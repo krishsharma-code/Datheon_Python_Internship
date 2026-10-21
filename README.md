@@ -213,6 +213,10 @@ Day-by-day engineering notes — architectural decisions, complexity analysis, a
 milestones — are recorded in
 [`docs/daily_learning_log.md`](docs/daily_learning_log.md).
 
+The full 4-week engineering progression plan (Day 3 → Day 28) — including the
+Progress Ledger that the daily scheduled run executes against — lives in
+[`docs/internship_milestones_plan.md`](docs/internship_milestones_plan.md).
+
 ---
 
 ## 📄 License
