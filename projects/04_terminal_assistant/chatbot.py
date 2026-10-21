@@ -26,6 +26,125 @@ from typing import Dict, List, Optional, Sequence, Union
 #: Inputs that end the session.
 DEFAULT_EXIT_COMMANDS = ("bye", "exit", "quit", "goodbye", "stop")
 
+#: Words ignored when deriving intent keywords from a FAQ question.
+STOPWORDS = frozenset(
+    {
+        "a",
+        "about",
+        "am",
+        "an",
+        "and",
+        "any",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "being",
+        "but",
+        "by",
+        "can",
+        "could",
+        "did",
+        "do",
+        "does",
+        "for",
+        "from",
+        "get",
+        "give",
+        "had",
+        "has",
+        "have",
+        "he",
+        "her",
+        "here",
+        "hers",
+        "him",
+        "his",
+        "how",
+        "i",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "may",
+        "me",
+        "might",
+        "must",
+        "my",
+        "need",
+        "of",
+        "on",
+        "or",
+        "our",
+        "ours",
+        "over",
+        "please",
+        "she",
+        "should",
+        "so",
+        "some",
+        "tell",
+        "than",
+        "that",
+        "the",
+        "their",
+        "theirs",
+        "them",
+        "then",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "to",
+        "us",
+        "want",
+        "was",
+        "we",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "whom",
+        "why",
+        "will",
+        "with",
+        "would",
+        "you",
+        "your",
+        "yours",
+    }
+)
+
+
+def _keywords(text: str, min_length: int = 4) -> List[str]:
+    """Return the significant keywords in ``text``.
+
+    Lower-cases the input, extracts alphanumeric tokens, and drops tokens that
+    are shorter than ``min_length`` or that appear in :data:`STOPWORDS`.
+
+    Args:
+        text: The source text (typically an FAQ question).
+        min_length: Minimum keyword length.
+
+    Returns:
+        A list of keywords in first-seen order, de-duplicated.
+    """
+    tokens = re.findall(r"[a-z0-9]+", text.lower())
+    seen: set = set()
+    keywords: List[str] = []
+    for token in tokens:
+        if len(token) < min_length or token in STOPWORDS or token in seen:
+            continue
+        seen.add(token)
+        keywords.append(token)
+    return keywords
+
 
 def normalize(text: str) -> str:
     """Normalise raw user input for matching.
@@ -171,6 +290,82 @@ class IntentEngine:
             fallbacks=data.get("fallbacks"),
             exit_commands=data.get("exit_commands"),
         )
+
+    @classmethod
+    def from_faq_json(
+        cls,
+        path: Union[str, Path],
+        min_keyword_length: int = 4,
+    ) -> "IntentEngine":
+        """Build an engine from a FAQ dataset (as supplied by Datheon).
+
+        The dataset is expected to contain a ``faqs`` list of
+        ``{"question": ..., "answer": ...}`` objects and, optionally, a
+        ``greetings`` list. Each FAQ becomes an intent whose patterns are the
+        significant keywords of its question.
+
+        Args:
+            path: Path to the FAQ JSON file.
+            min_keyword_length: Minimum length of a derived keyword.
+
+        Returns:
+            A configured :class:`IntentEngine`.
+
+        Raises:
+            FileNotFoundError: If ``path`` does not exist.
+            ValueError: If the file is not valid JSON or has no usable FAQs.
+        """
+        json_path = Path(path)
+        if not json_path.is_file():
+            raise FileNotFoundError(f"FAQ file not found: {json_path}")
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
+
+        faqs = data.get("faqs")
+        if not isinstance(faqs, list) or not faqs:
+            raise ValueError(f"No 'faqs' list found in {json_path}.")
+
+        intents: List[Intent] = []
+
+        greetings = [g for g in (data.get("greetings") or []) if str(g).strip()]
+        if greetings:
+            greeting_pattern = (
+                r"\b(" + "|".join(re.escape(str(g).strip().lower()) for g in greetings) + r")\b"
+            )
+            intents.append(
+                Intent(
+                    name="greeting",
+                    patterns=[re.compile(greeting_pattern, re.IGNORECASE)],
+                    responses=["Hello! How can I help you today?"],
+                    priority=1,
+                )
+            )
+
+        for index, entry in enumerate(faqs, start=1):
+            if not isinstance(entry, dict):
+                continue
+            question = str(entry.get("question", "")).strip()
+            answer = str(entry.get("answer", "")).strip()
+            if not question or not answer:
+                continue
+            keywords = _keywords(question, min_keyword_length)
+            if not keywords:
+                continue
+            pattern = r"\b(" + "|".join(re.escape(k) for k in keywords) + r")\b"
+            intents.append(
+                Intent(
+                    name=f"faq_{index}",
+                    patterns=[re.compile(pattern, re.IGNORECASE)],
+                    responses=[answer],
+                    priority=2,
+                )
+            )
+
+        if not intents:
+            raise ValueError(f"No usable FAQ entries found in {json_path}.")
+        return cls(intents)
 
     def _next_response(self, intent: Intent) -> str:
         """Rotate through an intent's responses so repeats feel natural."""

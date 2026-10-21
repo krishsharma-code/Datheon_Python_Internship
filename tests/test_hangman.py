@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pytest
 
@@ -13,7 +14,13 @@ from hangman import (
     ScoreBoard,
     normalize_letter,
 )
-from words import categories, get_random_word
+from words import (
+    MIN_WORD_LENGTH,
+    categories,
+    get_random_word,
+    get_random_word_from_list,
+    load_words_from_file,
+)
 
 
 # --- normalize_letter --------------------------------------------------
@@ -175,3 +182,59 @@ def test_scoreboard_tracks_record():
     assert board.wins == 2
     assert board.losses == 1
     assert board.win_rate == pytest.approx(2 / 3)
+
+
+# --- external word list ------------------------------------------------
+def test_load_words_from_file_filters_and_dedupes(tmp_path):
+    path = tmp_path / "words.txt"
+    path.write_text("apple\nbanana\nap\napple\n12345\n\nCherry\n", encoding="utf-8")
+    words = load_words_from_file(path)
+    # 'ap' is too short, '12345' is non-alphabetic, the duplicate is dropped,
+    # and 'Cherry' is normalised to lower case.
+    assert words == ["apple", "banana", "cherry"]
+
+
+def test_load_words_from_file_respects_length_bounds(tmp_path):
+    path = tmp_path / "words.txt"
+    path.write_text("alpha\nbe\ncharlie\ndeltaecho\n", encoding="utf-8")
+    words = load_words_from_file(path, min_length=3, max_length=7)
+    assert "be" not in words
+    assert "deltaecho" not in words
+    assert "alpha" in words
+    assert "charlie" in words
+
+
+def test_load_words_from_file_missing(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_words_from_file(tmp_path / "nope.txt")
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"min_length": 0}, {"min_length": 5, "max_length": 3}],
+)
+def test_load_words_from_file_bad_bounds(tmp_path, kwargs):
+    path = tmp_path / "words.txt"
+    path.write_text("hello\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_words_from_file(path, **kwargs)
+
+
+def test_get_random_word_from_list_is_deterministic():
+    words = ["alpha", "bravo", "charlie"]
+    word = get_random_word_from_list(words, rng=random.Random(1))
+    assert word in words
+
+
+def test_get_random_word_from_list_empty_raises():
+    with pytest.raises(ValueError):
+        get_random_word_from_list([])
+
+
+def test_bundled_official_word_list_loads():
+    path = (
+        Path(__file__).resolve().parents[1] / "projects" / "01_hangman_game" / "data" / "words.txt"
+    )
+    words = load_words_from_file(path, min_length=MIN_WORD_LENGTH)
+    assert len(words) > 1000
+    assert all(w.isalpha() and w.islower() and len(w) >= MIN_WORD_LENGTH for w in words)

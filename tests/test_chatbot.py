@@ -179,3 +179,65 @@ def test_conversation_logger_creates_parent_dirs(tmp_path):
     logger = ConversationLogger(tmp_path / "nested" / "conv.jsonl")
     logger.log("user", "hi")
     assert (tmp_path / "nested" / "conv.jsonl").exists()
+
+
+FAQ_PATH = (
+    Path(__file__).resolve().parents[1] / "projects" / "04_terminal_assistant" / "sample_faq.json"
+)
+
+
+# --- from_faq_json -----------------------------------------------------
+@pytest.fixture()
+def faq_engine():
+    return IntentEngine.from_faq_json(FAQ_PATH)
+
+
+def test_keywords_extraction():
+    from chatbot import _keywords
+
+    kws = _keywords("What are your hours of operation?")
+    assert "hours" in kws
+    assert "operation" in kws
+    assert "what" not in kws
+    assert "your" not in kws
+
+
+def test_faq_engine_greeting(faq_engine):
+    assert faq_engine.respond("hello").intent == "greeting"
+
+
+def test_faq_engine_hours(faq_engine):
+    response = faq_engine.respond("What are your hours of operation?")
+    assert response.intent == "faq_1"
+    assert "Monday" in response.text
+
+
+def test_faq_engine_submit(faq_engine):
+    assert faq_engine.respond("how do i submit my internship project").intent == "faq_2"
+
+
+def test_faq_engine_certificate(faq_engine):
+    assert faq_engine.respond("when will i receive my certificate").intent == "faq_3"
+
+
+def test_faq_engine_fallback(faq_engine):
+    assert faq_engine.respond("zzz qqq").intent == "fallback"
+
+
+def test_from_faq_json_missing(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        IntentEngine.from_faq_json(tmp_path / "nope.json")
+
+
+def test_from_faq_json_invalid(tmp_path):
+    path = tmp_path / "bad.json"
+    path.write_text("{nope", encoding="utf-8")
+    with pytest.raises(ValueError):
+        IntentEngine.from_faq_json(path)
+
+
+def test_from_faq_json_no_faqs(tmp_path):
+    path = tmp_path / "empty.json"
+    path.write_text(json.dumps({"greetings": ["hi"]}), encoding="utf-8")
+    with pytest.raises(ValueError):
+        IntentEngine.from_faq_json(path)

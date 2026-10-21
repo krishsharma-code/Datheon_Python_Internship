@@ -90,3 +90,70 @@ tests and CI.
 - Task-pack polish: live-price integration for the portfolio tracker.
 - Expand assistant intents and add a confidence threshold configuration.
 - Add a coverage badge and enforce a minimum coverage gate in CI.
+
+---
+
+## Day 2 — Official dataset integration
+
+**Branch:** `feat/datheon-day-2-datasets`
+**Scope:** Wire the official Datheon task-pack datasets into the projects.
+
+### Milestones
+
+- Bundled the official English word list (`google-10000-english`, 9,894 lines)
+  at `projects/01_hangman_game/data/words.txt`.
+- Bundled the S&P 500 constituents dataset at
+  `projects/02_portfolio_tracker/data/constituents.csv` (503 companies).
+- Bundled the Datheon sample FAQ dataset at
+  `projects/04_terminal_assistant/sample_faq.json`.
+- Added three loaders plus a CLI flag for each project.
+
+### Architectural decisions
+
+1. **Data is bundled, not fetched at runtime.** Every dataset is committed to
+   the repository so the projects stay offline-capable and the CI job needs no
+   network access. Downloads happen once, at development time.
+2. **Sanitise at the boundary, not in the algorithm.** `load_words_from_file`
+   normalises case, rejects non-alphabetic tokens, applies length bounds, and
+   de-duplicates while preserving first-seen order. The game engine then
+   receives a clean, predictable list and needs no defensive checks.
+3. **Backwards compatibility.** The original themed category banks and the
+   hand-written `intents.json` remain the fallback paths, so nothing that worked
+   on Day 1 regresses. New behaviour is opt-in via `--words-file` /
+   `--categories`, `--constituents`, and `--faq`.
+4. **Derive intents, don't hard-code them.** `IntentEngine.from_faq_json`
+   converts each FAQ question into a regex of its significant keywords
+   (stop-words and short tokens removed), so a new FAQ entry needs no code
+   change. This keeps the dataset the single source of truth.
+5. **Reuse the existing detection helper.** `load_symbols_from_csv` shares the
+   case-insensitive column-detection logic (`_detect_key`) already used for
+   price CSVs, so both loaders accept flexible header spellings.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `load_words_from_file` | words | O(L·W) | O(W) | L lines, W words kept; set-based de-dup |
+| `get_random_word_from_list` | words | O(W) | O(W) | `random.choice` on a materialised list |
+| `load_symbols_from_csv` | portfolio | O(R) | O(U) | R rows → U unique tickers |
+| `Portfolio.unknown_symbols` | portfolio | O(H + S) | O(S) | H holdings, S universe symbols |
+| `_keywords` | chatbot | O(T) | O(T) | T tokens in the question |
+| `IntentEngine.from_faq_json` | chatbot | O(F·K) | O(F·K) | F FAQs × K keywords each |
+| `IntentEngine.respond` (FAQ engine) | chatbot | O(F) | O(1) | One compiled regex per FAQ |
+
+### Edge cases covered by tests
+
+- Word list: short words, non-alphabetic tokens, duplicates, capitalisation,
+  `min_length`/`max_length` bounds, invalid bounds, missing file, and a live
+  assertion over the bundled list (>1,000 words, all alphabetic and lower-case).
+- Constituents: S&P 500 header layout, missing file, missing ticker column,
+  unknown-symbol detection, and a live assertion over the bundled dataset
+  (>400 symbols, `AAPL` present).
+- FAQ dataset: greeting match, keyword-derived FAQ matches, fallback for
+  unknown input, missing file, malformed JSON, and a dataset with no FAQs.
+
+### Next up
+
+- Add a coverage gate to CI.
+- Optional live-price path for the portfolio tracker behind a feature flag.
+- Expand the FAQ dataset and expose a configurable confidence threshold.

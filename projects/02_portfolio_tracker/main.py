@@ -16,10 +16,16 @@ import sys
 from pathlib import Path
 from typing import List
 
-from portfolio import Portfolio, load_prices_from_csv, write_summary_csv
+from portfolio import (
+    Portfolio,
+    load_prices_from_csv,
+    load_symbols_from_csv,
+    write_summary_csv,
+)
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_PRICES = HERE / "data" / "sample_prices.csv"
+DEFAULT_CONSTITUENTS = HERE / "data" / "constituents.csv"
 DEFAULT_OUTPUT = HERE / "portfolio_summary.csv"
 
 #: Positions used by ``--demo`` so the tool can be exercised without input.
@@ -111,6 +117,12 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument(
         "--demo", action="store_true", help="Value a sample portfolio instead of prompting."
     )
+    parser.add_argument(
+        "--constituents",
+        type=Path,
+        default=None,
+        help="Optional constituents CSV used to flag unknown tickers.",
+    )
     args = parser.parse_args(argv)
 
     prices = _load_prices(args.prices)
@@ -123,6 +135,17 @@ def main(argv: List[str] | None = None) -> int:
         _prompt_positions(portfolio)
 
     _print_report(portfolio)
+
+    if args.constituents is not None:
+        try:
+            universe = load_symbols_from_csv(args.constituents)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"! Could not load constituents: {exc}")
+        else:
+            unknown = portfolio.unknown_symbols(universe)
+            print(f"\nValidated against {len(universe):,} known symbols.")
+            if unknown:
+                print(f"  ! Not found in the reference list: {', '.join(unknown)}")
 
     if portfolio.holdings:
         out = write_summary_csv(portfolio, args.output)
