@@ -19,6 +19,7 @@ from chatbot import ConversationLogger, IntentEngine
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_INTENTS = HERE / "intents.json"
+DEFAULT_FAQ = HERE / "sample_faq.json"
 DEFAULT_LOG = HERE / "conversation.jsonl"
 
 BANNER = r"""
@@ -45,6 +46,12 @@ def main(argv: List[str] | None = None) -> int:
         "--intents", type=Path, default=DEFAULT_INTENTS, help="JSON intent dataset."
     )
     parser.add_argument(
+        "--faq",
+        type=Path,
+        default=None,
+        help="Load intents from a Datheon-style FAQ JSON dataset instead.",
+    )
+    parser.add_argument(
         "--log", type=Path, default=DEFAULT_LOG, help="JSONL conversation log path."
     )
     parser.add_argument("--no-log", action="store_true", help="Disable conversation logging.")
@@ -52,7 +59,11 @@ def main(argv: List[str] | None = None) -> int:
 
     print(BANNER)
     try:
-        engine = IntentEngine.from_json(args.intents)
+        if args.faq is not None:
+            engine = IntentEngine.from_faq_json(args.faq)
+            print(f"Loaded FAQ dataset: {args.faq}")
+        else:
+            engine = IntentEngine.from_json(args.intents)
     except (FileNotFoundError, ValueError) as exc:
         print(f"! Could not load intents: {exc}")
         return 1

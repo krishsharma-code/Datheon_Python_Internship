@@ -3,18 +3,33 @@
 Run with::
 
     python projects/01_hangman_game/main.py
+    python projects/01_hangman_game/main.py --categories
+    python projects/01_hangman_game/main.py --words-file path/to/words.txt
 
-The module wires the pure game engine in :mod:`hangman` to the terminal:
-category selection, the guess loop, ASCII gallows rendering, score tracking,
-and a replay prompt.
+The module wires the pure game engine in :mod:`hangman` to the terminal. By
+default it draws secret words from the official English word list bundled at
+``data/words.txt``; pass ``--categories`` to use the smaller themed word banks
+instead.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
+from pathlib import Path
+from typing import List, Optional
 
 from hangman import HangmanGame, ScoreBoard
-from words import DEFAULT_CATEGORY, categories, get_random_word
+from words import (
+    DEFAULT_CATEGORY,
+    categories,
+    get_random_word,
+    get_random_word_from_list,
+    load_words_from_file,
+)
+
+HERE = Path(__file__).resolve().parent
+DEFAULT_WORDS_FILE = HERE / "data" / "words.txt"
 
 BANNER = r"""
  _   _                                          _
@@ -44,18 +59,20 @@ def choose_category() -> str:
     return choice
 
 
-def play_round(category: str) -> bool:
-    """Play one full round of Hangman.
+def play_round(word: str, source_label: str) -> bool:
+    """Play one full round of Hangman for a given secret word.
 
     Args:
-        category: Word bank to draw the secret word from.
+        word: The secret word for this round.
+        source_label: A human-readable description of where the word came
+            from, shown to the player.
 
     Returns:
         ``True`` if the player guessed the word, ``False`` otherwise.
     """
-    game = HangmanGame(get_random_word(category))
+    game = HangmanGame(word)
 
-    print(f"\nA secret word has been chosen from '{category}'.")
+    print(f"\nA secret word has been chosen from {source_label}.")
     print(f"You have {game.max_wrong} incorrect guesses. Good luck!\n")
 
     while not game.is_over:
@@ -87,19 +104,94 @@ def play_round(category: str) -> bool:
     return False
 
 
-def main() -> int:
-    """Run the Hangman shell until the player declines to replay.
+def _load_word_list(args: argparse.Namespace) -> Optional[List[str]]:
+    """Resolve the word list to draw from, or ``None`` for themed categories.
+
+    Honours ``--categories`` (force category banks), ``--words-file`` (explicit
+    list), and otherwise falls back to the bundled official word list when it
+    is present.
+
+    Args:
+        args: Parsed command-line arguments.
 
     Returns:
-        Process exit code (always ``0``).
+        The loaded word list, or ``None`` to use the themed category banks.
+
+    Raises:
+        SystemExit: If a requested word file is missing or yields no words.
     """
+    if args.categories:
+        return None
+
+    words_file = args.words_file
+    if words_file is None and DEFAULT_WORDS_FILE.is_file():
+        words_file = DEFAULT_WORDS_FILE
+    if words_file is None:
+        return None
+
+    try:
+        words = load_words_from_file(words_file, args.min_length, args.max_length)
+    except FileNotFoundError as exc:
+        print(f"! {exc}")
+        raise SystemExit(1)
+    if not words:
+        print(f"! No usable words found in {words_file}.")
+        raise SystemExit(1)
+    print(f"Loaded {len(words):,} words from {words_file}.")
+    return words
+
+
+def main(argv: List[str] | None = None) -> int:
+    """Run the Hangman shell until the player declines to replay.
+
+    Args:
+        argv: Optional argument vector (defaults to ``sys.argv[1:]``).
+
+    Returns:
+        Process exit code (always ``0`` unless a word file fails to load).
+    """
+    parser = argparse.ArgumentParser(description="Console Hangman game.")
+    parser.add_argument(
+        "--categories",
+        action="store_true",
+        help="Use the themed category word banks instead of the word list.",
+    )
+    parser.add_argument(
+        "--words-file",
+        type=Path,
+        default=None,
+        help="Newline-delimited word list to draw secret words from.",
+    )
+    parser.add_argument(
+        "--min-length",
+        type=int,
+        default=4,
+        help="Minimum word length when loading a word file (default: 4).",
+    )
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=None,
+        help="Optional maximum word length when loading a word file.",
+    )
+    args = parser.parse_args(argv)
+
+    word_list = _load_word_list(args)
+
     print(BANNER)
     print("Welcome to Hangman — Datheon Python Internship, Task 1.")
 
     score = ScoreBoard()
     while True:
-        category = choose_category()
-        score.record(play_round(category))
+        if word_list is not None:
+            word = get_random_word_from_list(word_list)
+            label = f"the official word list ({len(word_list):,} words)"
+        else:
+            category = choose_category()
+            word = get_random_word(category)
+            label = f"the '{category}' category"
+
+        score.record(play_round(word, label))
 
         print(
             f"Score — played: {score.played} | wins: {score.wins} | "

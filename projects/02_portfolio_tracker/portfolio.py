@@ -26,6 +26,10 @@ _SYMBOL_KEYS = ("symbol", "ticker", "code")
 #: Header names (lower-cased) accepted as the price column in a price CSV.
 _PRICE_KEYS = ("price", "current_price", "close", "last", "market_price")
 
+#: Header names (lower-cased) accepted as the company-name column in a
+#: constituents CSV (e.g. the S&P 500 dataset).
+_NAME_KEYS = ("security", "name", "company", "company_name")
+
 
 @dataclass
 class Holding:
@@ -227,6 +231,21 @@ class Portfolio:
         """Return every holding as a CSV-ready row."""
         return [h.as_row() for h in self.holdings]
 
+    def unknown_symbols(self, universe: Iterable[str]) -> List[str]:
+        """Return held symbols that are absent from ``universe``.
+
+        Useful for validating entered tickers against a reference list such as
+        the S&P 500 constituents.
+
+        Args:
+            universe: An iterable of known ticker symbols.
+
+        Returns:
+            A sorted list of held symbols not present in ``universe``.
+        """
+        known = {symbol.strip().upper() for symbol in universe}
+        return sorted(h.symbol for h in self.holdings if h.symbol not in known)
+
 
 def _detect_key(headers: Iterable[str], candidates: Iterable[str]) -> Optional[str]:
     """Return the first header that matches one of ``candidates`` (case-insensitive)."""
@@ -283,6 +302,47 @@ def load_prices_from_csv(path: Union[str, Path]) -> Dict[str, float]:
                     f"Invalid price {raw_price!r} for {symbol} on line {line_no}."
                 ) from exc
     return prices
+
+
+def load_symbols_from_csv(path: Union[str, Path]) -> Dict[str, str]:
+    """Load a ticker → company-name map from a constituents CSV.
+
+    Handles the S&P 500 constituents format (``Symbol`` + ``Security``
+    columns) as well as generic CSVs using ``ticker``/``code`` and
+    ``name``/``company`` headers. Column matching is case-insensitive.
+
+    Args:
+        path: Path to the constituents CSV.
+
+    Returns:
+        A mapping of upper-cased ticker symbol to company name (falling back
+        to the symbol itself when no name column is present).
+
+    Raises:
+        FileNotFoundError: If ``path`` does not exist.
+        ValueError: If no ticker column can be identified.
+    """
+    csv_path = Path(path)
+    if not csv_path.is_file():
+        raise FileNotFoundError(f"Constituents file not found: {csv_path}")
+
+    symbols: Dict[str, str] = {}
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        headers = reader.fieldnames or []
+        symbol_key = _detect_key(headers, _SYMBOL_KEYS)
+        name_key = _detect_key(headers, _NAME_KEYS)
+        if symbol_key is None:
+            raise ValueError(
+                "CSV must contain a ticker column " f"({', '.join(_SYMBOL_KEYS)}). Found: {headers}"
+            )
+        for row in reader:
+            symbol = (row.get(symbol_key) or "").strip().upper()
+            if not symbol:
+                continue
+            name = (row.get(name_key) or "").strip() if name_key else ""
+            symbols[symbol] = name or symbol
+    return symbols
 
 
 def write_summary_csv(portfolio: Portfolio, path: Union[str, Path]) -> Path:

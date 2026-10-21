@@ -126,11 +126,13 @@ python projects/05_inventory_oop/main.py
 ### Task 1 — Hangman Word Guessing Game (Console)
 `projects/01_hangman_game/`
 
-Interactive console Hangman with category-based word banks, seven progressive
-ASCII gallows stages, duplicate-guess protection (a repeated letter never costs
-an attempt), input validation, per-round and cumulative score tracking, and a
-replay loop. The engine (`hangman.py`) is decoupled from the shell (`main.py`)
-so it can be unit tested.
+Interactive console Hangman with seven progressive ASCII gallows stages,
+duplicate-guess protection (a repeated letter never costs an attempt), input
+validation, per-round and cumulative score tracking, and a replay loop. Words
+come from the official English word list bundled at `data/words.txt` by default
+(10,000 most-common words, filtered to 4+ letters), with `--categories` to
+switch to the smaller themed word banks. The engine (`hangman.py`) is decoupled
+from the shell (`main.py`) so it can be unit tested.
 
 ### Task 2 — Stock Portfolio Performance Tracker
 `projects/02_portfolio_tracker/`
@@ -138,7 +140,9 @@ so it can be unit tested.
 Tracks positions in a dictionary-backed portfolio, computes per-holding and
 aggregate cost basis, market value, and percentage gain/loss, prints a formatted
 report, and persists a `portfolio_summary.csv`. Prices load from a bundled
-sample CSV, with an optional live `yfinance` lookup when available.
+sample CSV, with an optional live `yfinance` lookup when available. The official
+S&P 500 constituents dataset is bundled at `data/constituents.csv` and can be
+used via `--constituents` to flag tickers that are not in the reference list.
 
 ### Task 3 — Automated File Organizer & Cleanup Utility
 `projects/03_file_organizer_automation/`
@@ -153,7 +157,10 @@ duplicate detection, a `--dry-run` preview mode, and a JSON activity log.
 
 A conversational assistant with regex-driven multi-intent recognition, a
 confidence-scored matcher, graceful fallbacks, clean exit commands
-(`bye` / `exit` / `quit`), and persistent JSONL conversation logging.
+(`bye` / `exit` / `quit`), and persistent JSONL conversation logging. Two
+datasets are supported: the hand-written `intents.json` and the official
+Datheon FAQ dataset `sample_faq.json` (loaded with `--faq`), whose questions are
+converted into keyword-driven intents automatically.
 
 ### Task 5 — OOP Inventory & Asset System
 `projects/05_inventory_oop/`
@@ -166,6 +173,17 @@ attributes behind `@property` setters with validation, dunder methods
 handles checkout, returns, and tabular audit reports.
 
 ---
+
+## 📊 Bundled Datasets
+
+All data ships with the repository so every project runs fully offline.
+
+| File | Source | Used by |
+| --- | --- | --- |
+| `projects/01_hangman_game/data/words.txt` | `first20hours/google-10000-english` (no-swears) | Task 1 — secret word pool |
+| `projects/02_portfolio_tracker/data/sample_prices.csv` | Hand-authored sample | Task 2 — offline price table |
+| `projects/02_portfolio_tracker/data/constituents.csv` | `datasets/s-and-p-500-companies` | Task 2 — ticker validation |
+| `projects/04_terminal_assistant/sample_faq.json` | Datheon sample FAQ dataset | Task 4 — FAQ intents |
 
 ## 🔀 Git Workflow
 

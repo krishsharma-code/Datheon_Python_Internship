@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +11,7 @@ from portfolio import (
     Holding,
     Portfolio,
     load_prices_from_csv,
+    load_symbols_from_csv,
     write_summary_csv,
 )
 
@@ -145,3 +147,49 @@ def test_write_summary_creates_parent_dirs(tmp_path):
     pf = Portfolio()
     out = write_summary_csv(pf, tmp_path / "nested" / "summary.csv")
     assert out.exists()
+
+
+# --- constituents ------------------------------------------------------
+def test_load_symbols_from_csv_sp500_format(tmp_path):
+    path = tmp_path / "constituents.csv"
+    path.write_text(
+        "Symbol,Security,GICS Sector\n"
+        "AAPL,Apple Inc.,Information Technology\n"
+        "MSFT,Microsoft Corp.,Information Technology\n",
+        encoding="utf-8",
+    )
+    symbols = load_symbols_from_csv(path)
+    assert symbols["AAPL"] == "Apple Inc."
+    assert symbols["MSFT"] == "Microsoft Corp."
+
+
+def test_load_symbols_from_csv_missing(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_symbols_from_csv(tmp_path / "nope.csv")
+
+
+def test_load_symbols_from_csv_no_symbol_column(tmp_path):
+    path = tmp_path / "bad.csv"
+    path.write_text("name,value\nfoo,bar\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_symbols_from_csv(path)
+
+
+def test_unknown_symbols():
+    pf = Portfolio.from_prices({})
+    pf.add("AAPL", 1, 100.0, 100.0)
+    pf.add("ZZZZ", 1, 100.0, 100.0)
+    assert pf.unknown_symbols(["AAPL", "MSFT"]) == ["ZZZZ"]
+
+
+def test_bundled_constituents_load():
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "projects"
+        / "02_portfolio_tracker"
+        / "data"
+        / "constituents.csv"
+    )
+    symbols = load_symbols_from_csv(path)
+    assert len(symbols) > 400
+    assert "AAPL" in symbols
