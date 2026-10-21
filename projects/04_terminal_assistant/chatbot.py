@@ -1,0 +1,266 @@
+"""Rule-based interactive terminal assistant.
+
+The assistant recognises intent from free-text input using regular-expression
+patterns, scores each candidate intent, and returns a contextual response with
+a confidence value. Unrecognised input falls back gracefully. Every exchange
+can be appended to a persistent JSONL conversation log.
+
+Typical use::
+
+    from chatbot import IntentEngine, ConversationLogger
+
+    engine = IntentEngine.from_json("intents.json")
+    reply = engine.respond("what are your hours?")
+    print(reply.text, reply.confidence)
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Union
+
+#: Inputs that end the session.
+DEFAULT_EXIT_COMMANDS = ("bye", "exit", "quit", "goodbye", "stop")
+
+
+def normalize(text: str) -> str:
+    """Normalise raw user input for matching.
+
+    Lower-cases the text, strips surrounding whitespace, and collapses internal
+    runs of whitespace to a single space.
+
+    Args:
+        text: Raw user input.
+
+    Returns:
+        The normalised string (empty string if ``text`` is falsy).
+    """
+    if not text:
+        return ""
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+@dataclass(frozen=True)
+class Response:
+    """The assistant's reply to a single user turn.
+
+    Attributes:
+        intent: The matched intent name (``"fallback"`` if none matched).
+        confidence: Match confidence in the range 0.0–1.0.
+        text: The response text to show the user.
+        is_exit: ``True`` when the user asked to end the session.
+    """
+
+    intent: str
+    confidence: float
+    text: str
+    is_exit: bool = False
+
+
+@dataclass
+class Intent:
+    """A single recognisable intent.
+
+    Attributes:
+        name: Unique intent identifier.
+        patterns: Compiled regular expressions that signal this intent.
+        responses: Candidate responses; one is chosen at reply time.
+        priority: Tie-breaker when two intents score equally (higher wins).
+    """
+
+    name: str
+    patterns: List[re.Pattern] = field(default_factory=list)
+    responses: List[str] = field(default_factory=list)
+    priority: int = 0
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, object]) -> "Intent":
+        """Build an :class:`Intent` from a JSON-style dictionary.
+
+        Args:
+            data: Dictionary with ``name``, ``patterns``, and optional
+                ``responses`` and ``priority`` keys.
+
+        Returns:
+            The constructed intent.
+
+        Raises:
+            ValueError: If ``name`` or ``patterns`` is missing or malformed.
+        """
+        name = data.get("name")
+        raw_patterns = data.get("patterns")
+        if not name or not isinstance(raw_patterns, list) or not raw_patterns:
+            raise ValueError(f"Intent requires a name and non-empty patterns: {data!r}")
+        compiled = [re.compile(p, re.IGNORECASE) for p in raw_patterns]
+        responses = data.get("responses") or [f"[{name}]"]
+        if not isinstance(responses, list):
+            raise ValueError(f"Intent {name!r} responses must be a list.")
+        return cls(
+            name=str(name),
+            patterns=compiled,
+            responses=[str(r) for r in responses],
+            priority=int(data.get("priority", 0)),
+        )
+
+    def score(self, normalized_text: str) -> int:
+        """Count how many of this intent's patterns match the input."""
+        return sum(1 for pattern in self.patterns if pattern.search(normalized_text))
+
+
+class IntentEngine:
+    """Matches normalised input against a set of intents.
+
+    Args:
+        intents: The intents to match against.
+        fallbacks: Responses used when nothing matches.
+        exit_commands: Normalised strings that end the session.
+
+    Raises:
+        ValueError: If ``intents`` is empty.
+    """
+
+    def __init__(
+        self,
+        intents: Sequence[Intent],
+        fallbacks: Optional[Sequence[str]] = None,
+        exit_commands: Optional[Sequence[str]] = None,
+    ) -> None:
+        if not intents:
+            raise ValueError("IntentEngine requires at least one intent.")
+        self.intents: List[Intent] = list(intents)
+        self.fallbacks: List[str] = list(
+            fallbacks or ["I'm not sure I understood that. Could you rephrase?"]
+        )
+        self.exit_commands = {normalize(c) for c in (exit_commands or DEFAULT_EXIT_COMMANDS)}
+        self._fallback_index = 0
+        self._response_index: Dict[str, int] = {}
+
+    @classmethod
+    def from_json(cls, path: Union[str, Path]) -> "IntentEngine":
+        """Load an engine from a JSON dataset.
+
+        Args:
+            path: Path to a JSON file with ``intents``, optional ``fallbacks``
+                and ``exit_commands`` keys.
+
+        Returns:
+            A configured :class:`IntentEngine`.
+
+        Raises:
+            FileNotFoundError: If ``path`` does not exist.
+            ValueError: If the file is not valid JSON or lacks intents.
+        """
+        json_path = Path(path)
+        if not json_path.is_file():
+            raise FileNotFoundError(f"Intent file not found: {json_path}")
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
+
+        raw_intents = data.get("intents")
+        if not isinstance(raw_intents, list) or not raw_intents:
+            raise ValueError(f"No 'intents' list found in {json_path}.")
+        intents = [Intent.from_dict(item) for item in raw_intents]
+        return cls(
+            intents,
+            fallbacks=data.get("fallbacks"),
+            exit_commands=data.get("exit_commands"),
+        )
+
+    def _next_response(self, intent: Intent) -> str:
+        """Rotate through an intent's responses so repeats feel natural."""
+        if not intent.responses:
+            return f"[{intent.name}]"
+        index = self._response_index.get(intent.name, 0)
+        self._response_index[intent.name] = index + 1
+        return intent.responses[index % len(intent.responses)]
+
+    def _next_fallback(self) -> str:
+        """Rotate through the fallback responses."""
+        text = self.fallbacks[self._fallback_index % len(self.fallbacks)]
+        self._fallback_index += 1
+        return text
+
+    @staticmethod
+    def _confidence(score: int) -> float:
+        """Map a raw pattern-match count to a 0.0–1.0 confidence value."""
+        if score <= 0:
+            return 0.0
+        return round(min(1.0, 0.5 + 0.25 * (score - 1)), 2)
+
+    def respond(self, text: str) -> Response:
+        """Produce a response to a user turn.
+
+        Args:
+            text: Raw user input.
+
+        Returns:
+            A :class:`Response`. The ``intent`` is ``"exit"`` when the user
+            asked to stop, and ``"fallback"`` when nothing matched.
+        """
+        normalized = normalize(text)
+
+        if not normalized:
+            return Response("fallback", 0.0, self._next_fallback())
+
+        if normalized in self.exit_commands:
+            return Response("exit", 1.0, "Goodbye! Have a great day. 👋", is_exit=True)
+
+        best_intent: Optional[Intent] = None
+        best_score = 0
+        for intent in self.intents:
+            score = intent.score(normalized)
+            if score > best_score or (
+                score == best_score
+                and score > 0
+                and best_intent is not None
+                and intent.priority > best_intent.priority
+            ):
+                best_intent, best_score = intent, score
+
+        if best_intent is None or best_score == 0:
+            return Response("fallback", 0.0, self._next_fallback())
+
+        return Response(
+            best_intent.name,
+            self._confidence(best_score),
+            self._next_response(best_intent),
+        )
+
+
+class ConversationLogger:
+    """Appends conversation turns to a JSONL file.
+
+    Args:
+        path: Destination ``.jsonl`` path. The parent directory is created if
+            needed.
+    """
+
+    def __init__(self, path: Union[str, Path]) -> None:
+        self.path = Path(path)
+        if self.path.parent and not self.path.parent.exists():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def log(self, role: str, text: str, intent: str = "", confidence: float = 0.0) -> None:
+        """Append one turn to the log.
+
+        Args:
+            role: ``"user"`` or ``"assistant"``.
+            text: The turn's text.
+            intent: Matched intent (assistant turns).
+            confidence: Match confidence (assistant turns).
+        """
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "role": role,
+            "text": text,
+            "intent": intent,
+            "confidence": confidence,
+        }
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")

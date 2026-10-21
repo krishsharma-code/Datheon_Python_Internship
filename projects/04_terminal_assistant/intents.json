@@ -1,0 +1,109 @@
+{
+  "exit_commands": [
+    "bye",
+    "exit",
+    "quit",
+    "goodbye",
+    "stop",
+    "see you"
+  ],
+  "fallbacks": [
+    "I'm not sure I understood that. Could you rephrase?",
+    "Sorry, I don't have an answer for that yet. Try asking about hours, pricing, or support.",
+    "I didn't catch that. You can ask me about business hours, products, refunds, or contact details."
+  ],
+  "intents": [
+    {
+      "name": "greeting",
+      "priority": 1,
+      "patterns": [
+        "\\b(hi|hello|hey|greetings|good (morning|afternoon|evening))\\b"
+      ],
+      "responses": [
+        "Hello! I'm the Datheon support assistant. How can I help you today?",
+        "Hi there! Ask me about our hours, products, pricing, or support.",
+        "Hey! What can I help you with?"
+      ]
+    },
+    {
+      "name": "business_hours",
+      "priority": 2,
+      "patterns": [
+        "\\b(hours?|open|opening|close|closing|timings?)\\b",
+        "when.*(open|closed)",
+        "what time.*(open|close)"
+      ],
+      "responses": [
+        "We're open Monday to Friday, 9:00 AM to 6:00 PM IST. We're closed on weekends.",
+        "Our support desk operates 9 AM–6 PM IST, Monday through Friday."
+      ]
+    },
+    {
+      "name": "pricing",
+      "priority": 2,
+      "patterns": [
+        "\\b(price|pricing|cost|how much|fees?|charges?|subscription)\\b"
+      ],
+      "responses": [
+        "Our Standard plan starts at ₹499/month, and the Pro plan is ₹1,299/month.",
+        "Pricing starts at ₹499/month. Would you like a feature comparison?"
+      ]
+    },
+    {
+      "name": "products",
+      "priority": 2,
+      "patterns": [
+        "\\b(product|products|feature|features|what do you (offer|sell)|services?)\\b"
+      ],
+      "responses": [
+        "We offer three products: Starter, Standard, and Pro — each built around automation.",
+        "Our catalogue includes automation tooling, analytics dashboards, and API access."
+      ]
+    },
+    {
+      "name": "refund",
+      "priority": 3,
+      "patterns": [
+        "\\b(refund|money back|cancel|cancellation|return policy)\\b"
+      ],
+      "responses": [
+        "We offer a full refund within 14 days of purchase — no questions asked.",
+        "You can cancel anytime; refunds are processed within 5–7 business days."
+      ]
+    },
+    {
+      "name": "support",
+      "priority": 3,
+      "patterns": [
+        "\\b(support|help|issue|problem|bug|contact|reach)\\b",
+        "\\b(email|phone|call)\\b"
+      ],
+      "responses": [
+        "You can reach our support team at support@datheon.in or raise a ticket in the dashboard.",
+        "For help, email support@datheon.in and we'll respond within one business day."
+      ]
+    },
+    {
+      "name": "thanks",
+      "priority": 1,
+      "patterns": [
+        "\\b(thanks|thank you|cheers|appreciate)\\b"
+      ],
+      "responses": [
+        "You're very welcome! Anything else I can help with?",
+        "Happy to help! Let me know if you need anything else."
+      ]
+    },
+    {
+      "name": "identity",
+      "priority": 1,
+      "patterns": [
+        "\\b(who are you|what are you|your name|are you a bot|are you human)\\b"
+      ],
+      "responses": [
+        "I'm a rule-based assistant built for the Datheon Python internship — no AI model, just pattern matching.",
+        "I'm the Datheon terminal assistant, a rule-based chatbot written in pure Python."
+      ]
+    }
+  ]
+}
