@@ -157,3 +157,62 @@ tests and CI.
 - Add a coverage gate to CI.
 - Optional live-price path for the portfolio tracker behind a feature flag.
 - Expand the FAQ dataset and expose a configurable confidence threshold.
+
+---
+
+## Day 3 — CLI ergonomics & exit-code contract
+
+**Branch:** `feat/datheon-day-3-cli-contract`
+**PR:** #4
+**Scope:** Give all five CLIs one consistent command-line surface.
+
+### Milestones
+
+- Added `cli_contract.py`, the single source of truth for the CLI contract.
+- Every entry point now builds its parser with `build_parser(...)`, exposing
+  `-h/--help` and `--version` uniformly; `--version` prints `<prog> 1.0.0`.
+- Standardised exit codes — `0` success, `1` user/data error, `2` usage error —
+  exposed as the `ExitCode` `IntEnum`.
+- Added `run_cli()`, which maps an uncaught `ValueError`/`OSError` to exit code
+  `1` instead of leaking a traceback.
+- Documented the contract in `docs/cli_contract.md` and the README.
+- Added `tests/test_cli_contract.py`, which drives every CLI in a subprocess
+  and asserts each exit code.
+
+### Architectural decisions
+
+1. **One contract, five consumers.** Rather than duplicating argparse setup in
+   each `main.py`, the shared module owns parser construction, the version
+   string, and the exit-code mapping. A new tool opts in with a single import.
+2. **`IntEnum`, not magic numbers.** `ExitCode.OK` / `DATA_ERROR` /
+   `USAGE_ERROR` documents intent at every `return` site and keeps the three
+   codes in lock step across projects.
+3. **`argparse`'s native exit code is the contract.** `argparse` already exits
+   `2` on a malformed command line, so the contract adopts that value rather
+   than fighting it — matching POSIX `sysexits` `EX_USAGE`.
+4. **Errors are classified at the boundary.** `run_cli` treats `ValueError`
+   and `OSError` as user/data errors (exit `1`), so an unhandled input problem
+   becomes a clean message instead of a stack trace.
+5. **Exit codes are tested end-to-end.** Because coverage cannot see a
+   subprocess, the tests assert `returncode` directly — the observable contract
+   a shell or CI script actually depends on.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `build_parser` | cli_contract | O(1) | O(1) | One `ArgumentParser` per invocation |
+| `version_string` | cli_contract | O(1) | O(1) | Single f-string format |
+| `run_cli` | cli_contract | O(main) | O(1) | Adds only one try/except frame |
+
+### Edge cases covered by tests
+
+- `--version` and `--help` exit `0` in all five tools.
+- An unknown flag exits `2` in all five tools.
+- A missing word file (hangman), a missing directory (organizer), a missing
+  intent file (assistant), and a malformed price CSV (portfolio) each exit `1`.
+- `run_cli` maps a raised `ValueError` to exit code `1` and writes to stderr.
+
+### Next up
+
+- Day 4: strict input validators and a `--strict` mode with actionable errors.
