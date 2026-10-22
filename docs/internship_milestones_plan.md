@@ -20,7 +20,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-10-21 | Scaffold & 5 core projects | `feat/datheon-day-1-scaffold` | Repo, README, LICENSE, 5 projects, 131 tests, CI | done | #1 |
 | 2 | 2026-10-21 | Official datasets integration | `feat/datheon-day-2-datasets` | Word list, S&P 500 CSV, FAQ dataset, 153 tests | done | #2 |
-| 3 | 2026-10-22 | CLI ergonomics & exit-code contract | `feat/datheon-day-3-cli-contract` | Consistent argparse, `--version`, documented exit codes across all 5 CLIs | pending | — |
+| 3 | 2026-10-22 | CLI ergonomics & exit-code contract | `feat/datheon-day-3-cli-contract` | Consistent argparse, `--version`, documented exit codes across all 5 CLIs | done | #4 |
 | 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | pending | — |
 | 5 | 2026-10-24 | Edge-case handler sweep | `feat/datheon-day-5-edge-cases` | Every project's failure modes handled + regression tests | pending | — |
 | 6 | 2026-10-25 | Dataset loader hardening | `feat/datheon-day-6-loader-hardening` | Schema validation, BOM/CRLF/encoding tolerance, malformed-row reporting | pending | — |

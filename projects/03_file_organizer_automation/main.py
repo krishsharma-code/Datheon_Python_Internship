@@ -11,12 +11,16 @@ Nothing is deleted: files are only relocated into category subfolders, and
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 from typing import List
 
-from organizer import CATEGORIES, FileOrganizer, write_json_log
+# Make the repository root importable so every CLI shares one exit-code
+# contract module regardless of the directory the script is launched from.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
 
 
 def _print_report(report) -> None:
@@ -64,10 +68,13 @@ def main(argv: List[str] | None = None) -> int:
         argv: Optional argument vector (defaults to ``sys.argv[1:]``).
 
     Returns:
-        Process exit code (``0`` on success, ``1`` on a bad directory).
+        Process exit code: ``0`` on success, ``1`` on a bad directory
+        (see :mod:`cli_contract`).
     """
-    parser = argparse.ArgumentParser(
-        description="Organize a directory into category subfolders by file type."
+    parser = build_parser(
+        "organizer",
+        "Organize a directory into category subfolders by file type.",
+        epilog=EXIT_CODE_EPILOG,
     )
     parser.add_argument(
         "directory",
@@ -100,15 +107,15 @@ def main(argv: List[str] | None = None) -> int:
         )
     except NotADirectoryError as exc:
         print(f"! {exc}")
-        return 1
+        return int(ExitCode.DATA_ERROR)
 
     _print_report(report)
 
     if args.log:
         out = write_json_log(report, args.log)
         print(f"\nActivity log written to {out}")
-    return 0
+    return int(ExitCode.OK)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_cli(lambda: main()))
