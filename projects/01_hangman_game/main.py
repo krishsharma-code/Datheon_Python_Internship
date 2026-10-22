@@ -19,8 +19,13 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from hangman import HangmanGame, ScoreBoard
-from words import (
+# Make the repository root importable so every CLI shares one exit-code
+# contract module regardless of the directory the script is launched from.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from hangman import HangmanGame, ScoreBoard  # noqa: E402
+from words import (  # noqa: E402
     DEFAULT_CATEGORY,
     categories,
     get_random_word,
@@ -85,7 +90,7 @@ def play_round(word: str, source_label: str) -> bool:
             raw = input("Guess a letter: ")
         except (EOFError, KeyboardInterrupt):
             print("\nInput stream closed — exiting.")
-            raise SystemExit(0)
+            raise SystemExit(int(ExitCode.OK))
 
         try:
             result = game.guess(raw)
@@ -133,10 +138,10 @@ def _load_word_list(args: argparse.Namespace) -> Optional[List[str]]:
         words = load_words_from_file(words_file, args.min_length, args.max_length)
     except FileNotFoundError as exc:
         print(f"! {exc}")
-        raise SystemExit(1)
+        raise SystemExit(int(ExitCode.DATA_ERROR))
     if not words:
         print(f"! No usable words found in {words_file}.")
-        raise SystemExit(1)
+        raise SystemExit(int(ExitCode.DATA_ERROR))
     print(f"Loaded {len(words):,} words from {words_file}.")
     return words
 
@@ -148,9 +153,10 @@ def main(argv: List[str] | None = None) -> int:
         argv: Optional argument vector (defaults to ``sys.argv[1:]``).
 
     Returns:
-        Process exit code (always ``0`` unless a word file fails to load).
+        Process exit code: ``0`` on success, ``1`` if a word file fails to
+        load (see :mod:`cli_contract`).
     """
-    parser = argparse.ArgumentParser(description="Console Hangman game.")
+    parser = build_parser("hangman", "Console Hangman game.", epilog=EXIT_CODE_EPILOG)
     parser.add_argument(
         "--categories",
         action="store_true",
@@ -207,8 +213,8 @@ def main(argv: List[str] | None = None) -> int:
     print(f"  Wins          : {score.wins}")
     print(f"  Losses        : {score.losses}")
     print(f"  Win rate      : {score.win_rate:.0%}")
-    return 0
+    return int(ExitCode.OK)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_cli(lambda: main()))

@@ -62,7 +62,8 @@ Datheon_Python_Internship/
 │   └── workflows/
 │       └── ci.yml                  # flake8 + black + pytest on every PR
 ├── docs/
-│   └── daily_learning_log.md       # architectural decisions & complexity notes
+│   ├── daily_learning_log.md       # architectural decisions & complexity notes
+│   └── cli_contract.md             # shared command-line & exit-code contract
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
 │   ├── 02_portfolio_tracker/       # Task 2 — stock portfolio tracker
@@ -70,6 +71,7 @@ Datheon_Python_Internship/
 │   ├── 04_terminal_assistant/      # Task 4 — rule-based terminal chatbot
 │   └── 05_inventory_oop/           # Task 5 — OOP inventory & asset system
 ├── tests/                          # pytest suite for all five projects
+├── cli_contract.py                 # shared argparse / --version / exit codes
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -118,6 +120,26 @@ python projects/03_file_organizer_automation/main.py --help
 python projects/04_terminal_assistant/main.py
 python projects/05_inventory_oop/main.py
 ```
+
+### Command-line contract
+
+Every tool shares one consistent command-line surface, implemented once in
+[`cli_contract.py`](cli_contract.py):
+
+```bash
+# Identical across all five tools
+python projects/01_hangman_game/main.py --help
+python projects/01_hangman_game/main.py --version      # hangman 1.0.0
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | User or data error (missing file, invalid input) |
+| `2` | Usage error (unknown flag, missing value, bad type) |
+
+The full contract is documented in [`docs/cli_contract.md`](docs/cli_contract.md)
+and verified by `tests/test_cli_contract.py`.
 
 ---
 

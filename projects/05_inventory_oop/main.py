@@ -11,9 +11,16 @@ tabular audit report.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+from typing import List
 
-from inventory import InventoryError, InventoryManager
-from models import Book, DigitalMedia, Magazine
+# Make the repository root importable so every CLI shares one exit-code
+# contract module regardless of the directory the script is launched from.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from inventory import InventoryError, InventoryManager  # noqa: E402
+from models import Book, DigitalMedia, Magazine  # noqa: E402
 
 
 def build_demo_inventory() -> InventoryManager:
@@ -30,12 +37,22 @@ def build_demo_inventory() -> InventoryManager:
     return manager
 
 
-def main() -> int:
+def main(argv: List[str] | None = None) -> int:
     """Run the inventory demonstration.
 
+    Args:
+        argv: Optional argument vector (defaults to ``sys.argv[1:]``).
+
     Returns:
-        Process exit code (always ``0``).
+        Process exit code (``0`` on success — see :mod:`cli_contract`).
     """
+    parser = build_parser(
+        "inventory",
+        "OOP library inventory and asset management demo.",
+        epilog=EXIT_CODE_EPILOG,
+    )
+    parser.parse_args(argv)
+
     manager = build_demo_inventory()
 
     print("== Initial inventory ==")
@@ -76,8 +93,8 @@ def main() -> int:
     print(f"  repr(book) -> {book!r}")
     print(f"  len(book)  -> {len(book)} pages")
     print(f"  book == copy -> {book == manager.get('B002')}")
-    return 0
+    return int(ExitCode.OK)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_cli(lambda: main()))

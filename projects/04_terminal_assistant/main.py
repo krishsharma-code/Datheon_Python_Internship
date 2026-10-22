@@ -10,12 +10,16 @@ the reply with its confidence, and appends every turn to ``conversation.jsonl``.
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 from typing import List
 
-from chatbot import ConversationLogger, IntentEngine
+# Make the repository root importable so every CLI shares one exit-code
+# contract module regardless of the directory the script is launched from.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from chatbot import ConversationLogger, IntentEngine  # noqa: E402
+from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_INTENTS = HERE / "intents.json"
@@ -39,9 +43,14 @@ def main(argv: List[str] | None = None) -> int:
         argv: Optional argument vector (defaults to ``sys.argv[1:]``).
 
     Returns:
-        Process exit code (``0`` on success, ``1`` if intents fail to load).
+        Process exit code: ``0`` on success, ``1`` if intents fail to load
+        (see :mod:`cli_contract`).
     """
-    parser = argparse.ArgumentParser(description="Rule-based terminal assistant.")
+    parser = build_parser(
+        "assistant",
+        "Rule-based terminal assistant.",
+        epilog=EXIT_CODE_EPILOG,
+    )
     parser.add_argument(
         "--intents", type=Path, default=DEFAULT_INTENTS, help="JSON intent dataset."
     )
@@ -66,7 +75,7 @@ def main(argv: List[str] | None = None) -> int:
             engine = IntentEngine.from_json(args.intents)
     except (FileNotFoundError, ValueError) as exc:
         print(f"! Could not load intents: {exc}")
-        return 1
+        return int(ExitCode.DATA_ERROR)
 
     logger = None if args.no_log else ConversationLogger(args.log)
     print("Type a message, or 'bye'/'exit'/'quit' to finish.\n")
@@ -97,8 +106,8 @@ def main(argv: List[str] | None = None) -> int:
 
     if logger:
         print(f"\nConversation saved to {logger.path}")
-    return 0
+    return int(ExitCode.OK)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_cli(lambda: main()))

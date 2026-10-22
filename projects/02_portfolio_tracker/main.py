@@ -11,12 +11,16 @@ The script collects positions, prints a formatted valuation report, and writes
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 from typing import List
 
-from portfolio import (
+# Make the repository root importable so every CLI shares one exit-code
+# contract module regardless of the directory the script is launched from.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from portfolio import (  # noqa: E402
     Portfolio,
     load_prices_from_csv,
     load_symbols_from_csv,
@@ -105,9 +109,14 @@ def main(argv: List[str] | None = None) -> int:
         argv: Optional argument vector (defaults to ``sys.argv[1:]``).
 
     Returns:
-        Process exit code.
+        Process exit code: ``0`` on success, ``1`` on a user or data error
+        (see :mod:`cli_contract`).
     """
-    parser = argparse.ArgumentParser(description="Stock portfolio performance tracker.")
+    parser = build_parser(
+        "portfolio",
+        "Stock portfolio performance tracker.",
+        epilog=EXIT_CODE_EPILOG,
+    )
     parser.add_argument(
         "--prices", type=Path, default=DEFAULT_PRICES, help="CSV file with ticker/price columns."
     )
@@ -150,8 +159,8 @@ def main(argv: List[str] | None = None) -> int:
     if portfolio.holdings:
         out = write_summary_csv(portfolio, args.output)
         print(f"\nSummary written to {out}")
-    return 0
+    return int(ExitCode.OK)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_cli(lambda: main()))
