@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
 from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
+from validators import add_strict_flag, validate_int, validate_path  # noqa: E402
 
 
 def _print_report(report) -> None:
@@ -94,7 +95,18 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument(
         "--log", type=Path, default=None, help="Write a JSON activity log to this path."
     )
+    add_strict_flag(parser)
     args = parser.parse_args(argv)
+
+    # Validate the boundary inputs up front so the failure is one clear line.
+    args.workers = validate_int(
+        args.workers, minimum=1, maximum=32 if args.strict else None, field="--workers"
+    )
+    args.directory = str(
+        validate_path(args.directory, must_be_dir=True, strict=args.strict, field="directory")
+    )
+    if args.log is not None:
+        args.log = validate_path(args.log, strict=args.strict, field="--log")
 
     print("Categories: " + ", ".join(CATEGORIES))
 
@@ -105,7 +117,7 @@ def main(argv: List[str] | None = None) -> int:
             dry_run=args.dry_run,
             detect_duplicates=args.duplicates,
         )
-    except NotADirectoryError as exc:
+    except NotADirectoryError as exc:  # pragma: no cover - caught by validate_path
         print(f"! {exc}")
         return int(ExitCode.DATA_ERROR)
 
