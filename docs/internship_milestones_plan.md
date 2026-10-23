@@ -21,7 +21,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 1 | 2026-10-21 | Scaffold & 5 core projects | `feat/datheon-day-1-scaffold` | Repo, README, LICENSE, 5 projects, 131 tests, CI | done | #1 |
 | 2 | 2026-10-21 | Official datasets integration | `feat/datheon-day-2-datasets` | Word list, S&P 500 CSV, FAQ dataset, 153 tests | done | #2 |
 | 3 | 2026-10-22 | CLI ergonomics & exit-code contract | `feat/datheon-day-3-cli-contract` | Consistent argparse, `--version`, documented exit codes across all 5 CLIs | done | #4 |
-| 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | pending | — |
+| 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | done | #5 |
 | 5 | 2026-10-24 | Edge-case handler sweep | `feat/datheon-day-5-edge-cases` | Every project's failure modes handled + regression tests | pending | — |
 | 6 | 2026-10-25 | Dataset loader hardening | `feat/datheon-day-6-loader-hardening` | Schema validation, BOM/CRLF/encoding tolerance, malformed-row reporting | pending | — |
 | 7 | 2026-10-26 | Week 1 consolidation | `feat/datheon-day-7-error-taxonomy` | Custom exception taxonomy + user-facing error catalogue + docs | pending | — |
@@ -101,37 +101,27 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 
 ## 3. Daily scheduled-run execution contract
 
-The cron job **"Datheon internship daily progress"** fires at **09:00 IST** and
-executes exactly one milestone per run, in this order:
+The cron job **"Datheon internship daily progress"** fires at **09:00 IST** and executes exactly one milestone per run, in this order:
 
 1. **Read this file.** Parse the Progress Ledger in §1.
 2. **Select the milestone:** the lowest-numbered row whose `Status` is `pending`.
    That row — and only that row — is the day's work. Its `Branch` and
    `Deliverable` columns are the mandate.
-3. **Idempotency:** a day counts as complete only when its row reads `done` and
-   carries a PR number. If a run fails partway, the row stays `pending` and the
-   next run retries it. **No day can be executed twice**, and no day can be
-   skipped.
-4. **Catch-up rule:** the `Target date` column is advisory. If a run was missed
-   or the calendar has drifted, the run still picks the earliest `pending` row —
-   it never jumps ahead. The ledger is authoritative; the calendar is a target.
-5. **Never idle:** if every row is `done`, switch to maintenance mode and take
-   the highest-value item from the Backlog (§5), or ship a reliability/polish
-   improvement. A run must always end with a merged PR.
+3. **Idempotency:** a day counts as complete only when its row reads `done` and carries a PR number. If a run fails partway, the row stays `pending` and the next run retries it. **No day can be executed twice**, and no day can be skipped.
+4. **Catch-up rule:** the `Target date` column is advisory. If a run was missed or the calendar has drifted, the run still picks the earliest `pending` row — it never jumps ahead. The ledger is authoritative; the calendar is a target.
+5. **Never idle:** if every row is `done`, switch to maintenance mode and take the highest-value item from the Backlog (§5), or ship a reliability/polish improvement. A run must always end with a merged PR.
 6. **Per-run procedure:**
    1. Inspect `projects/`, `tests/`, `docs/` and open issues to avoid duplicate work.
    2. Create the branch named in the ledger row.
    3. Implement the row's `Deliverable`, with type hints and docstrings.
    4. Add or extend tests for the change.
    5. Verify locally: `python -m compileall`, `flake8 .`, `black --check .`, `pytest`.
-   6. Update **this ledger** (mark the row `done`, record the PR number) and append
-      a dated entry to `docs/daily_learning_log.md` — in the *same* PR.
+   6. Update **this ledger** (mark the row `done`, record the PR number) and append a dated entry to `docs/daily_learning_log.md` — in the *same* PR.
    7. Open a PR targeting `main`.
    8. Submit a formal review (`COMMENT` event — GitHub blocks self-approval).
    9. Squash-merge with `feat(internship): complete Day <N> tasks (#<PR>)`.
    10. Delete the branch and report the PR link, review ID, and merge commit URL.
-7. **Hard rules:** never push directly to `main`; never commit secrets or tokens;
-   never run destructive commands; keep every run non-destructive.
+7. **Hard rules:** never push directly to `main`; never commit secrets or tokens; never run destructive commands; keep every run non-destructive.
 
 ---
 
@@ -169,8 +159,7 @@ Required to qualify for the **Datheon Verified Certificate of Completion**
 
 ### Certification
 - [ ] Code review completed on the submitted work.
-- [ ] Certificate issued — Datheon's FAQ states certificates are reviewed and
-      issued within **3–5 business days after the code review**.
+- [ ] Certificate issued — Datheon's FAQ states certificates are reviewed and issued within **3–5 business days after the code review**.
 - [ ] Verified certificate received: QR-coded credential + unique verification hash.
 - [ ] Letter of Recommendation (LOR) — considered for top-performing candidates.
 

@@ -20,6 +20,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from chatbot import ConversationLogger, IntentEngine  # noqa: E402
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from validators import (  # noqa: E402
+    ValidationError,
+    add_strict_flag,
+    validate_message,
+    validate_path,
+)
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_INTENTS = HERE / "intents.json"
@@ -64,7 +70,14 @@ def main(argv: List[str] | None = None) -> int:
         "--log", type=Path, default=DEFAULT_LOG, help="JSONL conversation log path."
     )
     parser.add_argument("--no-log", action="store_true", help="Disable conversation logging.")
+    add_strict_flag(parser)
     args = parser.parse_args(argv)
+
+    if args.strict:
+        if args.faq is not None:
+            args.faq = validate_path(args.faq, must_be_file=True, field="--faq")
+        else:
+            args.intents = validate_path(args.intents, must_be_file=True, field="--intents")
 
     print(BANNER)
     try:
@@ -86,6 +99,12 @@ def main(argv: List[str] | None = None) -> int:
         except (EOFError, KeyboardInterrupt):
             print("\n(interrupted)")
             break
+
+        try:
+            user_input = validate_message(user_input, strict=args.strict, field="input")
+        except ValidationError as exc:
+            print(f"  ! {exc}")
+            continue
 
         if logger:
             logger.log("user", user_input)

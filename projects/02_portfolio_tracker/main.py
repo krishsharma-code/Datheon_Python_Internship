@@ -26,6 +26,14 @@ from portfolio import (  # noqa: E402
     load_symbols_from_csv,
     write_summary_csv,
 )
+from validators import (  # noqa: E402
+    ValidationError,
+    add_strict_flag,
+    validate_path,
+    validate_price,
+    validate_quantity,
+    validate_symbol,
+)
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_PRICES = HERE / "data" / "sample_prices.csv"
@@ -41,17 +49,40 @@ DEMO_POSITIONS: List[tuple] = [
 ]
 
 
-def _load_prices(path: Path) -> dict:
-    """Load the price table, degrading gracefully if the file is missing."""
+def _load_prices(path: Path, *, strict: bool = False) -> dict:
+    """Load the price table, degrading gracefully if the file is missing.
+
+    Args:
+        path: The price CSV to load.
+        strict: When ``True``, a missing file is a hard error rather than a
+            silent fallback to buy prices.
+
+    Returns:
+        A symbol → price mapping (empty when the file is missing and the run is
+        not strict).
+
+    Raises:
+        ValidationError: In strict mode, if the file does not exist.
+    """
     try:
         return load_prices_from_csv(path)
     except FileNotFoundError:
+        if strict:
+            raise ValidationError(f"--prices: file not found: {path} — e.g. data/sample_prices.csv")
         print(f"! Price file not found at {path}. Falling back to buy prices.")
         return {}
 
 
-def _prompt_positions(portfolio: Portfolio) -> None:
-    """Read positions from standard input until the user submits a blank line."""
+def _prompt_positions(portfolio: Portfolio, *, strict: bool = False) -> None:
+    """Read positions from standard input until the user submits a blank line.
+
+    Each field is validated with the shared validators, so a bad line produces
+    a single actionable message and the loop continues.
+
+    Args:
+        portfolio: The portfolio to add positions to.
+        strict: Forwarded to the validators (ticker shape, plain numbers).
+    """
     print("\nEnter positions as:  SYMBOL  SHARES  BUY_PRICE  [CURRENT_PRICE]")
     print("Leave the symbol blank and press Enter when you are done.\n")
     while True:
@@ -64,19 +95,22 @@ def _prompt_positions(portfolio: Portfolio) -> None:
             return
         parts = line.replace(",", " ").split()
         if len(parts) < 3:
-            print("  ! Expected at least SYMBOL SHARES BUY_PRICE.")
+            print("  ! line: expected SYMBOL SHARES BUY_PRICE [CURRENT_PRICE] — e.g. AAPL 10 150")
             continue
-        symbol, shares_raw, buy_raw = parts[0], parts[1], parts[2]
-        current_raw = parts[3] if len(parts) > 3 else None
         try:
-            shares = float(shares_raw)
-            buy_price = float(buy_raw)
-            current_price = float(current_raw) if current_raw else None
+            symbol = validate_symbol(parts[0], strict=strict, field="symbol")
+            shares = validate_quantity(parts[1], strict=strict, field="shares")
+            buy_price = validate_price(parts[2], strict=strict, field="buy price")
+            current_price = (
+                validate_price(parts[3], strict=strict, field="current price")
+                if len(parts) > 3
+                else None
+            )
             portfolio.add(symbol, shares, buy_price, current_price)
-        except ValueError as exc:
+        except ValidationError as exc:
             print(f"  ! {exc}")
             continue
-        print(f"  + Added {symbol.upper()}")
+        print(f"  + Added {symbol}")
 
 
 def _print_report(portfolio: Portfolio) -> None:
@@ -132,20 +166,23 @@ def main(argv: List[str] | None = None) -> int:
         default=None,
         help="Optional constituents CSV used to flag unknown tickers.",
     )
+    add_strict_flag(parser)
     args = parser.parse_args(argv)
 
-    prices = _load_prices(args.prices)
+    prices = _load_prices(args.prices, strict=args.strict)
     portfolio = Portfolio.from_prices(prices)
 
     if args.demo:
         for symbol, shares, buy in DEMO_POSITIONS:
             portfolio.add(symbol, shares, buy)
     else:
-        _prompt_positions(portfolio)
+        _prompt_positions(portfolio, strict=args.strict)
 
     _print_report(portfolio)
 
     if args.constituents is not None:
+        if args.strict:
+            validate_path(args.constituents, must_be_file=True, field="--constituents")
         try:
             universe = load_symbols_from_csv(args.constituents)
         except (FileNotFoundError, ValueError) as exc:
@@ -154,6 +191,11 @@ def main(argv: List[str] | None = None) -> int:
             unknown = portfolio.unknown_symbols(universe)
             print(f"\nValidated against {len(universe):,} known symbols.")
             if unknown:
+                if args.strict:
+                    raise ValidationError(
+                        "--constituents: unknown tickers "
+                        f"{', '.join(unknown)} — not in the reference list"
+                    )
                 print(f"  ! Not found in the reference list: {', '.join(unknown)}")
 
     if portfolio.holdings:

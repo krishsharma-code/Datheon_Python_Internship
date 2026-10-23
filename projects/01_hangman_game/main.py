@@ -25,6 +25,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
 from hangman import HangmanGame, ScoreBoard  # noqa: E402
+from validators import (  # noqa: E402
+    ValidationError,
+    add_strict_flag,
+    validate_int,
+    validate_letter,
+    validate_path,
+)
 from words import (  # noqa: E402
     DEFAULT_CATEGORY,
     categories,
@@ -64,13 +71,15 @@ def choose_category() -> str:
     return choice
 
 
-def play_round(word: str, source_label: str) -> bool:
+def play_round(word: str, source_label: str, strict: bool = False) -> bool:
     """Play one full round of Hangman for a given secret word.
 
     Args:
         word: The secret word for this round.
         source_label: A human-readable description of where the word came
             from, shown to the player.
+        strict: When ``True``, only ASCII letters (``a``–``z``) are accepted as
+            guesses, and the reason is spelled out on rejection.
 
     Returns:
         ``True`` if the player guessed the word, ``False`` otherwise.
@@ -93,8 +102,8 @@ def play_round(word: str, source_label: str) -> bool:
             raise SystemExit(int(ExitCode.OK))
 
         try:
-            result = game.guess(raw)
-        except ValueError as exc:
+            result = game.guess(validate_letter(raw, strict=strict, field="guess"))
+        except ValidationError as exc:
             print(f"  ! {exc}")
             continue
 
@@ -157,6 +166,7 @@ def main(argv: List[str] | None = None) -> int:
         load (see :mod:`cli_contract`).
     """
     parser = build_parser("hangman", "Console Hangman game.", epilog=EXIT_CODE_EPILOG)
+    add_strict_flag(parser)
     parser.add_argument(
         "--categories",
         action="store_true",
@@ -182,6 +192,15 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Reject nonsensical length bounds before any file I/O happens.
+    args.min_length = validate_int(args.min_length, minimum=1, field="--min-length")
+    if args.max_length is not None:
+        args.max_length = validate_int(
+            args.max_length, minimum=args.min_length, field="--max-length"
+        )
+    if args.strict and args.words_file is not None:
+        args.words_file = validate_path(args.words_file, must_be_file=True, field="--words-file")
+
     word_list = _load_word_list(args)
 
     print(BANNER)
@@ -197,7 +216,7 @@ def main(argv: List[str] | None = None) -> int:
             word = get_random_word(category)
             label = f"the '{category}' category"
 
-        score.record(play_round(word, label))
+        score.record(play_round(word, label, strict=args.strict))
 
         print(
             f"Score — played: {score.played} | wins: {score.wins} | "
