@@ -43,6 +43,31 @@ matter how the script is launched:
 | Task 4 — Terminal assistant | `assistant` | `projects/04_terminal_assistant/main.py` |
 | Task 5 — Inventory (OOP) | `inventory` | `projects/05_inventory_oop/main.py` |
 
+## Strict input validation (`--strict`)
+
+Every tool also accepts a shared `--strict` switch, wired through
+[`validators.py`](../validators.py). In the default **lenient** mode the tools
+coerce whatever can be coerced (trim whitespace, upper-case tickers, parse
+`str` numbers). In **strict** mode they additionally enforce the documented
+shape of each value and refuse anything ambiguous, always with one actionable
+message and exit code `1`:
+
+| Validator | Lenient | Strict additionally requires |
+| --- | --- | --- |
+| `validate_symbol` | non-empty, upper-cased | a well-formed ticker (`AAPL`, `RELIANCE.NS`), ≤ 15 chars |
+| `validate_quantity` | finite number > 0 | a plain decimal literal (no `1,000`) |
+| `validate_price` | finite number ≥ 0 | a plain decimal literal in `[0, 1e9]` |
+| `validate_int` | whole number | a plain integer literal (no `1_000`), within bounds |
+| `validate_path` | expanded `Path` | the parent directory exists |
+| `validate_letter` | one letter | an ASCII letter (`a`–`z`) |
+| `validate_date` | ISO date, not in the future | — |
+| `validate_name` | non-empty | ≤ 60 chars, no control characters |
+| `validate_message` | any text | non-empty, ≤ 500 chars |
+
+Failures raise `ValidationError`, a `ValueError` subclass, so `run_cli` maps
+them onto exit code `1` automatically. The layer is covered by
+[`tests/test_validation.py`](../tests/test_validation.py).
+
 ## How it is wired
 
 Each entry point imports `build_parser` to obtain an `ArgumentParser` that
