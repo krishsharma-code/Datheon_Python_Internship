@@ -216,3 +216,79 @@ tests and CI.
 ### Next up
 
 - Day 4: strict input validators and a `--strict` mode with actionable errors.
+
+---
+
+## Day 4 — Input validation layer
+
+**Branch:** `feat/datheon-day-4-validation`
+**PR:** #5
+**Scope:** Reject bad input early, in every CLI, with a single actionable message.
+
+### Milestones
+
+- Added `validators.py`, a shared, pure validation layer: `validate_symbol`,
+  `validate_quantity`, `validate_price`, `validate_int`, `validate_path`,
+  `validate_letter`, `validate_date`, `validate_name`, `validate_message`, and
+  the `add_strict_flag` helper.
+- Every one of the five CLIs now exposes `--strict` and validates its boundary
+  inputs before doing any work.
+- Added `tests/test_validation.py` (64 tests) covering both modes, the error
+  messages, and the end-to-end `--strict` behaviour of all five tools.
+- Documented the layer in `docs/cli_contract.md`.
+
+### Architectural decisions
+
+1. **Lenient by default, strict on request.** The tools keep their friendly
+   behaviour (trim whitespace, upper-case tickers, parse `str` numbers) unless
+   `--strict` is passed, at which point they additionally enforce the *shape*
+   of each value. This keeps Day 1-3 behaviour intact while offering a hard
+   mode for scripting.
+2. **One error type, mapped once.** Every failure raises `ValidationError`, a
+   `ValueError` subclass. Because `cli_contract.run_cli` already maps
+   `ValueError` onto exit code `1`, the new layer needs no wiring in the exit
+   contract — a bad value becomes a clean message instead of a traceback.
+3. **Messages are actionable.** Each message names the field, quotes the
+   offending value, and shows a concrete example of valid input
+   (`"--prices: file not found: X — e.g. data/sample_prices.csv"`), so the
+   user can fix the problem without reading the source.
+4. **Pure functions, no I/O, no printing.** The validators never print and
+   never mutate global state, so they are trivially unit-testable and reusable
+   from both the interactive shells and the pure cores.
+5. **Validate at the boundary.** Paths, counts, and bounds are checked up
+   front, before any filesystem access, so failures are cheap and consistent
+   across tools.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `validate_symbol` | validators | O(S) | O(S) | S = symbol length; regex full-match |
+| `validate_quantity` / `validate_price` | validators | O(1) | O(1) | `float()` + finiteness check |
+| `validate_int` | validators | O(D) | O(1) | D = digit count |
+| `validate_path` | validators | O(1) | O(1) | Existence checks are `stat` calls |
+| `validate_date` | validators | O(1) | O(1) | `date.fromisoformat` |
+| `_prompt_positions` (portfolio) | main | O(L) | O(1) | L input lines, one validation pass each |
+
+### Edge cases covered by tests
+
+- Symbols: empty/whitespace, over-long, non-ticker shapes (`9LIVES`,
+  `AAPL US`); strict accepts `RELIANCE.NS` and `BRK-B`.
+- Numbers: zero/negative quantities, `NaN`/`inf`, strict rejects `1,000` and
+  `₹150`; prices allow zero by default and reject values above the strict cap.
+- Integers: non-integers (`4.0`), bounds, strict rejects `1_000`.
+- Paths: missing files/directories, wrong kind, strict requires an existing
+  parent.
+- Letters: multi-character, digits, empty; strict rejects non-ASCII letters.
+- Dates: bad formats, future dates, `allow_future` override.
+- Names/messages: empty, over-long, control characters; strict message limits.
+- CLI: `--strict` appears in every `--help`; `--min-length 0`, `--workers 0`,
+  a missing price file under `--strict`, an unknown ticker, an empty borrower,
+  `--days 0`, and a future `--borrow-date` each exit `1` with the field named
+  in stderr — while the same invocations without `--strict` still succeed.
+
+### Next up
+
+- Day 5: an edge-case handler sweep — close every remaining failure mode
+  (empty directories, permission errors, name collisions, interrupted input)
+  with a regression test each.

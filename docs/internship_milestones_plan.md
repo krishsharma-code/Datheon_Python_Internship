@@ -1,9 +1,9 @@
-# Datheon Python Internship â€” 4-Week Engineering Progression Plan
+# Datheon Python Internship â€” 4-Week Engineering Progression Plan  
 
 **Repository:** `krishsharma-code/Datheon_Python_Internship`
 **Credential ID:** DT-2026-O6Q0X Â· **Intern:** Krish Sharma
 **Program:** Python Programming Internship â€” Batch 01 Â· 2026 Cohort
-**Plan window:** Day 3 â†’ Day 28
+**Plan window;** Day 3 â†’ Day 28
 
 > This file is the **single source of truth** for the daily scheduled run.
 > The 09:00 IST cron job reads the Progress Ledger below, executes the earliest
@@ -21,7 +21,7 @@ Status values: `pending` Â· `in-progress` Â· `done` Â· `blocked`.
 | 1 | 2026-10-21 | Scaffold & 5 core projects | `feat/datheon-day-1-scaffold` | Repo, README, LICENSE, 5 projects, 131 tests, CI | done | #1 |
 | 2 | 2026-10-21 | Official datasets integration | `feat/datheon-day-2-datasets` | Word list, S&P 500 CSV, FAQ dataset, 153 tests | done | #2 |
 | 3 | 2026-10-22 | CLI ergonomics & exit-code contract | `feat/datheon-day-3-cli-contract` | Consistent argparse, `--version`, documented exit codes across all 5 CLIs | done | #4 |
-| 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | pending | â€” |
+| 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | done | #5 |
 | 5 | 2026-10-24 | Edge-case handler sweep | `feat/datheon-day-5-edge-cases` | Every project's failure modes handled + regression tests | pending | â€” |
 | 6 | 2026-10-25 | Dataset loader hardening | `feat/datheon-day-6-loader-hardening` | Schema validation, BOM/CRLF/encoding tolerance, malformed-row reporting | pending | â€” |
 | 7 | 2026-10-26 | Week 1 consolidation | `feat/datheon-day-7-error-taxonomy` | Custom exception taxonomy + user-facing error catalogue + docs | pending | â€” |
@@ -130,61 +130,42 @@ executes exactly one milestone per run, in this order:
    8. Submit a formal review (`COMMENT` event â€” GitHub blocks self-approval).
    9. Squash-merge with `feat(internship): complete Day <N> tasks (#<PR>)`.
    10. Delete the branch and report the PR link, review ID, and merge commit URL.
-7. **Hard rules:** never push directly to `main`; never commit secrets or tokens;
-   never run destructive commands; keep every run non-destructive.
-
----
-
-## 4. Final submission deliverables checklist
-
-Required to qualify for the **Datheon Verified Certificate of Completion**
-(Credential ID `DT-2026-O6Q0X`).
-
-### Repository
-- [ ] Public repository named exactly **`Datheon_Python_Internship`** on GitHub.
-- [ ] **Minimum 2â€“3 completed task-pack tasks** â€” this repo implements **all 5**.
-- [ ] `README.md` with installation, architecture, and quickstart commands.
-- [ ] `LICENSE` (MIT, 2026 Krish Sharma), `CONTRIBUTING.md`, strict `.gitignore`.
-- [ ] Full docstrings and type hints on all public callables.
-
-### Quality
-- [ ] Test suite green â€” target **200+ assertions**, â‰¥ **90%** coverage.
-- [ ] CI pipeline green across the multi-OS / multi-Python matrix.
-- [ ] Linting clean (`flake8`) and formatting clean (`black --check`).
-- [ ] No secrets, tokens, or credentials anywhere in history.
-
-### Delivery
-- [ ] Installable package with console entry points (Day 22).
-- [ ] Tagged release with `CHANGELOG.md` and attached build artefacts (Day 26).
-- [ ] Generated documentation site (Day 25), linked from the README.
-
-### Proof of work (Datheon requirements)
-- [ ] **LinkedIn walkthrough post tagging @Datheon** â€” done on 2026-10-21 âœ…
-      (offer announcement; see `Datheon_LinkedIn_Post.md`).
-- [ ] Optional: short **video walkthrough** of one project for the LinkedIn post.
-- [ ] **Final LinkedIn post** (Option C) published once the internship completes.
-- [ ] Credential ID **DT-2026-O6Q0X** verified on the Datheon portal
-      (`https://datheon.in/verify?id=DT-2026-O6Q0X`).
-- [ ] Repository link submitted through the **Datheon Student Workspace**.
-
-### Certification
-- [ ] Code review completed on the submitted work.
-- [ ] Certificate issued â€” Datheon's FAQ states certificates are reviewed and
-      issued within **3â€“5 business days after the code review**.
-- [ ] Verified certificate received: QR-coded credential + unique verification hash.
-- [ ] Letter of Recommendation (LOR) â€” considered for top-performing candidates.
-
----
-
-## 5. Backlog / stretch (maintenance mode)
-
-Used only when every ledger row is `done`, or to fill spare capacity:
-
-- Add a `--json` output mode to every CLI for machine-readable results.
-- Ship a GitHub Actions workflow that publishes coverage to Codecov.
-- Add a benchmark harness with `pytest-benchmark` and a regression budget.
-- Add Docker packaging for the organizer as a cron-friendly container.
-- Add a `pre-commit` configuration (black, flake8, end-of-file-fixer).
-- Add type checking (`mypy`/`pyright`) to CI once annotations are complete.
-- Add a `SECURITY.md` and a `CODE_OF_CONDUCT.md`.
-- Record a 2-minute demo video for the LinkedIn walkthrough.
+7. **Hard,[\ÎŠŠˆ™]™\ˆ\Ú\™XİHÈXZ[˜È™]™\ˆÛÛ[Z]ÙXÜ™]ÈÜˆÚÙ[œÎÂˆ™]™\ˆ[ˆ\İXİ]™HÛÛ[X[™ÎÈÙY\]™\H[ˆ›Û‹Y\İXİ]™K‚‚‹KKB‚ˆÈÈˆš[˜[İX›Z\ÜÚ[Ûˆ[]™\˜X›\ÈÚXÚÛ\İ‚”™\]Z\™YÈ]X[YH›ÜˆH
+Š‘][Ûˆ™\šYšYYÙ\YšXØ]HÙˆÛÛ\][ÛŠŠ‚ŠÜ™Y[X[QLŒ‹SÍ”L
+K‚‚ˆÈÈÈ™\ÜÚ]ÜB‹HÈHX›XÈ™\ÜÚ]ÜH˜[YY^XİH
+Š˜][Û—Ô]Û—Ò[\›œÚ\
+ŠˆÛˆÚ]X‹‚‹HÈH
+Š“Z[š[][H¸ $ÌÈÛÛ\]Y\ÚË\XÚÈ\ÚÜÊŠˆ8 %\È™\È[\[Y[È
+Š˜[JŠ‹‚‹HÈH‘PQQK›YÚ][œİ[][Û‹\˜Ú]Xİ\™K[™]ZXÚÜİ\ÛÛ[X[™Ë‚‹HÈHPÑS”ÑX
+RUŒˆÜš\ÚÚ\›XJKÓÓ•’P•US‘Ë›YİšXİ™Ú]YÛ›Ü™X‚‹HÈH[ØÜİš[™ÜÈ[™\H[ÈÛˆ[X›XÈØ[X›\Ë‚‚ˆÈÈÈ]X[]B‹HÈH\İİZ]HÜ™Y[ˆ8 %\™Ù]
+ŠŒŒ
+È\ÜÙ\[ÛœÊŠ‹8¢iH
+ŠL	JŠˆÛİ™\˜YÙK‚‹HÈHÒH\[[™HÜ™Y[ˆXÜ›ÜÜÈH][KSÔÈÈ][KT]ÛˆX]š^‚‹HÈH[[™ÈÛX[ˆ
+›ZÙN
+H[™›Ü›X][™ÈÛX[ˆ
+›XÚÈKXÚXÚØ
+K‚‹HÈH›ÈÙXÜ™]ËÚÙ[œËÜˆÜ™Y[X[È[]Ú\™H[ˆ\İÜK‚‚ˆÈÈÈ[]™\B‹HÈH[œİ[X›HXÚØYÙHÚ]ÛÛœÛÛH[HÚ[È
+^HŒŠK‚‹HÈHYÙÙY™[X\ÙHÚ]ÒS‘ÑSÑË›Y[™]XÚYZ[\Y˜XİÈ
+^HŠK‚‹HÈHÙ[™\˜]YØİ[Y[][ÛˆÚ]H
+^HJK[šÙYœ›ÛHH‘PQQK‚‚ˆÈÈÈ›ÛÙˆÙˆÛÜšÈ
+][Ûˆ™\]Z\™[Y[ÊB‹HÈH
+Š“[šÙY[ˆØ[İ›İYÚÜİYÙÚ[™È][ÛŠŠˆ8 %Û™HÛˆŒ‹LLLŒH8§!Bˆ
+Ù™™\ˆ[››İ[˜Ù[Y[ÈÙYH][Û—Ó[šÙY[—ÔÜİ›Y
+K‚‹HÈHÜ[Û˜[ˆÚÜ
+ŠšY[ÈØ[İ›İYÚ
+ŠˆÙˆÛ™H›Ú™Xİ›ÜˆH[šÙY[ˆÜİ‚‹HÈH
+Š‘š[˜[[šÙY[ˆÜİ
+Šˆ
+Ü[ÛˆÊHX›\ÚYÛ˜ÙHH[\›œÚ\ÛÛ\]\Ë‚‹HÈHÜ™Y[X[Q
+Š‘LŒ‹SÍ”L
+Šˆ™\šYšYYÛˆH][ÛˆÜ[ˆ
+Î‹ËÙ][Û‹š[‹İ™\šYOÚYQLŒ‹SÍ”L
+K‚‹HÈH™\ÜÚ]ÜH[šÈİX›Z]Y›İYÚH
+Š‘][ÛˆİY[ÛÜšÜÜXÙJŠ‹‚‚ˆÈÈÈÙ\YšXØ][Û‚‹HÈHÛÙH™]šY]ÈÛÛ\]YÛˆHİX›Z]YÛÜšË‚‹HÈHÙ\YšXØ]H\ÜİYY8 %][Û‰ÜÈTHİ]\ÈÙ\YšXØ]\È\™H™]šY]ÙY[™ˆ\ÜİYYÚ][ˆ
+ŠŒø $ÍH\Ú[™\ÜÈ^\ÈY\ˆHÛÙH™]šY]ÊŠ‹‚‹HÈH™\šYšYYÙ\YšXØ]H™XÙZ]™YˆT‹XÛÙYÜ™Y[X[
+È[š\]YH™\šYšXØ][Ûˆ\Ú‚‹HÈH]\ˆÙˆ™XÛÛ[Y[™][Ûˆ
+ÔŠH8 %ÛÛœÚY\™Y›ÜˆÜ\\™›Ü›Z[™ÈØ[™Y]\Ë‚‚‹KKB‚ˆÈÈKˆ˜XÚÛÙÈÈİ™]Ú
+XZ[[˜[˜ÙH[ÙJB‚•\ÙYÛ›HÚ[ˆ]™\HYÙ\ˆ›İÈ\ÈÛ™XÜˆÈš[Ü\™HØ\XÚ]N‚‚‹HYHKZœÛÛ˜İ]][ÙHÈ]™\HÓH›ÜˆXXÚ[™K\™XYX›H™\İ[Ë‚‹HÚ\HÚ]XˆXİ[ÛœÈÛÜšÙ›İÈ]X›\Ú\ÈÛİ™\˜YÙHÈÛÙXÛİ‹‚‹HYH™[˜ÚX\šÈ\›™\ÜÈÚ]]\İX™[˜ÚX\šØ[™H™YÜ™\ÜÚ[ÛˆYÙ]‚‹HYØÚÙ\ˆXÚØYÚ[™È›ÜˆHÜ™Ø[š^™\ˆ\ÈHÜ›Û‹YœšY[™HÛÛZ[™\‹‚‹HYH™KXÛÛ[Z]ÛÛ™šYİ\˜][Ûˆ
+›XÚË›ZÙN[™[Ù‹Yš[KYš^\ŠK‚‹HY\HÚXÚÚ[™È
+^\XØ\šYÚ
+HÈÒHÛ˜ÙH[››İ][ÛœÈ\™HÛÛ\]K‚‹HYHÑPÕT’UK›Y[™HÓÑWÓÑ—ĞÓÓ‘PÕ›Y‚‹H™XÛÜ™H‹[Z[]H[[ÈšY[È›ÜˆH[šÙY[ˆØ[İ›İYÚ‚
