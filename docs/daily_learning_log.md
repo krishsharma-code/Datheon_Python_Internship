@@ -292,3 +292,85 @@ tests and CI.
 - Day 5: an edge-case handler sweep — close every remaining failure mode
   (empty directories, permission errors, name collisions, interrupted input)
   with a regression test each.
+
+---
+
+## Day 5 — Edge-case handler sweep
+
+**Branch:** `feat/datheon-day-5-edge-cases`
+**PR:** #6
+**Scope:** Close every remaining failure mode so no shell-level edge case ends
+in an unhandled traceback.
+
+### Milestones
+
+- Added `edge_cases.py`, the shared edge-case layer: `safe_input` +
+  `InputClosed` (EOF/`Ctrl-C`), `check_file_size` (a 64 MiB input guard),
+  `iter_files` (permission-aware, sorted directory listing), and
+  `guard_broken_pipe`.
+- `cli_contract.run_cli` now maps `BrokenPipeError` and `KeyboardInterrupt`
+  onto a clean exit `0`. Because `BrokenPipeError` subclasses `OSError`, it is
+  caught *first* so a closed pipe is not misread as a data error.
+- The organizer lists files through `iter_files` and its collision search is
+  bounded (`unique_destination(..., max_attempts=...)`).
+- The words, portfolio and chatbot loaders reject oversized inputs up front
+  and re-raise a `PermissionError` that names the offending file.
+- The hangman and assistant shells read input through `safe_input`; the
+  assistant disables logging gracefully if the log cannot be written.
+- Added `tests/test_edge_cases.py` (33 tests); the suite is now **276 tests**
+  (243 before) and **365 assertions** (263 before).
+- Documented the failure-mode contract in `docs/cli_contract.md`.
+
+### Architectural decisions
+
+1. **One shared layer, five consumers.** Like `validators.py`, the new module
+   owns the low-level failure handling so a fix lands once. Each project keeps
+   only the wiring that is specific to it.
+2. **Classify before you catch.** `BrokenPipeError` is a subclass of
+   `OSError`, so `run_cli` catches it before the generic `OSError` arm —
+   otherwise a closed pipe would be reported as a data error. The ordering of
+   `except` clauses *is* the behaviour here.
+3. **Fail before you read.** `check_file_size` rejects an oversized file before
+   it is opened, so a wrong path or a log file cannot pull gigabytes into
+   memory; the guard is a `stat`, not a read.
+4. **Name the offender.** Every permission/size error names the exact file or
+   directory, so a user can fix it without reading the source — the same
+   actionable-message rule the Day 4 validators established.
+5. **Degrade, don't die.** A failed conversation-log write disables logging for
+   the rest of the session instead of aborting the REPL; the interactive loop
+   is more valuable than its audit trail.
+6. **Bounded, not infinite.** The collision search stops after a fixed number
+   of attempts and raises `FileExistsError`, turning a possible infinite loop
+   into a recorded per-file error.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `safe_input` | edge_cases | O(1) | O(1) | Wraps one `input()` call |
+| `check_file_size` | edge_cases | O(1) | O(1) | Single `stat` |
+| `iter_files` | edge_cases | O(N log N) | O(N) | N entries, sorted by name |
+| `guard_broken_pipe` | edge_cases | O(1) | O(1) | One `open` + `dup2` |
+| `unique_destination` (bounded) | organizer | O(A) | O(1) | A ≤ `max_attempts` `exists()` calls |
+
+### Edge cases covered by tests
+
+- Empty directory: the organizer reports “No files found to organise” and
+  exits `0`.
+- Permission errors: an unlistable directory (`chmod 000`) raises a named
+  `PermissionError` from `iter_files`, `organize` and `find_duplicates`; an
+  unreadable input file raises one from each loader.
+- Oversized input: every loader rejects a file over the size limit.
+- Name collision: `unique_destination` renames on collision and raises
+  `FileExistsError` once `max_attempts` is exhausted.
+- Interrupted input: `safe_input` raises `InputClosed` on EOF and on
+  `Ctrl-C`; the hangman and assistant CLIs exit `0` with no traceback on a
+  closed stdin.
+- Broken pipe: `run_cli` returns exit `0` for a raised `BrokenPipeError`, both
+  in-process and in a subprocess.
+- `KeyboardInterrupt` escaping a CLI body is mapped to exit `0`.
+
+### Next up
+
+- Day 6: harden the three dataset loaders — schema validation, BOM/CRLF
+  tolerance, encoding fallbacks, and malformed-row reporting with line numbers.
