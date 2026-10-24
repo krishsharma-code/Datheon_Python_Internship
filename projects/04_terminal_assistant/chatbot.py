@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+from edge_cases import check_file_size
+
 #: Inputs that end the session.
 DEFAULT_EXIT_COMMANDS = ("bye", "exit", "quit", "goodbye", "stop")
 
@@ -271,13 +273,20 @@ class IntentEngine:
 
         Raises:
             FileNotFoundError: If ``path`` does not exist.
-            ValueError: If the file is not valid JSON or lacks intents.
+            PermissionError: If ``path`` cannot be read.
+            ValueError: If the file is not valid JSON, lacks intents, or exceeds
+                :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
         """
         json_path = Path(path)
-        if not json_path.is_file():
-            raise FileNotFoundError(f"Intent file not found: {json_path}")
+        check_file_size(json_path, field="intent file")
         try:
-            data = json.loads(json_path.read_text(encoding="utf-8"))
+            text = json_path.read_text(encoding="utf-8")
+        except PermissionError as exc:
+            raise PermissionError(
+                f"intent file is not readable (permission denied): {json_path}"
+            ) from exc
+        try:
+            data = json.loads(text)
         except json.JSONDecodeError as exc:
             raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
 
@@ -313,13 +322,20 @@ class IntentEngine:
 
         Raises:
             FileNotFoundError: If ``path`` does not exist.
-            ValueError: If the file is not valid JSON or has no usable FAQs.
+            PermissionError: If ``path`` cannot be read.
+            ValueError: If the file is not valid JSON, has no usable FAQs, or
+                exceeds :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
         """
         json_path = Path(path)
-        if not json_path.is_file():
-            raise FileNotFoundError(f"FAQ file not found: {json_path}")
+        check_file_size(json_path, field="FAQ file")
         try:
-            data = json.loads(json_path.read_text(encoding="utf-8"))
+            text = json_path.read_text(encoding="utf-8")
+        except PermissionError as exc:
+            raise PermissionError(
+                f"FAQ file is not readable (permission denied): {json_path}"
+            ) from exc
+        try:
+            data = json.loads(text)
         except json.JSONDecodeError as exc:
             raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
 
