@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Union
 
+from edge_cases import check_file_size
+
 #: Header names (lower-cased) accepted as the ticker column in a price CSV.
 _SYMBOL_KEYS = ("symbol", "ticker", "code")
 
@@ -271,15 +273,23 @@ def load_prices_from_csv(path: Union[str, Path]) -> Dict[str, float]:
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
-        ValueError: If the required columns are missing or a price is not
-            numeric.
+        PermissionError: If ``path`` cannot be read.
+        ValueError: If the required columns are missing, a price is not
+            numeric, or ``path`` exceeds
+            :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
     """
     csv_path = Path(path)
-    if not csv_path.is_file():
-        raise FileNotFoundError(f"Price file not found: {csv_path}")
+    check_file_size(csv_path, field="price file")
+
+    try:
+        handle = csv_path.open(newline="", encoding="utf-8")
+    except PermissionError as exc:
+        raise PermissionError(
+            f"price file is not readable (permission denied): {csv_path}"
+        ) from exc
 
     prices: Dict[str, float] = {}
-    with csv_path.open(newline="", encoding="utf-8") as handle:
+    with handle:
         reader = csv.DictReader(handle)
         headers = reader.fieldnames or []
         symbol_key = _detect_key(headers, _SYMBOL_KEYS)
@@ -320,14 +330,22 @@ def load_symbols_from_csv(path: Union[str, Path]) -> Dict[str, str]:
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
-        ValueError: If no ticker column can be identified.
+        PermissionError: If ``path`` cannot be read.
+        ValueError: If no ticker column can be identified, or ``path`` exceeds
+            :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
     """
     csv_path = Path(path)
-    if not csv_path.is_file():
-        raise FileNotFoundError(f"Constituents file not found: {csv_path}")
+    check_file_size(csv_path, field="constituents file")
+
+    try:
+        handle = csv_path.open(newline="", encoding="utf-8")
+    except PermissionError as exc:
+        raise PermissionError(
+            f"constituents file is not readable (permission denied): {csv_path}"
+        ) from exc
 
     symbols: Dict[str, str] = {}
-    with csv_path.open(newline="", encoding="utf-8") as handle:
+    with handle:
         reader = csv.DictReader(handle)
         headers = reader.fieldnames or []
         symbol_key = _detect_key(headers, _SYMBOL_KEYS)

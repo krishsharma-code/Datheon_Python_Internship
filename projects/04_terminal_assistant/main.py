@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from chatbot import ConversationLogger, IntentEngine  # noqa: E402
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from edge_cases import InputClosed, safe_input  # noqa: E402
 from validators import (  # noqa: E402
     ValidationError,
     add_strict_flag,
@@ -40,6 +41,36 @@ BANNER = r"""
  |____/ \__,_|\__|_| |_|\___|\___/|_| |_|
  Rule-Based Terminal Assistant — Datheon Task 4
 """
+
+
+def _log_turn(
+    logger: ConversationLogger,
+    role: str,
+    text: str,
+    **extra: object,
+) -> Optional[ConversationLogger]:
+    """Append one turn to the conversation log, degrading gracefully on failure.
+
+    A full disk or an unwritable log path must not abort the session: the
+    failure is reported once and logging is switched off for the rest of the
+    run.
+
+    Args:
+        logger: The active :class:`ConversationLogger`.
+        role: ``"user"`` or ``"assistant"``.
+        text: The turn's text.
+        **extra: Extra fields forwarded to :meth:`ConversationLogger.log`
+            (``intent``, ``confidence``).
+
+    Returns:
+        The logger to keep using, or ``None`` once it has been disabled.
+    """
+    try:
+        logger.log(role, text, **extra)
+    except OSError as exc:
+        print(f"  ! could not write the conversation log ({exc}); logging disabled.")
+        return None
+    return logger
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -95,8 +126,8 @@ def main(argv: List[str] | None = None) -> int:
 
     while True:
         try:
-            user_input = input("you > ")
-        except (EOFError, KeyboardInterrupt):
+            user_input = safe_input("you > ")
+        except InputClosed:
             print("\n(interrupted)")
             break
 
@@ -107,13 +138,14 @@ def main(argv: List[str] | None = None) -> int:
             continue
 
         if logger:
-            logger.log("user", user_input)
+            logger = _log_turn(logger, "user", user_input)
 
         response = engine.respond(user_input)
         print(f"bot > {response.text}  [{response.intent} · {response.confidence:.0%}]")
 
         if logger:
-            logger.log(
+            logger = _log_turn(
+                logger,
                 "assistant",
                 response.text,
                 intent=response.intent,
