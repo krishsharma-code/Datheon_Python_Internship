@@ -179,3 +179,12 @@ def test_write_json_log(tmp_path):
 def test_category_map_covers_common_types():
     assert ".pdf" in CATEGORY_MAP
     assert ".py" in CATEGORY_MAP
+
+
+def test_unique_destination_gives_up_after_max_attempts(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    _make_file(out, "a.txt")
+    _make_file(out, "a (1).txt")
+    with pytest.raises(FileExistsError):
+        unique_destination(tmp_path / "a.txt", out, max_attempts=1)

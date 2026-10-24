@@ -62,7 +62,8 @@ def _load_prices(path: Path, *, strict: bool = False) -> dict:
         not strict).
 
     Raises:
-        ValidationError: In strict mode, if the file does not exist.
+        ValidationError: In strict mode, if the file does not exist or cannot
+            be read.
     """
     try:
         return load_prices_from_csv(path)
@@ -70,6 +71,11 @@ def _load_prices(path: Path, *, strict: bool = False) -> dict:
         if strict:
             raise ValidationError(f"--prices: file not found: {path} — e.g. data/sample_prices.csv")
         print(f"! Price file not found at {path}. Falling back to buy prices.")
+        return {}
+    except OSError as exc:
+        if strict:
+            raise ValidationError(f"--prices: {exc}")
+        print(f"! Could not read the price file ({exc}). Falling back to buy prices.")
         return {}
 
 

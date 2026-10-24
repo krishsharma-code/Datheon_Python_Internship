@@ -117,7 +117,9 @@ def main(argv: List[str] | None = None) -> int:
             dry_run=args.dry_run,
             detect_duplicates=args.duplicates,
         )
-    except NotADirectoryError as exc:  # pragma: no cover - caught by validate_path
+    except OSError as exc:
+        # Covers a non-directory argument and a directory we cannot list
+        # (permission denied) with a single actionable line.
         print(f"! {exc}")
         return int(ExitCode.DATA_ERROR)
 
