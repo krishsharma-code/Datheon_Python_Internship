@@ -24,6 +24,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+from edge_cases import iter_files
+
 #: Default extension → category mapping.
 CATEGORY_MAP: Dict[str, str] = {
     # Documents
@@ -143,34 +145,42 @@ def find_duplicates(directory: Union[str, Path]) -> Dict[str, List[Path]]:
 
     Raises:
         NotADirectoryError: If ``directory`` is not a directory.
+        PermissionError: If ``directory`` cannot be listed.
     """
     root = Path(directory).expanduser()
-    if not root.is_dir():
-        raise NotADirectoryError(f"Not a directory: {root}")
-
     by_hash: Dict[str, List[Path]] = {}
-    for entry in root.iterdir():
-        if entry.is_file():
-            try:
-                digest = sha256_of_file(entry)
-            except OSError:
-                continue
-            by_hash.setdefault(digest, []).append(entry)
+    for entry in iter_files(root):
+        try:
+            digest = sha256_of_file(entry)
+        except OSError:
+            continue
+        by_hash.setdefault(digest, []).append(entry)
     return {digest: paths for digest, paths in by_hash.items() if len(paths) > 1}
 
 
-def unique_destination(source: Union[str, Path], dest_dir: Union[str, Path]) -> Path:
+def unique_destination(
+    source: Union[str, Path],
+    dest_dir: Union[str, Path],
+    *,
+    max_attempts: int = 1000,
+) -> Path:
     """Return a collision-free destination path inside ``dest_dir``.
 
     If ``dest_dir/<name>`` already exists, ``" (1)"``, ``" (2)"`` … is appended
-    to the stem until a free name is found.
+    to the stem until a free name is found. The search is bounded, so a
+    pathological directory cannot trap the tool in an infinite loop.
 
     Args:
         source: The file being moved (its name is preserved).
         dest_dir: Target directory (need not exist yet).
+        max_attempts: Maximum number of ``" (n)"`` suffixes to try before
+            giving up.
 
     Returns:
         A :class:`~pathlib.Path` that does not yet exist.
+
+    Raises:
+        FileExistsError: If no free name is found within ``max_attempts``.
     """
     source_path = Path(source)
     target_dir = Path(dest_dir)
@@ -180,11 +190,15 @@ def unique_destination(source: Union[str, Path], dest_dir: Union[str, Path]) -> 
 
     stem, suffix = source_path.stem, source_path.suffix
     counter = 1
-    while True:
+    while counter <= max_attempts:
         candidate = target_dir / f"{stem} ({counter}){suffix}"
         if not candidate.exists():
             return candidate
         counter += 1
+    raise FileExistsError(
+        f"could not find a free name for {source_path.name!r} in {target_dir} "
+        f"after {max_attempts} attempts"
+    )
 
 
 @dataclass
@@ -338,15 +352,10 @@ class FileOrganizer:
 
         Raises:
             NotADirectoryError: If ``directory`` is not a directory.
+            PermissionError: If ``directory`` cannot be listed.
         """
         root = Path(directory).expanduser()
-        if not root.is_dir():
-            raise NotADirectoryError(f"Not a directory: {root}")
-
-        files = sorted(
-            (entry for entry in root.iterdir() if entry.is_file()),
-            key=lambda p: p.name.lower(),
-        )
+        files = iter_files(root)
 
         report = OrganizeReport(directory=str(root), dry_run=dry_run)
 
