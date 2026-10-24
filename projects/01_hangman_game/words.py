@@ -17,6 +17,8 @@ import random
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+from edge_cases import check_file_size
+
 #: Secret words grouped by theme. Keep every entry lowercase and alphabetic.
 WORDS_BY_CATEGORY: Dict[str, List[str]] = {
     "programming": [
@@ -130,7 +132,10 @@ def load_words_from_file(
 
     Raises:
         FileNotFoundError: If ``path`` does not exist.
-        ValueError: If ``min_length`` is less than 1 or exceeds ``max_length``.
+        PermissionError: If ``path`` cannot be read.
+        ValueError: If ``min_length`` is less than 1, exceeds ``max_length``,
+            or ``path`` is larger than
+            :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
     """
     if min_length < 1:
         raise ValueError("min_length must be at least 1.")
@@ -138,12 +143,17 @@ def load_words_from_file(
         raise ValueError("max_length must not be smaller than min_length.")
 
     file_path = Path(path)
-    if not file_path.is_file():
-        raise FileNotFoundError(f"Word list not found: {file_path}")
+    check_file_size(file_path, field="word list")
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except PermissionError as exc:
+        raise PermissionError(
+            f"word list is not readable (permission denied): {file_path}"
+        ) from exc
 
     words: List[str] = []
     seen: set = set()
-    for line in file_path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         word = line.strip().lower()
         if not word.isalpha():
             continue
