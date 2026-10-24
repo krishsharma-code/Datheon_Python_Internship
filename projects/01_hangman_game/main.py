@@ -24,6 +24,7 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from edge_cases import InputClosed, safe_input  # noqa: E402
 from hangman import HangmanGame, ScoreBoard  # noqa: E402
 from validators import (  # noqa: E402
     ValidationError,
@@ -62,7 +63,7 @@ def choose_category() -> str:
     """
     available = categories()
     print("\nAvailable categories: " + ", ".join(available))
-    choice = input(f"Pick a category [{DEFAULT_CATEGORY}]: ").strip().lower()
+    choice = safe_input(f"Pick a category [{DEFAULT_CATEGORY}]: ").strip().lower()
     if not choice:
         return DEFAULT_CATEGORY
     if choice not in available:
@@ -96,8 +97,8 @@ def play_round(word: str, source_label: str, strict: bool = False) -> bool:
         print(f"Attempts left: {game.remaining_attempts}")
 
         try:
-            raw = input("Guess a letter: ")
-        except (EOFError, KeyboardInterrupt):
+            raw = safe_input("Guess a letter: ")
+        except InputClosed:
             print("\nInput stream closed — exiting.")
             raise SystemExit(int(ExitCode.OK))
 
@@ -145,7 +146,7 @@ def _load_word_list(args: argparse.Namespace) -> Optional[List[str]]:
 
     try:
         words = load_words_from_file(words_file, args.min_length, args.max_length)
-    except FileNotFoundError as exc:
+    except (OSError, ValueError) as exc:
         print(f"! {exc}")
         raise SystemExit(int(ExitCode.DATA_ERROR))
     if not words:
@@ -208,22 +209,26 @@ def main(argv: List[str] | None = None) -> int:
 
     score = ScoreBoard()
     while True:
-        if word_list is not None:
-            word = get_random_word_from_list(word_list)
-            label = f"the official word list ({len(word_list):,} words)"
-        else:
-            category = choose_category()
-            word = get_random_word(category)
-            label = f"the '{category}' category"
+        try:
+            if word_list is not None:
+                word = get_random_word_from_list(word_list)
+                label = f"the official word list ({len(word_list):,} words)"
+            else:
+                category = choose_category()
+                word = get_random_word(category)
+                label = f"the '{category}' category"
 
-        score.record(play_round(word, label, strict=args.strict))
+            score.record(play_round(word, label, strict=args.strict))
 
-        print(
-            f"Score — played: {score.played} | wins: {score.wins} | "
-            f"losses: {score.losses} | win rate: {score.win_rate:.0%}"
-        )
+            print(
+                f"Score — played: {score.played} | wins: {score.wins} | "
+                f"losses: {score.losses} | win rate: {score.win_rate:.0%}"
+            )
 
-        again = input("Play again? [y/N]: ").strip().lower()
+            again = safe_input("Play again? [y/N]: ").strip().lower()
+        except InputClosed:
+            print("\nInput stream closed — exiting.")
+            break
         if again not in {"y", "yes"}:
             break
 

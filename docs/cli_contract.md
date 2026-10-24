@@ -68,6 +68,26 @@ Failures raise `ValidationError`, a `ValueError` subclass, so `run_cli` maps
 them onto exit code `1` automatically. The layer is covered by
 [`tests/test_validation.py`](../tests/test_validation.py).
 
+## Edge-case handling
+
+Beyond validating *values*, every tool survives the failure modes a shell user
+actually hits. These are handled once in [`edge_cases.py`](../edge_cases.py) and
+reused across the projects, so no case ends in a raw traceback:
+
+| Failure mode | Behaviour |
+| --- | --- |
+| Empty directory (organizer) | Reports “No files found to organise” and exits `0`. |
+| Permission error reading a directory | `iter_files` raises a `PermissionError` naming the directory; the organizer exits `1` with one line. |
+| Permission error reading an input file | Each loader re-raises a `PermissionError` naming the file; exit `1`. |
+| Missing input file | `FileNotFoundError` → exit `1` with an actionable message. |
+| Oversized input file (> 64 MiB) | `check_file_size` rejects it up front → exit `1`. |
+| Name collision on move | `unique_destination` appends ` (n)`; a bounded search gives up with `FileExistsError` rather than looping forever. |
+| Interrupted input (`Ctrl-D`/`Ctrl-C`) | `safe_input` raises `InputClosed`; the interactive shells end the session cleanly with exit `0`. |
+| Broken output pipe (`… \| head`) | `run_cli` catches `BrokenPipeError` and exits `0` quietly. |
+
+The behaviour is pinned by
+[`tests/test_edge_cases.py`](../tests/test_edge_cases.py).
+
 ## How it is wired
 
 Each entry point imports `build_parser` to obtain an `ArgumentParser` that
@@ -75,7 +95,8 @@ already exposes `--version` and appends the exit-code legend to `--help`, then
 returns `int(ExitCode.…)` from `main`. The `run_cli` helper wraps the
 `if __name__ == "__main__"` call and translates an uncaught `ValueError` or
 `OSError` (the standard shapes of a data error) into exit code `1` instead of a
-raw traceback.
+raw traceback. It also treats a `KeyboardInterrupt` or a `BrokenPipeError` (a
+closed output pipe) as a clean early exit with code `0`.
 
 ```python
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli

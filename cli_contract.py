@@ -24,6 +24,8 @@ import sys
 from enum import IntEnum
 from typing import Callable, Optional
 
+from edge_cases import guard_broken_pipe
+
 __all__ = [
     "PROGRAM_VERSION",
     "EXIT_CODE_EPILOG",
@@ -107,18 +109,32 @@ def build_parser(
 
 
 def run_cli(main: Callable[[], int]) -> int:
-    """Run a CLI entry point, mapping domain errors onto the exit contract.
+    """Run a CLI entry point, mapping domain and pipe errors onto the contract.
 
     Args:
         main: A zero-argument callable that returns a process exit code.
 
     Returns:
-        The exit code returned by ``main``, or :data:`ExitCode.DATA_ERROR`
-        (``1``) if ``main`` raised a :class:`ValueError` or :class:`OSError` —
-        the standard shapes of a user or data error.
+        The exit code returned by ``main``; :data:`ExitCode.OK` (``0``) when the
+        user interrupted the program with ``Ctrl-C`` or the output pipe was
+        closed early (for example ``organizer . | head``); or
+        :data:`ExitCode.DATA_ERROR` (``1``) if ``main`` raised a
+        :class:`ValueError` or :class:`OSError` — the standard shapes of a user
+        or data error.
+
+    Note:
+        :class:`BrokenPipeError` is a subclass of :class:`OSError`, so it is
+        caught first and treated as a normal early exit rather than a data
+        error.
     """
     try:
         return int(main())
+    except BrokenPipeError:
+        guard_broken_pipe()
+        return int(ExitCode.OK)
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return int(ExitCode.OK)
     except (ValueError, OSError) as exc:
         print(f"! {exc}", file=sys.stderr)
         return int(ExitCode.DATA_ERROR)
