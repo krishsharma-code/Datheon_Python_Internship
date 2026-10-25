@@ -374,3 +374,88 @@ in an unhandled traceback.
 
 - Day 6: harden the three dataset loaders — schema validation, BOM/CRLF
   tolerance, encoding fallbacks, and malformed-row reporting with line numbers.
+
+---
+
+## Day 6 — Dataset loader hardening
+
+**Branch:** `feat/datheon-day-6-loader-hardening`
+**PR:** #7
+**Scope:** Harden the three dataset loaders — schema validation, BOM/CRLF/
+encoding tolerance, and malformed-row reporting with line numbers.
+
+### Milestones
+
+- Added `dataset_loader.py`, the shared loader-hardening layer:
+  `read_text_robust` (encoding fallback chain + BOM strip + line-ending
+  detection), `TextSource`, `LoadReport` / `LoadIssue`, `require_columns`,
+  `detect_newline`, `strip_bom`, and `DatasetFormatError`.
+- Wired all three dataset loaders through it: `words.load_words_from_file`,
+  `portfolio.load_prices_from_csv`, `portfolio.load_symbols_from_csv`,
+  `chatbot.IntentEngine.from_json`, and `chatbot.IntentEngine.from_faq_json`
+  now accept `strict` / `report` and report malformed rows instead of
+  dropping them silently.
+- Added a `--validate` pre-flight mode to the hangman, portfolio and assistant
+  CLIs: it loads the dataset in strict mode, prints an encoding/row report, and
+  exits `0` when valid or `1` when corrupt.
+- Documented the loader contract in `docs/cli_contract.md`.
+- Added `tests/test_dataset_loader.py` (47 tests); the suite is now
+  **323 tests**, all green.
+
+### Architectural decisions
+
+1. **One decode path, five loaders.** Encoding fallback, BOM handling, and
+   newline detection live in `read_text_robust`, so every loader inherits the
+   same tolerance and the fix lands once. `utf-8-sig` heads the chain because
+   it decodes plain UTF-8 *and* transparently drops a BOM; `latin-1` is the
+   terminal fallback because it maps every byte, so the reported encoding is
+   what tells the caller whether a silent mis-decode happened.
+2. **Report, don't drop.** A malformed row is collected in a `LoadReport`
+   carrying its **line number** (CSV/text) or entry index (`intents[i]` /
+   `faqs[i]` for JSON). The definition of done is that a corrupt fixture is
+   detected and reported, never silently accepted.
+3. **Severity mirrors history; strict escalates.** A soft failure that the
+   old code skipped is a *warning* in lenient mode and an *error* under
+   `--strict` / `--validate`; a structurally broken file (unparseable JSON, a
+   non-numeric price, a missing required column) is always an error. This keeps
+   Day 1–5 behaviour intact while offering a hard mode for CI.
+4. **One error type, mapped once.** `DatasetFormatError` subclasses
+   `ValueError`, so the existing `cli_contract.run_cli` mapping turns it into
+   exit code `1` with no new wiring.
+5. **Backwards-compatible signatures.** The new `strict` / `report` parameters
+   are keyword-only and default off, so every existing call site and test keeps
+   working unchanged.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `read_text_robust` | dataset_loader | O(B) | O(B) | B bytes; one decode attempt per encoding until success |
+| `detect_newline` | dataset_loader | O(B) | O(1) | Three `str.count` passes over the text |
+| `require_columns` | dataset_loader | O(H) | O(H) | H headers, one dict build |
+| `load_words_from_file` (hardened) | words | O(L·W) | O(W) | L lines, W words kept; set-based de-dup |
+| `load_prices_from_csv` (hardened) | portfolio | O(R) | O(U) | R rows → U unique symbols; line lookup is O(1) |
+| `load_symbols_from_csv` (hardened) | portfolio | O(R) | O(U) | As above |
+| `IntentEngine.from_json` (hardened) | chatbot | O(I·P) | O(I·P) | I intents × P patterns, plus one per-entry validation pass |
+| `IntentEngine.from_faq_json` (hardened) | chatbot | O(F·K) | O(F·K) | F FAQs × K keywords each |
+
+### Edge cases covered by tests
+
+- Encoding: UTF-8, UTF-8 with BOM, CRLF, `cp1252` fallback, an undecodable
+  byte sequence when `latin-1` is removed from the chain, and newline-style
+  detection (`lf` / `crlf` / `cr` / `mixed` / `none`).
+- Schema: a missing ticker column and a missing price column each raise a
+  `DatasetFormatError` naming the column; a JSON top level that is not an
+  object is rejected.
+- Malformed rows: non-alphabetic word-list lines, a blank ticker, a missing
+  price, and a non-numeric price each report their **line number**; a bad
+  intent entry reports `intents[i]`; a bad FAQ entry reports `faqs[i]`.
+- Strict vs lenient: lenient records warnings and skips, strict raises; a
+  non-numeric price is always an error.
+- CLI: `--validate` exits `0` on the bundled datasets and `1` on a corrupt
+  fixture for all three tools, with no traceback.
+
+### Next up
+
+- Day 7: a custom exception taxonomy (`DatheonError` base → per-domain
+  subclasses) plus a user-facing error catalogue in `docs/`.
