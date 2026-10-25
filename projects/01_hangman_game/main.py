@@ -24,6 +24,7 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from dataset_loader import LoadReport  # noqa: E402
 from edge_cases import InputClosed, safe_input  # noqa: E402
 from hangman import HangmanGame, ScoreBoard  # noqa: E402
 from validators import (  # noqa: E402
@@ -156,6 +157,40 @@ def _load_word_list(args: argparse.Namespace) -> Optional[List[str]]:
     return words
 
 
+def _run_validation(args: argparse.Namespace) -> int:
+    """Validate the word-list dataset and report, without starting a game.
+
+    Args:
+        args: Parsed command-line arguments (``--words-file``, ``--min-length``,
+            ``--max-length``).
+
+    Returns:
+        ``0`` when the dataset is valid, ``1`` when it is missing or corrupt.
+    """
+    words_file = args.words_file
+    if words_file is None and DEFAULT_WORDS_FILE.is_file():
+        words_file = DEFAULT_WORDS_FILE
+    if words_file is None:
+        print("! no word list to validate (pass --words-file).")
+        return int(ExitCode.DATA_ERROR)
+
+    report = LoadReport(words_file)
+    try:
+        load_words_from_file(
+            words_file,
+            args.min_length,
+            args.max_length,
+            strict=True,
+            report=report,
+        )
+    except (OSError, ValueError) as exc:
+        print(f"! {exc}")
+        return int(ExitCode.DATA_ERROR)
+    print(report.render())
+    print(f"OK: {report.rows_accepted:,} words loaded from {words_file}.")
+    return int(ExitCode.OK)
+
+
 def main(argv: List[str] | None = None) -> int:
     """Run the Hangman shell until the player declines to replay.
 
@@ -191,6 +226,11 @@ def main(argv: List[str] | None = None) -> int:
         default=None,
         help="Optional maximum word length when loading a word file.",
     )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate the word-list dataset (schema, encoding, rows) and exit.",
+    )
     args = parser.parse_args(argv)
 
     # Reject nonsensical length bounds before any file I/O happens.
@@ -201,6 +241,9 @@ def main(argv: List[str] | None = None) -> int:
         )
     if args.strict and args.words_file is not None:
         args.words_file = validate_path(args.words_file, must_be_file=True, field="--words-file")
+
+    if args.validate:
+        return _run_validation(args)
 
     word_list = _load_word_list(args)
 

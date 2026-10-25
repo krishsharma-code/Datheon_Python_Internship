@@ -88,6 +88,43 @@ reused across the projects, so no case ends in a raw traceback:
 The behaviour is pinned by
 [`tests/test_edge_cases.py`](../tests/test_edge_cases.py).
 
+## Dataset loading & `--validate`
+
+The three dataset loaders — the Hangman word list, the portfolio price and
+constituents CSVs, and the assistant intent and FAQ JSON — share one hardening
+layer in [`dataset_loader.py`](../dataset_loader.py). Every file is read through
+`read_text_robust`, which tolerates the messy realities of real data:
+
+| Hazard | Handling |
+| --- | --- |
+| UTF-8 BOM (Excel, some editors) | Stripped transparently; `utf-8-sig` heads the decode chain. |
+| CRLF / CR line endings (Windows) | Detected and reported; rows are split on any line ending. |
+| Legacy 8-bit encoding | Decoded via `cp1252` → `latin-1` fallbacks; the winning encoding is reported. |
+| Missing / misspelled columns | `require_columns` rejects the file with a `DatasetFormatError` naming the column. |
+| Malformed rows | Collected in a `LoadReport` with their **line number** (or `intents[i]` / `faqs[i]` index for JSON). |
+
+A malformed row that used to be skipped silently is now *recorded*. Severity
+mirrors each loader's historical behaviour: a soft failure is a **warning** in
+the default lenient mode and is escalated to an **error** under `--strict` /
+`--validate`; a structurally broken file (unparseable JSON, a non-numeric
+price, a missing required column) is always an error. In strict / `--validate`
+mode the collected errors abort the load with a `DatasetFormatError` (a
+`ValueError`, so exit code `1`).
+
+Each affected tool adds a `--validate` flag that loads its dataset in strict
+mode, prints the encoding/row report, and exits `0` when the dataset is valid
+or `1` when it is missing or corrupt — a cheap pre-flight check for CI:
+
+```console
+$ python projects/02_portfolio_tracker/main.py --validate
+sample_prices.csv: encoding=utf-8-sig, newlines=lf
+sample_prices.csv: 12/12 rows accepted
+OK: price file …/sample_prices.csv is valid (12 rows).
+```
+
+The layer is covered by
+[`tests/test_dataset_loader.py`](../tests/test_dataset_loader.py).
+
 ## How it is wired
 
 Each entry point imports `build_parser` to obtain an `ArgumentParser` that

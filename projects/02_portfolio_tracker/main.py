@@ -20,6 +20,7 @@ from typing import List
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from dataset_loader import LoadReport  # noqa: E402
 from portfolio import (  # noqa: E402
     Portfolio,
     load_prices_from_csv,
@@ -142,6 +143,36 @@ def _print_report(portfolio: Portfolio) -> None:
     print(f"{'Return':<14}{totals['total_gain_pct']:>41.2f}%")
 
 
+def _run_validation(args) -> int:
+    """Validate the price (and optional constituents) datasets and exit.
+
+    Each dataset is loaded in strict mode so a missing column or a malformed
+    row is reported with its line number instead of being skipped.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        ``0`` when every requested dataset is valid, ``1`` otherwise.
+    """
+    targets = [("price file", args.prices, load_prices_from_csv)]
+    if args.constituents is not None:
+        targets.append(("constituents file", args.constituents, load_symbols_from_csv))
+
+    status = int(ExitCode.OK)
+    for label, path, loader in targets:
+        report = LoadReport(path)
+        try:
+            loader(path, strict=True, report=report)
+        except (OSError, ValueError) as exc:
+            print(f"! {label}: {exc}")
+            status = int(ExitCode.DATA_ERROR)
+            continue
+        print(report.render())
+        print(f"OK: {label} {path} is valid ({report.rows_accepted} rows).")
+    return status
+
+
 def main(argv: List[str] | None = None) -> int:
     """Run the portfolio tracker CLI.
 
@@ -173,7 +204,15 @@ def main(argv: List[str] | None = None) -> int:
         help="Optional constituents CSV used to flag unknown tickers.",
     )
     add_strict_flag(parser)
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate the price/constituents datasets (schema, encoding, rows) and exit.",
+    )
     args = parser.parse_args(argv)
+
+    if args.validate:
+        return _run_validation(args)
 
     prices = _load_prices(args.prices, strict=args.strict)
     portfolio = Portfolio.from_prices(prices)

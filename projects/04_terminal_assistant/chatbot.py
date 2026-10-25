@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+from dataset_loader import DatasetFormatError, LoadReport, TextSource, read_text_robust
 from edge_cases import check_file_size
 
 #: Inputs that end the session.
@@ -232,6 +233,61 @@ class Intent:
         return sum(1 for pattern in self.patterns if pattern.search(normalized_text))
 
 
+def _load_json_object(source: TextSource, path: Path) -> Dict[str, object]:
+    """Parse a dataset file as a JSON object, with a clear failure message.
+
+    Args:
+        source: The decoded dataset file.
+        path: The originating path, used in error messages.
+
+    Returns:
+        The parsed top-level JSON object.
+
+    Raises:
+        DatasetFormatError: If the text is not valid JSON, or the top level is
+            not a JSON object.
+    """
+    try:
+        data = json.loads(source.text)
+    except json.JSONDecodeError as exc:
+        raise DatasetFormatError(f"invalid JSON in {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise DatasetFormatError(
+            f"{path}: expected a JSON object at the top level, got {type(data).__name__}"
+        )
+    return data
+
+
+def _parse_intents(entries: Sequence[object], report: LoadReport) -> List["Intent"]:
+    """Build :class:`Intent` objects from raw JSON entries, reporting bad ones.
+
+    Each entry is validated in turn; a malformed entry is recorded as an error
+    (with its ``intents[i]`` index) instead of aborting on the first one, so a
+    single run surfaces *every* problem in the dataset.
+
+    Args:
+        entries: The raw ``intents`` list from the JSON file.
+        report: The report to populate with per-entry issues.
+
+    Returns:
+        The intents that were successfully built.
+    """
+    intents: List[Intent] = []
+    for index, entry in enumerate(entries):
+        where = f"intents[{index}]"
+        report.rows_checked += 1
+        if not isinstance(entry, dict):
+            report.add(f"{where}: expected an object, got {type(entry).__name__}", severity="error")
+            continue
+        try:
+            intents.append(Intent.from_dict(entry))
+        except ValueError as exc:
+            report.add(f"{where}: {exc}", severity="error")
+            continue
+        report.rows_accepted += 1
+    return intents
+
+
 class IntentEngine:
     """Matches normalised input against a set of intents.
 
@@ -261,12 +317,29 @@ class IntentEngine:
         self._response_index: Dict[str, int] = {}
 
     @classmethod
-    def from_json(cls, path: Union[str, Path]) -> "IntentEngine":
+    def from_json(
+        cls,
+        path: Union[str, Path],
+        *,
+        strict: bool = False,
+        report: Optional[LoadReport] = None,
+    ) -> "IntentEngine":
         """Load an engine from a JSON dataset.
+
+        The file is decoded through :func:`dataset_loader.read_text_robust`, so
+        a UTF-8 BOM and legacy encodings are tolerated. Schema validation
+        requires a JSON object at the top level with a non-empty ``intents``
+        list; each entry must be an object that yields a valid
+        :class:`Intent`. A malformed entry is reported with its ``intents[i]``
+        index and aborts the load.
 
         Args:
             path: Path to a JSON file with ``intents``, optional ``fallbacks``
                 and ``exit_commands`` keys.
+            strict: Accepted for API symmetry; intent entries are always
+                validated as errors.
+            report: Optional :class:`~dataset_loader.LoadReport` to populate
+                with the file's metadata and any per-entry issues.
 
         Returns:
             A configured :class:`IntentEngine`.
@@ -274,26 +347,22 @@ class IntentEngine:
         Raises:
             FileNotFoundError: If ``path`` does not exist.
             PermissionError: If ``path`` cannot be read.
-            ValueError: If the file is not valid JSON, lacks intents, or exceeds
+            ValueError: If the file is not valid JSON, is not a JSON object,
+                lacks intents, has a malformed intent entry, or exceeds
                 :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
         """
         json_path = Path(path)
         check_file_size(json_path, field="intent file")
-        try:
-            text = json_path.read_text(encoding="utf-8")
-        except PermissionError as exc:
-            raise PermissionError(
-                f"intent file is not readable (permission denied): {json_path}"
-            ) from exc
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
+        source = read_text_robust(json_path, field="intent file")
+        local = report if report is not None else LoadReport(json_path)
+        local.source = source
+        data = _load_json_object(source, json_path)
 
         raw_intents = data.get("intents")
         if not isinstance(raw_intents, list) or not raw_intents:
-            raise ValueError(f"No 'intents' list found in {json_path}.")
-        intents = [Intent.from_dict(item) for item in raw_intents]
+            raise DatasetFormatError(f"no 'intents' list found in {json_path}.")
+        intents = _parse_intents(raw_intents, local)
+        local.raise_if_errors("intent file")
         return cls(
             intents,
             fallbacks=data.get("fallbacks"),
@@ -305,17 +374,29 @@ class IntentEngine:
         cls,
         path: Union[str, Path],
         min_keyword_length: int = 4,
+        *,
+        strict: bool = False,
+        report: Optional[LoadReport] = None,
     ) -> "IntentEngine":
         """Build an engine from a FAQ dataset (as supplied by Datheon).
 
         The dataset is expected to contain a ``faqs`` list of
         ``{"question": ..., "answer": ...}`` objects and, optionally, a
         ``greetings`` list. Each FAQ becomes an intent whose patterns are the
-        significant keywords of its question.
+        significant keywords of its question. The file is decoded through
+        :func:`dataset_loader.read_text_robust` (BOM / encoding tolerant).
+
+        An unusable FAQ entry is a *malformed row*: it is skipped and recorded
+        as a warning (escalated to an error under ``strict``), always with its
+        ``faqs[i]`` index.
 
         Args:
             path: Path to the FAQ JSON file.
             min_keyword_length: Minimum length of a derived keyword.
+            strict: When ``True``, reject a dataset containing any malformed
+                FAQ entry.
+            report: Optional :class:`~dataset_loader.LoadReport` to populate
+                with the file's metadata and any per-entry issues.
 
         Returns:
             A configured :class:`IntentEngine`.
@@ -323,25 +404,20 @@ class IntentEngine:
         Raises:
             FileNotFoundError: If ``path`` does not exist.
             PermissionError: If ``path`` cannot be read.
-            ValueError: If the file is not valid JSON, has no usable FAQs, or
-                exceeds :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
+            ValueError: If the file is not valid JSON, is not a JSON object,
+                has no usable FAQs, or exceeds
+                :data:`edge_cases.MAX_INPUT_FILE_BYTES`.
         """
         json_path = Path(path)
         check_file_size(json_path, field="FAQ file")
-        try:
-            text = json_path.read_text(encoding="utf-8")
-        except PermissionError as exc:
-            raise PermissionError(
-                f"FAQ file is not readable (permission denied): {json_path}"
-            ) from exc
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"Invalid JSON in {json_path}: {exc}") from exc
+        source = read_text_robust(json_path, field="FAQ file")
+        local = report if report is not None else LoadReport(json_path)
+        local.source = source
+        data = _load_json_object(source, json_path)
 
         faqs = data.get("faqs")
         if not isinstance(faqs, list) or not faqs:
-            raise ValueError(f"No 'faqs' list found in {json_path}.")
+            raise DatasetFormatError(f"no 'faqs' list found in {json_path}.")
 
         intents: List[Intent] = []
 
@@ -359,28 +435,39 @@ class IntentEngine:
                 )
             )
 
-        for index, entry in enumerate(faqs, start=1):
+        severity = "error" if strict else "warning"
+        for index, entry in enumerate(faqs):
+            where = f"faqs[{index}]"
+            local.rows_checked += 1
             if not isinstance(entry, dict):
+                local.add(
+                    f"{where}: expected an object, got {type(entry).__name__}",
+                    severity=severity,
+                )
                 continue
             question = str(entry.get("question", "")).strip()
             answer = str(entry.get("answer", "")).strip()
             if not question or not answer:
+                local.add(f"{where}: missing question or answer", severity=severity)
                 continue
             keywords = _keywords(question, min_keyword_length)
             if not keywords:
+                local.add(f"{where}: no usable keywords in question", severity=severity)
                 continue
             pattern = r"\b(" + "|".join(re.escape(k) for k in keywords) + r")\b"
             intents.append(
                 Intent(
-                    name=f"faq_{index}",
+                    name=f"faq_{index + 1}",
                     patterns=[re.compile(pattern, re.IGNORECASE)],
                     responses=[answer],
                     priority=2,
                 )
             )
+            local.rows_accepted += 1
 
+        local.raise_if_errors("FAQ file")
         if not intents:
-            raise ValueError(f"No usable FAQ entries found in {json_path}.")
+            raise DatasetFormatError(f"no usable FAQ entries found in {json_path}.")
         return cls(intents)
 
     def _next_response(self, intent: Intent) -> str:

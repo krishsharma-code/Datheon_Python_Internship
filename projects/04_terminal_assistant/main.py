@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from chatbot import ConversationLogger, IntentEngine  # noqa: E402
 from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from dataset_loader import LoadReport  # noqa: E402
 from edge_cases import InputClosed, safe_input  # noqa: E402
 from validators import (  # noqa: E402
     ValidationError,
@@ -73,6 +74,31 @@ def _log_turn(
     return logger
 
 
+def _run_validation(args) -> int:
+    """Validate the intent or FAQ dataset and exit, without starting the REPL.
+
+    Args:
+        args: Parsed command-line arguments (``--intents`` or ``--faq``).
+
+    Returns:
+        ``0`` when the dataset is valid, ``1`` when it is missing or corrupt.
+    """
+    if args.faq is not None:
+        label, path, loader = "FAQ file", args.faq, IntentEngine.from_faq_json
+    else:
+        label, path, loader = "intent file", args.intents, IntentEngine.from_json
+
+    report = LoadReport(path)
+    try:
+        loader(path, strict=True, report=report)
+    except (OSError, ValueError) as exc:
+        print(f"! {label}: {exc}")
+        return int(ExitCode.DATA_ERROR)
+    print(report.render())
+    print(f"OK: {label} {path} is valid ({report.rows_accepted} entries).")
+    return int(ExitCode.OK)
+
+
 def main(argv: List[str] | None = None) -> int:
     """Run the assistant REPL.
 
@@ -102,7 +128,15 @@ def main(argv: List[str] | None = None) -> int:
     )
     parser.add_argument("--no-log", action="store_true", help="Disable conversation logging.")
     add_strict_flag(parser)
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate the intent/FAQ dataset (schema, encoding, entries) and exit.",
+    )
     args = parser.parse_args(argv)
+
+    if args.validate:
+        return _run_validation(args)
 
     if args.strict:
         if args.faq is not None:

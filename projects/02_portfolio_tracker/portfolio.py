@@ -16,10 +16,12 @@ Typical use::
 from __future__ import annotations
 
 import csv
+import io
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Union
 
+from dataset_loader import LoadReport, read_text_robust, require_columns
 from edge_cases import check_file_size
 
 #: Header names (lower-cased) accepted as the ticker column in a price CSV.
@@ -258,15 +260,32 @@ def _detect_key(headers: Iterable[str], candidates: Iterable[str]) -> Optional[s
     return None
 
 
-def load_prices_from_csv(path: Union[str, Path]) -> Dict[str, float]:
+def load_prices_from_csv(
+    path: Union[str, Path],
+    *,
+    strict: bool = False,
+    report: Optional[LoadReport] = None,
+) -> Dict[str, float]:
     """Load a symbol → price mapping from a CSV file.
 
     The file must contain a ticker column (one of ``symbol``/``ticker``/``code``)
     and a price column (one of ``price``/``current_price``/``close``/``last``/
-    ``market_price``). Column names are matched case-insensitively.
+    ``market_price``). Column names are matched case-insensitively. The file is
+    decoded through :func:`dataset_loader.read_text_robust`, so a UTF-8 BOM,
+    CRLF line endings, and legacy 8-bit encodings are all tolerated.
+
+    A row with no ticker or no price is a *malformed row*: it is skipped and
+    recorded as a warning (escalated to an error under ``strict``). A row whose
+    price is present but not numeric is always an error — it is never silently
+    accepted — and aborts the load with a
+    :class:`~dataset_loader.DatasetFormatError` that names the offending line.
 
     Args:
         path: Path to the CSV file.
+        strict: When ``True``, treat a row with a missing ticker or price as an
+            error rather than skipping it.
+        report: Optional :class:`~dataset_loader.LoadReport` to populate with
+            the file's encoding metadata and any malformed-row issues.
 
     Returns:
         A mapping of upper-cased ticker symbol to ``float`` price.
@@ -280,49 +299,77 @@ def load_prices_from_csv(path: Union[str, Path]) -> Dict[str, float]:
     """
     csv_path = Path(path)
     check_file_size(csv_path, field="price file")
+    source = read_text_robust(csv_path, field="price file")
+    local = report if report is not None else LoadReport(csv_path)
+    local.source = source
 
-    try:
-        handle = csv_path.open(newline="", encoding="utf-8")
-    except PermissionError as exc:
-        raise PermissionError(
-            f"price file is not readable (permission denied): {csv_path}"
-        ) from exc
+    reader = csv.DictReader(io.StringIO(source.text, newline=""))
+    headers = reader.fieldnames or []
+    symbol_key = require_columns(headers, _SYMBOL_KEYS, field="ticker column", path=csv_path)
+    price_key = require_columns(headers, _PRICE_KEYS, field="price column", path=csv_path)
 
+    raw_lines = source.text.splitlines()
     prices: Dict[str, float] = {}
-    with handle:
-        reader = csv.DictReader(handle)
-        headers = reader.fieldnames or []
-        symbol_key = _detect_key(headers, _SYMBOL_KEYS)
-        price_key = _detect_key(headers, _PRICE_KEYS)
-        if symbol_key is None or price_key is None:
-            raise ValueError(
-                "CSV must contain a ticker column "
-                f"({', '.join(_SYMBOL_KEYS)}) and a price column "
-                f"({', '.join(_PRICE_KEYS)}). Found: {headers}"
+    for row in reader:
+        line_no = reader.line_num
+        local.rows_checked += 1
+        raw = raw_lines[line_no - 1] if line_no <= len(raw_lines) else ""
+        symbol = (row.get(symbol_key) or "").strip().upper()
+        raw_price = (row.get(price_key) or "").strip()
+        if not symbol:
+            local.add(
+                "row has no ticker symbol",
+                line=line_no,
+                raw=raw,
+                severity="error" if strict else "warning",
             )
-        for line_no, row in enumerate(reader, start=2):
-            symbol = (row.get(symbol_key) or "").strip().upper()
-            raw_price = (row.get(price_key) or "").strip()
-            if not symbol or not raw_price:
-                continue
-            try:
-                prices[symbol] = float(raw_price)
-            except ValueError as exc:
-                raise ValueError(
-                    f"Invalid price {raw_price!r} for {symbol} on line {line_no}."
-                ) from exc
+            continue
+        if not raw_price:
+            local.add(
+                f"missing price for {symbol}",
+                line=line_no,
+                raw=raw,
+                severity="error" if strict else "warning",
+            )
+            continue
+        try:
+            prices[symbol] = float(raw_price)
+        except ValueError:
+            local.add(
+                f"invalid price {raw_price!r} for {symbol}",
+                line=line_no,
+                raw=raw,
+                severity="error",
+            )
+            continue
+        local.rows_accepted += 1
+    local.raise_if_errors("price file")
     return prices
 
 
-def load_symbols_from_csv(path: Union[str, Path]) -> Dict[str, str]:
+def load_symbols_from_csv(
+    path: Union[str, Path],
+    *,
+    strict: bool = False,
+    report: Optional[LoadReport] = None,
+) -> Dict[str, str]:
     """Load a ticker → company-name map from a constituents CSV.
 
     Handles the S&P 500 constituents format (``Symbol`` + ``Security``
     columns) as well as generic CSVs using ``ticker``/``code`` and
-    ``name``/``company`` headers. Column matching is case-insensitive.
+    ``name``/``company`` headers. Column matching is case-insensitive. The file
+    is decoded through :func:`dataset_loader.read_text_robust`, so a UTF-8 BOM,
+    CRLF line endings, and legacy 8-bit encodings are all tolerated.
+
+    A row with no ticker is a *malformed row*: it is skipped and recorded as a
+    warning (escalated to an error under ``strict``).
 
     Args:
         path: Path to the constituents CSV.
+        strict: When ``True``, treat a row with a missing ticker as an error
+            rather than skipping it.
+        report: Optional :class:`~dataset_loader.LoadReport` to populate with
+            the file's encoding metadata and any malformed-row issues.
 
     Returns:
         A mapping of upper-cased ticker symbol to company name (falling back
@@ -336,30 +383,34 @@ def load_symbols_from_csv(path: Union[str, Path]) -> Dict[str, str]:
     """
     csv_path = Path(path)
     check_file_size(csv_path, field="constituents file")
+    source = read_text_robust(csv_path, field="constituents file")
+    local = report if report is not None else LoadReport(csv_path)
+    local.source = source
 
-    try:
-        handle = csv_path.open(newline="", encoding="utf-8")
-    except PermissionError as exc:
-        raise PermissionError(
-            f"constituents file is not readable (permission denied): {csv_path}"
-        ) from exc
+    reader = csv.DictReader(io.StringIO(source.text, newline=""))
+    headers = reader.fieldnames or []
+    symbol_key = require_columns(headers, _SYMBOL_KEYS, field="ticker column", path=csv_path)
+    name_key = _detect_key(headers, _NAME_KEYS)
 
+    raw_lines = source.text.splitlines()
     symbols: Dict[str, str] = {}
-    with handle:
-        reader = csv.DictReader(handle)
-        headers = reader.fieldnames or []
-        symbol_key = _detect_key(headers, _SYMBOL_KEYS)
-        name_key = _detect_key(headers, _NAME_KEYS)
-        if symbol_key is None:
-            raise ValueError(
-                "CSV must contain a ticker column " f"({', '.join(_SYMBOL_KEYS)}). Found: {headers}"
+    for row in reader:
+        line_no = reader.line_num
+        local.rows_checked += 1
+        raw = raw_lines[line_no - 1] if line_no <= len(raw_lines) else ""
+        symbol = (row.get(symbol_key) or "").strip().upper()
+        if not symbol:
+            local.add(
+                "row has no ticker symbol",
+                line=line_no,
+                raw=raw,
+                severity="error" if strict else "warning",
             )
-        for row in reader:
-            symbol = (row.get(symbol_key) or "").strip().upper()
-            if not symbol:
-                continue
-            name = (row.get(name_key) or "").strip() if name_key else ""
-            symbols[symbol] = name or symbol
+            continue
+        name = (row.get(name_key) or "").strip() if name_key else ""
+        symbols[symbol] = name or symbol
+        local.rows_accepted += 1
+    local.raise_if_errors("constituents file")
     return symbols
 
 
