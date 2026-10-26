@@ -1,45 +1,23 @@
-- [ ] **Minimum 2–3 completed task-pack tasks** — this repo implements **all 5**.
-- [ ] `README.md` with installation, architecture, and quickstart commands.
-- [ ] `LICENSE` (MIT, 2026 Krish Sharma), `CONTRIBUTING.md`, strict `.gitignore`.
-- [ ] Full docstrings and type hints on all public callables.
-
-### Quality
-- [ ] Test suite green — target **200+ assertions**, ≥ **90%** coverage.
-- [ ] CI pipeline green across the multi-OS / multi-Python matrix.
-- [ ] Linting clean (`flake8`) and formatting clean (`black --check`).
-- [ ] No secrets, tokens, or credentials anywhere in history.
-
-### Delivery
-- [ ] Installable package with console entry points (Day 22).
-- [ ] Tagged release with `CHANGELOG.md` and attached build artefacts (Day 26).
-- [ ] Generated documentation site (Day 25), linked from the README.
-
-### Proof of work (Datheon requirements)
-- [ ] **LinkedIn walkthrough post tagging @Datheon** — done on 2026-10-21 ✅
-      (offer announcement; see `Datheon_LinkedIn_Post.md`).
-- [ ] Optional: short **video walkthrough** of one project for the LinkedIn post.
-- [ ] **Final LinkedIn post** (Option C) published once the internship completes.
-- [ ] Credential ID **DT-2026-O6Q0X** verified on the Datheon portal
-      (`https://datheon.in/verify` — enter credential ID `DT-2026-O6Q0X`).
-- [ ] Repository link submitted through the **Datheon Student Workspace**.
-
-### Certification
-- [ ] Code review completed on the submitted work.
-- [ ] Certificate issued — Datheon's FAQ states certificates are reviewed and issued within **3–5 business days after the code review**.
-- [ ] Verified certificate received: QR-coded credential + unique verification hash.
-- [ ] Letter of Recommendation (LOR) — considered for top-performing candidates.
+| Day | Objective | Key work | Definition of done |
+| --- | --- | --- | --- |
+| 22 | Make it installable | `pyproject.toml` (PEP 621) with a `console_scripts` entry point per tool; package layout finalised | `pip install -e .` exposes `hangman`, `portfolio`, `organizer`, `assistant`, `inventory` |
+| 23 | Prove it ships | Build wheel + sdist; install into a clean venv and run each entry point; `twine check` | Built artefacts install and run from a clean environment |
+| 24 | Test where users actually are | CI matrix: ubuntu-latest / macos-latest / windows-latest × Python 3.10, 3.11, 3.12, 3.13 | All matrix cells green; pip cache enabled |
+| 25 | Publish the docs | MkDocs (Material) site with API reference from docstrings, deployed to GitHub Pages | Live docs URL linked from the README |
+| 26 | Cut a release | SemVer bump, `CHANGELOG.md`, annotated git tag, GitHub Release with artefacts | Release visible on the repo with attached wheel/sdist |
+| 27 | Make the submission shine | README final pass, architecture diagram, demo GIF/screenshots, licence review | README reads well cold; assets embedded |
+| 28 | Verify and submit | Full local + CI green run, repository freeze, certificate checklist, final summary | Checklist complete; submission package ready |
 
 ---
 
-## 5. Backlog / stretch (maintenance mode)
+## 3. Daily scheduled-run execution contract
 
-Used only when every ledger row is `done`, or to fill spare capacity:
+The cron job **"Datheon internship daily progress"** fires at **09:00 IST** and executes exactly one milestone per run, in this order:
 
-- Add a `--json` output mode to every CLI for machine-readable results.
-- Ship a GitHub Actions workflow that publishes coverage to Codecov.
-- Add a benchmark harness with `pytest-benchmark` and a regression budget.
-- Add Docker packaging for the organizer as a cron-friendly container.
-- Add a `pre-commit` configuration (black, flake8, end-of-file-fixer).
-- Add type checking (`mypy`/`pyright`) to CI once annotations are complete.
-- Add a `SECURITY.md` and a `CODE_OF_CONDUCT.md`.
-- Record a 2-minute demo video for the LinkedIn walkthrough.
+1. **Read this file.** Parse the Progress Ledger in §1.
+2. **Select the milestone:** the lowest-numbered row whose `Status` is `pending`.
+   That row — and only that row — is the day's work. Its `Branch` and
+   `Deliverable` columns are the mandate.
+3. **Idempotency:** a day counts as complete only when its row reads `done` and carries a PR number. If a run fails partway, the row stays `pending` and the next run retries it. **No day can be executed twice**, and no day can be skipped.
+4. **Catch-up rule:** the `Target date` column is advisory. If a run was missed or the calendar has drifted, the run still picks the earliest `pending` row — it never jumps ahead. The ledger is authoritative; the calendar is a target.
+5. **Never idle:** if every row is `done`, switch to maintenance mode and take the highest-value item from the Backlog (§5), or ship a reliability/polish improvement. A run must always end with a merged PR.
