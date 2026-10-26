@@ -63,9 +63,12 @@ print(exc.to_dict())
 
 ## Regenerating this document
 
-The tables above are generated from the classes in `errors.py`; edit the
-class metadata, not this file, then run:
+The tables above are generated from the classes in `errors.py`. Edit the
+class metadata, never this file, then rewrite it from the repository
+root:
 
 ```bash
-python -c "import pathlib, errors; pathlib.Path('docs/error_catalogue.md').write_text(errors.render_catalogue_markdown())"
+python error_catalogue.py
 ```
+
+A different destination path may be passed as the first argument.
