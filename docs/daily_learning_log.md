@@ -459,3 +459,135 @@ encoding tolerance, and malformed-row reporting with line numbers.
 
 - Day 7: a custom exception taxonomy (`DatheonError` base → per-domain
   subclasses) plus a user-facing error catalogue in `docs/`.
+
+---
+
+## Day 7 — Week 1 consolidation: exception taxonomy & error catalogue
+
+**Branch:** `feat/datheon-day-7-error-taxonomy`
+**Scope:** Give every deliberate failure in the repository one root, one stable
+code, and one documented remedy — and generate the user-facing catalogue from
+the code so the two can never drift.
+
+### Milestones
+
+- Added `errors.py`: a `DatheonError` base with per-domain subclasses, each
+  carrying a stable machine-readable `code`, a process `exit_code`, and
+  catalogue metadata (`title`, `summary`, `resolution`).
+- Rebased the shared modules onto the taxonomy: `validators.ValidationError`,
+  `dataset_loader.DatasetFormatError` / `DatasetEncodingError`,
+  `edge_cases.InputClosed`, and the new `MissingFileError` /
+  `AccessDeniedError` / `DirectoryExpectedError` all now live in `errors.py`.
+- Rewrote the five projects' raises: Hangman (`ValidationError`,
+  `UnknownCategoryError`), portfolio (`ValidationError`), inventory
+  (`InventoryError` moved into the taxonomy), organizer and assistant.
+- Taught `cli_contract.run_cli` to read the exit code and the rendered message
+  off the exception instead of inferring both from its builtin type.
+- Generated `docs/error_catalogue.md` from `errors.render_catalogue_markdown()`
+  and added a test that fails if the committed file differs by a single byte.
+- Added `tests/test_errors.py` (47 tests, 84 assertions); the suite is now
+  **376 tests**, all green, with `flake8`, `black --check` and
+  `compileall` clean.
+
+### The taxonomy
+
+```text
+DatheonError                   DT-0000   exit 1
+├── InputError                 DT-1000   exit 1
+│   ├── ValidationError        DT-1001   exit 1   (also ValueError)
+│   ├── InputClosed            DT-1002   exit 1
+│   ├── UsageError             DT-1003   exit 2
+│   └── UnknownCategoryError   DT-1004   exit 1   (also KeyError)
+├── FilesystemError            DT-2000   exit 1   (also OSError)
+│   ├── MissingFileError       DT-2001   exit 1   (also FileNotFoundError)
+│   ├── AccessDeniedError      DT-2002   exit 1   (also PermissionError)
+│   └── DirectoryExpectedError DT-2003   exit 1   (also NotADirectoryError)
+├── DatasetError               DT-2100   exit 1   (also ValueError)
+│   ├── DatasetFormatError     DT-2101   exit 1
+│   └── DatasetEncodingError   DT-2102   exit 1   (also DatasetFormatError)
+├── OperationError             DT-3000   exit 1
+│   ├── InventoryError         DT-3001   exit 1
+│   ├── OrganizerError         DT-3002   exit 1
+│   ├── PortfolioError         DT-3003   exit 1
+│   └── AssistantError         DT-3004   exit 1
+└── ConfigurationError         DT-4000   exit 1
+```
+
+### Architectural decisions
+
+1. **Multiple inheritance, not a parallel hierarchy.** Each leaf also inherits
+   the builtin it replaces, so `ValidationError` *is* a `ValueError`,
+   `MissingFileError` *is* a `FileNotFoundError`, and `UnknownCategoryError`
+   *is* a `KeyError`. Every handler written on Days 3–6 — and every one of the
+   323 pre-existing tests — kept working without a single edit, while
+   `except DatheonError` became a complete safety net for new code.
+2. **The exception knows its exit code.** Previously `run_cli` guessed:
+   `ValueError` or `OSError` meant `1`. Now each class declares `exit_code`, so
+   `UsageError` can map onto `2` (matching `argparse` and POSIX `EX_USAGE`)
+   without `run_cli` growing a table of special cases. `DatheonError` is
+   checked *before* the generic `OSError` branch, because several leaves are
+   both.
+3. **Message and hint are separate fields.** `str(exc)` stays the bare message
+   — so log lines and existing assertions are unchanged — while `render()`
+   adds the catalogue code and a `hint:` line for the shell user. The
+   `validators` module moved its `— e.g. AAPL` suffix out of the message and
+   into `hint`, which is why the message text is shorter but the output is
+   richer.
+4. **Structured detail in `context`.** Paths, field names, line numbers and
+   offending values travel in a dict rather than being interpolated into
+   English, so `to_dict()` produces a record a future JSON log handler can
+   emit verbatim (Day 10).
+5. **Documentation is generated, not written.** `render_catalogue_markdown()`
+   walks the class metadata and emits `docs/error_catalogue.md`; a test
+   compares the file to the generator's output. Adding a class without
+   documenting it, or editing the table by hand, fails CI.
+6. **`DatasetEncodingError` subclasses `DatasetFormatError`.** Bytes that
+   cannot be decoded *are* a format problem, so the Day 6 test that expects
+   `DatasetFormatError` for an undecodable file keeps passing while callers who
+   care can catch the narrower class.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `DatheonError.__init__` | errors | O(1) | O(C) | C context keys copied |
+| `render` / `to_dict` | errors | O(M + H) | O(M + H) | M message, H hint length |
+| `catalogue` | errors | O(K) | O(K) | K = 19 classes, rebuilt per call |
+| `describe_code` / `error_class_for` | errors | O(K) | O(1) | Linear scan over a 19-entry tuple |
+| `exit_code_for` | errors | O(1) | O(1) | Two `isinstance` checks |
+| `render_catalogue_markdown` | errors | O(K·R) | O(K·R) | K rows of R resolution text |
+
+The catalogue is rebuilt rather than cached deliberately: it is called by
+tests and by a documentation generator, never on a hot path, and a module-level
+cache would need invalidation the moment a subclass overrides its metadata.
+Day 13's caching work can revisit this if a CLI ever needs it per invocation.
+
+### Edge cases covered by tests
+
+- Structure: every class derives from `DatheonError`; codes are unique,
+  `DT-` prefixed and seven characters long; parents are listed before
+  children; every entry has non-empty title, summary and resolution.
+- Compatibility: each leaf raises as its builtin (`ValueError`, `KeyError`,
+  `OSError`, `FileNotFoundError`, `PermissionError`, `NotADirectoryError`).
+- Rendering: bare message via `str()`, coded block via `render()`,
+  `render(show_code=False)`, hint on its own line, empty message allowed,
+  per-instance code override.
+- Structured output: `to_dict()` is complete and its `context` is a copy, not a
+  reference to the caller's dict.
+- Fluent helpers: `with_context()` merges and returns `self`; `with_hint()`
+  fills a missing hint but never overwrites one.
+- Lookups: `describe_code` / `error_class_for` round-trip; unknown codes raise
+  `UnknownCategoryError` carrying the known codes as a hint.
+- CLI contract: `run_cli` prints the rendered block, returns `1` for data
+  errors and `2` for a `UsageError`, and still maps a plain `ValueError`.
+- Real call sites: a validator, the dataset loader, `check_file_size`,
+  `iter_files`, the word banks, the inventory, the intent engine and the
+  portfolio all raise taxonomy errors with populated context.
+- Documentation: the committed catalogue matches the generator byte for byte.
+
+### Next up
+
+- Day 8: a shared logging setup — `--log-level`, console + rotating file
+  handlers, and a consistent format wired into all five projects. The
+  `to_dict()` record shape added today is the natural payload for Day 10's
+  JSON log lines.
