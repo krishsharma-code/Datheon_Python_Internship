@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Sequence, Union
 
 from dataset_loader import LoadReport, read_text_robust
 from edge_cases import check_file_size
+from errors import UnknownCategoryError, ValidationError
 
 #: Secret words grouped by theme. Keep every entry lowercase and alphabetic.
 WORDS_BY_CATEGORY: Dict[str, List[str]] = {
@@ -99,10 +100,15 @@ def get_random_word(
         A single lowercase word.
 
     Raises:
-        KeyError: If ``category`` is not a known word bank.
+        UnknownCategoryError: If ``category`` is not a known word bank. Also a
+            :class:`KeyError`.
     """
     if category not in WORDS_BY_CATEGORY:
-        raise KeyError(f"Unknown category: {category!r}. Available: {', '.join(categories())}")
+        raise UnknownCategoryError(
+            f"Unknown category: {category!r}.",
+            hint=f"available categories: {', '.join(categories())}",
+            context={"field": "category", "value": category},
+        )
     chooser = rng if rng is not None else random
     return chooser.choice(WORDS_BY_CATEGORY[category])
 
@@ -155,9 +161,17 @@ def load_words_from_file(
             a single alphabetic word.
     """
     if min_length < 1:
-        raise ValueError("min_length must be at least 1.")
+        raise ValidationError(
+            f"min_length must be at least 1, got {min_length}.",
+            hint="use a minimum length of 1 or more",
+            context={"field": "min_length", "value": min_length},
+        )
     if max_length is not None and max_length < min_length:
-        raise ValueError("max_length must not be smaller than min_length.")
+        raise ValidationError(
+            f"max_length ({max_length}) must not be smaller than min_length ({min_length}).",
+            hint="swap the bounds so that min_length <= max_length",
+            context={"field": "max_length", "value": max_length},
+        )
 
     file_path = Path(path)
     check_file_size(file_path, field="word list")
@@ -207,9 +221,13 @@ def get_random_word_from_list(
         A randomly chosen word.
 
     Raises:
-        ValueError: If ``words`` is empty.
+        ValidationError: If ``words`` is empty. Also a :class:`ValueError`.
     """
     if not words:
-        raise ValueError("Cannot pick a word from an empty list.")
+        raise ValidationError(
+            "Cannot pick a word from an empty list.",
+            hint="pass at least one candidate word",
+            context={"field": "words"},
+        )
     chooser = rng if rng is not None else random
     return chooser.choice(list(words))
