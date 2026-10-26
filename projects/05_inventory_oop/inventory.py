@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Dict, List, Optional
 
+from errors import InventoryError
 from models import LibraryItem
 
 
@@ -31,10 +32,6 @@ class LoanRecord:
     days: int
     fee: float
     checked_out_on: date
-
-
-class InventoryError(Exception):
-    """Raised when an inventory operation is invalid."""
 
 
 class InventoryManager:
