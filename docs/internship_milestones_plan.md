@@ -1,1 +1,1 @@
-   6. Update **this ledger** (mark the row `done`, record the PR number) and append a dated entry to `docs/daily_learning_log.md` — in the *same* PR.
+   7. Open a PR targeting `main`.
