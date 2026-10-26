@@ -74,6 +74,7 @@ Datheon_Python_Internship/
 ├── tests/                          # pytest suite for all five projects
 ├── cli_contract.py                 # shared argparse / --version / exit codes
 ├── errors.py                       # exception taxonomy (DatheonError root)
+├── error_catalogue.py              # generates docs/error_catalogue.md
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -155,7 +156,8 @@ Every error a tool raises on purpose derives from `DatheonError` in
 ```
 
 The full list — code, class, meaning and resolution for each — is the
-generated [`docs/error_catalogue.md`](docs/error_catalogue.md).
+generated [`docs/error_catalogue.md`](docs/error_catalogue.md), rebuilt from the
+class metadata by `python error_catalogue.py`.
 
 ---
 
