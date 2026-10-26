@@ -63,7 +63,8 @@ Datheon_Python_Internship/
 │       └── ci.yml                  # flake8 + black + pytest on every PR
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
-│   └── cli_contract.md             # shared command-line & exit-code contract
+│   ├── cli_contract.md             # shared command-line & exit-code contract
+│   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
 │   ├── 02_portfolio_tracker/       # Task 2 — stock portfolio tracker
@@ -72,6 +73,8 @@ Datheon_Python_Internship/
 │   └── 05_inventory_oop/           # Task 5 — OOP inventory & asset system
 ├── tests/                          # pytest suite for all five projects
 ├── cli_contract.py                 # shared argparse / --version / exit codes
+├── errors.py                       # exception taxonomy (DatheonError root)
+├── error_catalogue.py              # generates docs/error_catalogue.md
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -140,6 +143,21 @@ python projects/01_hangman_game/main.py --version      # hangman 1.0.0
 
 The full contract is documented in [`docs/cli_contract.md`](docs/cli_contract.md)
 and verified by `tests/test_cli_contract.py`.
+
+Every error a tool raises on purpose derives from `DatheonError` in
+[`errors.py`](errors.py), carries a stable code (`DT-1001`, `DT-2101`, …) and a
+"what to do next" hint, and is still catchable as the builtin it replaces —
+`ValidationError` is a `ValueError`, `MissingFileError` is a
+`FileNotFoundError`, and so on. `run_cli` prints the rendered form:
+
+```text
+! [DT-1001] symbol: must not be empty
+  hint: e.g. AAPL
+```
+
+The full list — code, class, meaning and resolution for each — is the
+generated [`docs/error_catalogue.md`](docs/error_catalogue.md), rebuilt from the
+class metadata by `python error_catalogue.py`.
 
 ---
 

@@ -19,8 +19,12 @@ This module centralises the hardening so a fix lands once:
   **line number** of the offending row (or the entry index, for JSON) — so a
   corrupt fixture is *reported*, never silently accepted;
 * :func:`require_columns` performs CSV schema validation; and
-* :class:`DatasetFormatError` (a :class:`ValueError`) is raised in strict /
-  ``--validate`` mode, mapping onto the shared exit-code contract (code ``1``).
+* the failure classes come from the shared taxonomy in :mod:`errors` —
+  :class:`~errors.MissingFileError`, :class:`~errors.AccessDeniedError`,
+  :class:`~errors.DatasetEncodingError` and
+  :class:`~errors.DatasetFormatError` — so every dataset failure derives from
+  :class:`~errors.DatheonError` and maps onto the shared exit-code contract
+  (code ``1``).
 
 Severity defaults mirror each loader's historical behaviour — a soft failure
 that used to be skipped is recorded as a *warning*, and the same failure under
@@ -32,6 +36,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
+
+from errors import (
+    AccessDeniedError,
+    DatasetEncodingError,
+    DatasetFormatError,
+    MissingFileError,
+)
 
 __all__ = [
     "DEFAULT_ENCODINGS",
@@ -56,15 +67,6 @@ DEFAULT_ENCODINGS: Tuple[str, ...] = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
 
 #: Leading UTF-8 byte-order mark, as it appears in the raw bytes.
 _UTF8_BOM = b"\xef\xbb\xbf"
-
-
-class DatasetFormatError(ValueError):
-    """Raised when a dataset is present but structurally invalid.
-
-    Subclasses :class:`ValueError` so the shared
-    :func:`cli_contract.run_cli` maps an uncaught instance onto exit code
-    ``1`` — a user or data error — instead of leaking a traceback.
-    """
 
 
 def strip_bom(text: str) -> str:
@@ -149,18 +151,28 @@ def read_text_robust(
         A :class:`TextSource` with the decoded text and its metadata.
 
     Raises:
-        FileNotFoundError: If ``path`` is not an existing file.
-        PermissionError: If ``path`` cannot be read.
-        DatasetFormatError: If no encoding in ``encodings`` can decode the bytes
-            (only reachable when ``latin-1`` is omitted from the chain).
+        MissingFileError: If ``path`` is not an existing file. Also a
+            :class:`FileNotFoundError`, so older handlers still catch it.
+        AccessDeniedError: If ``path`` cannot be read. Also a
+            :class:`PermissionError`.
+        DatasetEncodingError: If no encoding in ``encodings`` can decode the
+            bytes (only reachable when ``latin-1`` is omitted from the chain).
     """
     file_path = Path(path)
     if not file_path.is_file():
-        raise FileNotFoundError(f"{field} not found: {file_path}")
+        raise MissingFileError(
+            f"{field} not found: {file_path}",
+            hint="check the spelling of the path; sample datasets live under each project's data/",
+            context={"field": field, "path": str(file_path)},
+        )
     try:
         raw = file_path.read_bytes()
     except PermissionError as exc:
-        raise PermissionError(f"{field} is not readable (permission denied): {file_path}") from exc
+        raise AccessDeniedError(
+            f"{field} is not readable (permission denied): {file_path}",
+            hint="fix the file's permissions, or run the tool as a user that may read it",
+            context={"field": field, "path": str(file_path)},
+        ) from exc
 
     had_bom = raw.startswith(_UTF8_BOM)
     last_error: Optional[UnicodeDecodeError] = None
@@ -178,8 +190,10 @@ def read_text_robust(
             newline=detect_newline(text),
             had_bom=had_bom,
         )
-    raise DatasetFormatError(
-        f"{field}: could not decode {file_path} with any of {', '.join(encodings)} ({last_error})"
+    raise DatasetEncodingError(
+        f"{field}: could not decode {file_path} with any of {', '.join(encodings)} ({last_error})",
+        hint="re-save the file as UTF-8, or widen the encoding chain",
+        context={"field": field, "path": str(file_path), "encodings": list(encodings)},
     )
 
 
@@ -211,7 +225,9 @@ def require_columns(
     where = f" in {path}" if path is not None else ""
     raise DatasetFormatError(
         f"{field}: missing required column (one of {', '.join(candidates)}){where}; "
-        f"found: {list(headers)}"
+        f"found: {list(headers)}",
+        hint="rename or add the column in the header row",
+        context={"field": field, "candidates": list(candidates), "headers": list(headers)},
     )
 
 
@@ -362,4 +378,13 @@ class LoadReport:
         head = self.summary(what)
         detail = "; ".join(issue.describe() for issue in self.errors[:5])
         more = "" if len(self.errors) <= 5 else f"; (+{len(self.errors) - 5} more)"
-        raise DatasetFormatError(f"malformed {what}: {head} — {detail}{more}")
+        raise DatasetFormatError(
+            f"malformed {what}: {head} — {detail}{more}",
+            hint="open the file at the reported line and fix the row, or re-run with --validate",
+            context={
+                "dataset": what,
+                "path": str(self.path) if self.path is not None else None,
+                "errors": len(self.errors),
+                "warnings": len(self.warnings),
+            },
+        )

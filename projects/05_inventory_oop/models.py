@@ -18,6 +18,8 @@ from abc import ABC, abstractmethod
 from datetime import date
 from typing import Dict, Optional, Union
 
+from errors import ValidationError
+
 #: Default standard loan period, in days.
 DEFAULT_LOAN_DAYS: int = 14
 
@@ -36,8 +38,8 @@ class LibraryItem(ABC):
         borrow_date: Optional date the item was borrowed.
 
     Raises:
-        ValueError: If ``item_id``/``title`` is empty, ``price`` is negative, or
-            ``borrow_date`` is invalid.
+        ValidationError: If ``item_id``/``title`` is empty, ``price`` is
+            negative, or ``borrow_date`` is invalid. Also a :class:`ValueError`.
     """
 
     def __init__(
@@ -60,14 +62,22 @@ class LibraryItem(ABC):
     def _clean_id(item_id: str) -> str:
         cleaned = (item_id or "").strip()
         if not cleaned:
-            raise ValueError("item_id must not be empty.")
+            raise ValidationError(
+                "item_id must not be empty.",
+                hint="give the item a short unique id, e.g. BK-001",
+                context={"field": "item_id"},
+            )
         return cleaned
 
     @staticmethod
     def _clean_title(title: str) -> str:
         cleaned = (title or "").strip()
         if not cleaned:
-            raise ValueError("title must not be empty.")
+            raise ValidationError(
+                "title must not be empty.",
+                hint="give the item a human-readable title",
+                context={"field": "title"},
+            )
         return cleaned
 
     # -- encapsulated attributes ----------------------------------------
@@ -96,9 +106,17 @@ class LibraryItem(ABC):
         try:
             numeric = float(value)
         except (TypeError, ValueError) as exc:
-            raise ValueError("price must be a number.") from exc
+            raise ValidationError(
+                f"price must be a number, got {value!r}.",
+                hint="use a decimal number, e.g. 499.00",
+                context={"field": "price"},
+            ) from exc
         if numeric < 0:
-            raise ValueError("price must not be negative.")
+            raise ValidationError(
+                f"price must not be negative, got {numeric:g}.",
+                hint="use 0 or a positive price",
+                context={"field": "price", "value": numeric},
+            )
         self.__price = round(numeric, 2)
 
     @property
@@ -122,11 +140,23 @@ class LibraryItem(ABC):
             try:
                 value = date.fromisoformat(value)
             except ValueError as exc:
-                raise ValueError("borrow_date string must be in YYYY-MM-DD format.") from exc
+                raise ValidationError(
+                    f"borrow_date string must be in YYYY-MM-DD format, got {value!r}.",
+                    hint="e.g. 2026-10-26",
+                    context={"field": "borrow_date"},
+                ) from exc
         if not isinstance(value, date):
-            raise ValueError("borrow_date must be a date or ISO date string.")
+            raise ValidationError(
+                "borrow_date must be a date or ISO date string.",
+                hint="pass datetime.date(2026, 10, 26) or '2026-10-26'",
+                context={"field": "borrow_date"},
+            )
         if value > date.today():
-            raise ValueError("borrow_date cannot be in the future.")
+            raise ValidationError(
+                f"borrow_date cannot be in the future, got {value.isoformat()}.",
+                hint="use today's date or earlier",
+                context={"field": "borrow_date", "value": value.isoformat()},
+            )
         self.__borrow_date = value
 
     @property
@@ -215,7 +245,11 @@ class Book(LibraryItem):
         super().__init__(item_id, title, price, borrow_date)
         self.author = (author or "").strip() or "Unknown"
         if pages <= 0:
-            raise ValueError("pages must be greater than zero.")
+            raise ValidationError(
+                f"pages must be greater than zero, got {pages}.",
+                hint="use a positive page count",
+                context={"field": "pages", "value": pages},
+            )
         self.pages = int(pages)
         self.genre = (genre or "General").strip()
 
@@ -275,7 +309,11 @@ class Magazine(LibraryItem):
         super().__init__(item_id, title, price, borrow_date)
         self.issue = (issue or "").strip() or "N/A"
         if articles <= 0:
-            raise ValueError("articles must be greater than zero.")
+            raise ValidationError(
+                f"articles must be greater than zero, got {articles}.",
+                hint="use a positive article count",
+                context={"field": "articles", "value": articles},
+            )
         self.articles = int(articles)
 
     @property
@@ -331,7 +369,11 @@ class DigitalMedia(LibraryItem):
         super().__init__(item_id, title, price, borrow_date)
         self.media_type = (media_type or "Digital").strip()
         if duration_minutes <= 0:
-            raise ValueError("duration_minutes must be greater than zero.")
+            raise ValidationError(
+                f"duration_minutes must be greater than zero, got {duration_minutes}.",
+                hint="use a positive duration",
+                context={"field": "duration_minutes", "value": duration_minutes},
+            )
         self.duration_minutes = int(duration_minutes)
 
     @property

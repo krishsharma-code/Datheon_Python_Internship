@@ -24,7 +24,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 4 | 2026-10-23 | Input validation layer | `feat/datheon-day-4-validation` | Strict validators + `--strict` mode with actionable error messages | done | #5 |
 | 5 | 2026-10-24 | Edge-case handler sweep | `feat/datheon-day-5-edge-cases` | Every project's failure modes handled + regression tests | done | #6 |
 | 6 | 2026-10-25 | Dataset loader hardening | `feat/datheon-day-6-loader-hardening` | Schema validation, BOM/CRLF/encoding tolerance, malformed-row reporting | done | #7 |
-| 7 | 2026-10-26 | Week 1 consolidation | `feat/datheon-day-7-error-taxonomy` | Custom exception taxonomy + user-facing error catalogue + docs | pending | — |
+| 7 | 2026-10-26 | Week 1 consolidation | `feat/datheon-day-7-error-taxonomy` | Custom exception taxonomy + user-facing error catalogue + docs | done | #8 |
 | 8 | 2026-10-27 | Logging architecture | `feat/datheon-day-8-logging` | `--log-level`, console + rotating file handlers wired into all projects | pending | — |
 | 9 | 2026-10-28 | Atomic & versioned persistence | `feat/datheon-day-9-persistence` | Temp-file + `os.replace` writes, schema version field, round-trip tests | pending | — |
 | 10 | 2026-10-29 | Structured logging | `feat/datheon-day-10-structured-logs` | JSON log records, run IDs, durations | pending | — |
@@ -115,7 +115,7 @@ The cron job **"Datheon internship daily progress"** fires at **09:00 IST** and 
    2. Create the branch named in the ledger row.
    3. Implement the row's `Deliverable`, with type hints and docstrings.
    4. Add or extend tests for the change.
-   5. Verify locally: `python -m compileall`, `flake8 .`, `black --check .`, `pytest`.
+   5. Verify locally: `compileall`, `flake8 .`, `black --check .`, `pytest`.
    6. Update **this ledger** (mark the row `done`, record the PR number) and append a dated entry to `docs/daily_learning_log.md` — in the *same* PR.
    7. Open a PR targeting `main`.
    8. Submit a formal review (`COMMENT` event — GitHub blocks self-approval).
@@ -154,7 +154,7 @@ Required to qualify for the **Datheon Verified Certificate of Completion**
 - [ ] Optional: short **video walkthrough** of one project for the LinkedIn post.
 - [ ] **Final LinkedIn post** (Option C) published once the internship completes.
 - [ ] Credential ID **DT-2026-O6Q0X** verified on the Datheon portal
-      (`https://datheon.in/verify?id=DT-2026-O6Q0X`).
+      (`https://datheon.in/verify` — enter credential ID `DT-2026-O6Q0X`).
 - [ ] Repository link submitted through the **Datheon Student Workspace**.
 
 ### Certification

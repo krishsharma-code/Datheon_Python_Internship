@@ -23,6 +23,7 @@ from typing import Dict, Iterable, List, Optional, Union
 
 from dataset_loader import LoadReport, read_text_robust, require_columns
 from edge_cases import check_file_size
+from errors import ValidationError
 
 #: Header names (lower-cased) accepted as the ticker column in a price CSV.
 _SYMBOL_KEYS = ("symbol", "ticker", "code")
@@ -46,7 +47,8 @@ class Holding:
         current_price: Latest known price per share.
 
     Raises:
-        ValueError: If any field fails validation.
+        ValidationError: If any field fails validation. Also a
+            :class:`ValueError`.
     """
 
     symbol: str
@@ -57,13 +59,29 @@ class Holding:
     def __post_init__(self) -> None:
         self.symbol = (self.symbol or "").strip().upper()
         if not self.symbol:
-            raise ValueError("Holding symbol must not be empty.")
+            raise ValidationError(
+                "Holding symbol must not be empty.",
+                hint="use a ticker such as AAPL or RELIANCE.NS",
+                context={"field": "symbol"},
+            )
         if self.shares <= 0:
-            raise ValueError("Holding shares must be greater than zero.")
+            raise ValidationError(
+                f"Holding shares must be greater than zero, got {self.shares:g}.",
+                hint="use a positive share count",
+                context={"field": "shares", "value": self.shares},
+            )
         if self.buy_price < 0:
-            raise ValueError("Buy price must not be negative.")
+            raise ValidationError(
+                f"Buy price must not be negative, got {self.buy_price:g}.",
+                hint="use 0 or a positive price",
+                context={"field": "buy_price", "value": self.buy_price},
+            )
         if self.current_price < 0:
-            raise ValueError("Current price must not be negative.")
+            raise ValidationError(
+                f"Current price must not be negative, got {self.current_price:g}.",
+                hint="use 0 or a positive price",
+                context={"field": "current_price", "value": self.current_price},
+            )
 
     @property
     def cost_basis(self) -> float:
@@ -92,10 +110,15 @@ class Holding:
             new_price: The new market price per share.
 
         Raises:
-            ValueError: If ``new_price`` is negative.
+            ValidationError: If ``new_price`` is negative. Also a
+                :class:`ValueError`.
         """
         if new_price < 0:
-            raise ValueError("Current price must not be negative.")
+            raise ValidationError(
+                f"Current price must not be negative, got {new_price:g}.",
+                hint="use 0 or a positive price",
+                context={"field": "current_price", "value": new_price},
+            )
         self.current_price = float(new_price)
 
     def as_row(self) -> Dict[str, Union[str, float]]:

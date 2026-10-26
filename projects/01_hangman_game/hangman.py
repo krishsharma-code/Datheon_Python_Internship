@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Set
 
+from errors import ValidationError
+
 #: Number of incorrect guesses a player may make before losing.
 MAX_WRONG: int = 6
 
@@ -71,13 +73,22 @@ def normalize_letter(raw: str) -> str:
         The lower-cased, whitespace-stripped letter.
 
     Raises:
-        ValueError: If ``raw`` is not exactly one alphabetic character.
+        ValidationError: If ``raw`` is not exactly one alphabetic character.
+            Also a :class:`ValueError`.
     """
     if raw is None:
-        raise ValueError("No letter was provided.")
+        raise ValidationError(
+            "No letter was provided.",
+            hint="type a single letter, e.g. 'a'",
+            context={"field": "letter"},
+        )
     letter = raw.strip().lower()
     if len(letter) != 1 or not letter.isalpha():
-        raise ValueError("Enter exactly one letter (A-Z).")
+        raise ValidationError(
+            f"Enter exactly one letter (A-Z), got {raw!r}.",
+            hint="one alphabetic character per guess",
+            context={"field": "letter", "value": raw},
+        )
     return letter
 
 
@@ -94,15 +105,25 @@ class HangmanGame:
             :data:`MAX_WRONG`.
 
     Raises:
-        ValueError: If ``word`` is empty or contains non-alphabetic characters.
+        ValidationError: If ``word`` is empty or contains non-alphabetic
+            characters, or if ``max_wrong`` is below 1. Also a
+            :class:`ValueError`.
     """
 
     def __init__(self, word: str, max_wrong: int = MAX_WRONG) -> None:
         cleaned = (word or "").strip().lower()
         if not cleaned.isalpha():
-            raise ValueError("The secret word must contain letters only.")
+            raise ValidationError(
+                "The secret word must contain letters only.",
+                hint="pick a word from the bundled word list",
+                context={"field": "word"},
+            )
         if max_wrong < 1:
-            raise ValueError("max_wrong must be at least 1.")
+            raise ValidationError(
+                f"max_wrong must be at least 1, got {max_wrong}.",
+                hint="use a positive number of allowed wrong guesses",
+                context={"field": "max_wrong", "value": max_wrong},
+            )
         self._word: str = cleaned
         self._max_wrong: int = max_wrong
         self._guessed: Set[str] = set()
