@@ -1,1 +1,1 @@
-   7. Open a PR targeting `main`.
+   5. Verify locally: `compileall`, `flake8 .`, `black --check .`, `pytest`.
