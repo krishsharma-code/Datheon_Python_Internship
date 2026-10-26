@@ -15,6 +15,11 @@ The codes are exposed as :class:`ExitCode` so callers can ``return
 int(ExitCode.DATA_ERROR)`` instead of writing magic numbers, and
 :func:`run_cli` maps uncaught domain errors onto the contract for the
 ``if __name__ == "__main__"`` blocks.
+
+Since Day 7 the mapping is driven by the exception taxonomy in :mod:`errors`:
+any :class:`~errors.DatheonError` knows its own ``exit_code`` and renders its
+own user-facing message, so ``run_cli`` no longer has to infer the exit code
+from the exception's builtin type.
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ from enum import IntEnum
 from typing import Callable, Optional
 
 from edge_cases import guard_broken_pipe
+from errors import EXIT_DATA_ERROR, EXIT_SUCCESS, EXIT_USAGE_ERROR, DatheonError
 
 __all__ = [
     "PROGRAM_VERSION",
@@ -56,9 +62,9 @@ class ExitCode(IntEnum):
         USAGE_ERROR: The command line itself was invalid.
     """
 
-    OK = 0
-    DATA_ERROR = 1
-    USAGE_ERROR = 2
+    OK = EXIT_SUCCESS
+    DATA_ERROR = EXIT_DATA_ERROR
+    USAGE_ERROR = EXIT_USAGE_ERROR
 
 
 def version_string(prog: str) -> str:
@@ -117,15 +123,20 @@ def run_cli(main: Callable[[], int]) -> int:
     Returns:
         The exit code returned by ``main``; :data:`ExitCode.OK` (``0``) when the
         user interrupted the program with ``Ctrl-C`` or the output pipe was
-        closed early (for example ``organizer . | head``); or
-        :data:`ExitCode.DATA_ERROR` (``1``) if ``main`` raised a
-        :class:`ValueError` or :class:`OSError` — the standard shapes of a user
-        or data error.
+        closed early (for example ``organizer . | head``); the error's own
+        :attr:`~errors.DatheonError.exit_code` when ``main`` raised a
+        :class:`~errors.DatheonError` — printing its catalogue code and hint
+        instead of a bare message; or :data:`ExitCode.DATA_ERROR` (``1``) if
+        ``main`` raised a bare :class:`ValueError` or :class:`OSError` that was
+        never converted into the taxonomy.
 
     Note:
         :class:`BrokenPipeError` is a subclass of :class:`OSError`, so it is
         caught first and treated as a normal early exit rather than a data
-        error.
+        error. :class:`~errors.DatheonError` is checked before the generic
+        ``OSError`` branch because several taxonomy leaves — for instance
+        :class:`~errors.MissingFileError` — are also :class:`OSError`
+        subclasses.
     """
     try:
         return int(main())
@@ -135,6 +146,9 @@ def run_cli(main: Callable[[], int]) -> int:
     except KeyboardInterrupt:
         print("\nInterrupted.", file=sys.stderr)
         return int(ExitCode.OK)
+    except DatheonError as exc:
+        print(exc.render(), file=sys.stderr)
+        return int(exc.exit_code)
     except (ValueError, OSError) as exc:
         print(f"! {exc}", file=sys.stderr)
         return int(ExitCode.DATA_ERROR)
