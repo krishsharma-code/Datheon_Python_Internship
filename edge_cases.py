@@ -13,6 +13,11 @@ actually hit — the ones that used to surface as an unhandled traceback:
 Each helper turns one low-level failure into either a single, actionable
 message or a graceful stop. They hold no project state, so they can be unit
 tested directly and reused by every tool.
+
+Every error raised here comes from the shared taxonomy in :mod:`errors`, so it
+derives from :class:`~errors.DatheonError`, carries a catalogue code, and is
+still catchable as the builtin it replaces (:class:`FileNotFoundError`,
+:class:`PermissionError`, :class:`NotADirectoryError`).
 """
 
 from __future__ import annotations
@@ -21,6 +26,14 @@ import os
 import sys
 from pathlib import Path
 from typing import List, Optional, Union
+
+from errors import (
+    AccessDeniedError,
+    DirectoryExpectedError,
+    InputClosed,
+    MissingFileError,
+    ValidationError,
+)
 
 __all__ = [
     "MAX_INPUT_FILE_BYTES",
@@ -35,15 +48,6 @@ __all__ = [
 #: almost certainly a mistake — a log, a database dump, the wrong path — and is
 #: rejected up front rather than being pulled into memory line by line.
 MAX_INPUT_FILE_BYTES: int = 64 * 1024 * 1024
-
-
-class InputClosed(Exception):
-    """Raised by :func:`safe_input` when standard input ends or is interrupted.
-
-    The interactive shells catch this to finish the session cleanly — the
-    terminal equivalent of ``Ctrl-D`` (EOF) or ``Ctrl-C`` — instead of letting
-    :class:`EOFError` or :class:`KeyboardInterrupt` escape as a traceback.
-    """
 
 
 def safe_input(prompt: str = "", *, default: Optional[str] = None) -> str:
@@ -67,9 +71,15 @@ def safe_input(prompt: str = "", *, default: Optional[str] = None) -> str:
     except EOFError as exc:
         if default is not None:
             return default
-        raise InputClosed("input stream closed (EOF)") from exc
+        raise InputClosed(
+            "input stream closed (EOF)",
+            hint="re-run the tool to start a new session",
+        ) from exc
     except KeyboardInterrupt as exc:
-        raise InputClosed("input interrupted (Ctrl-C)") from exc
+        raise InputClosed(
+            "input interrupted (Ctrl-C)",
+            hint="re-run the tool to start a new session",
+        ) from exc
 
 
 def check_file_size(
@@ -90,16 +100,25 @@ def check_file_size(
         The file size in bytes.
 
     Raises:
-        FileNotFoundError: If ``path`` is not an existing file.
-        ValueError: If the file is larger than ``max_bytes``.
+        MissingFileError: If ``path`` is not an existing file. Also a
+            :class:`FileNotFoundError`.
+        ValidationError: If the file is larger than ``max_bytes``. Also a
+            :class:`ValueError`.
     """
     file_path = Path(path)
     if not file_path.is_file():
-        raise FileNotFoundError(f"{field} not found: {file_path}")
+        raise MissingFileError(
+            f"{field} not found: {file_path}",
+            hint="check the spelling of the path",
+            context={"field": field, "path": str(file_path)},
+        )
     size = file_path.stat().st_size
     if size > max_bytes:
-        raise ValueError(
-            f"{field}: {file_path} is too large " f"({size:,} bytes > limit of {max_bytes:,} bytes)"
+        raise ValidationError(
+            f"{field}: {file_path} is too large "
+            f"({size:,} bytes > limit of {max_bytes:,} bytes)",
+            hint="point the tool at a smaller file, or raise the limit explicitly",
+            context={"field": field, "path": str(file_path), "size": size},
         )
     return size
 
@@ -120,16 +139,26 @@ def iter_files(directory: Union[str, Path]) -> List[Path]:
         name. An empty list means the directory holds no files.
 
     Raises:
-        NotADirectoryError: If ``directory`` is not a directory.
-        PermissionError: If the directory's contents cannot be listed.
+        DirectoryExpectedError: If ``directory`` is not a directory. Also a
+            :class:`NotADirectoryError`.
+        AccessDeniedError: If the directory's contents cannot be listed. Also a
+            :class:`PermissionError`.
     """
     root = Path(directory).expanduser()
     if not root.is_dir():
-        raise NotADirectoryError(f"Not a directory: {root}")
+        raise DirectoryExpectedError(
+            f"Not a directory: {root}",
+            hint="pass the folder you want the tool to work on",
+            context={"path": str(root)},
+        )
     try:
         entries = list(root.iterdir())
     except PermissionError as exc:
-        raise PermissionError(f"cannot read directory (permission denied): {root}") from exc
+        raise AccessDeniedError(
+            f"cannot read directory (permission denied): {root}",
+            hint="fix the permissions on the directory, or run as a user that may read it",
+            context={"path": str(root)},
+        ) from exc
     return sorted((entry for entry in entries if entry.is_file()), key=lambda p: p.name.lower())
 
 
