@@ -1,3 +1,1 @@
-   8. Submit a formal review (`COMMENT` event — GitHub blocks self-approval).
-   9. Squash-merge with `feat(internship): complete Day <N> tasks (#<PR>)`.
-   10. Delete the branch and report the PR link, review ID, and merge commit URL.
+   6. Update **this ledger** (mark the row `done`, record the PR number) and append a dated entry to `docs/daily_learning_log.md` — in the *same* PR.
