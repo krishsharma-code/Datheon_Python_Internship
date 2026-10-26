@@ -14,16 +14,20 @@ The document is generated rather than hand-written, and
 ``tests/test_errors.py`` asserts that the committed file matches this
 module's output byte for byte, so the catalogue cannot drift away from the code.
 
-Regenerate it after changing any class metadata by calling
-``render_catalogue_markdown()`` and writing the result over
-``docs/error_catalogue.md``; the regeneration command is repeated in the
-document's own footer.
+Regenerate it after changing any class metadata by running the module from the
+repository root — it rewrites ``docs/error_catalogue.md`` in place::
+
+    python error_catalogue.py
+
+A different destination can be passed as the first argument.
 """
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
-from typing import List, Tuple
+from pathlib import Path
+from typing import List, Optional, Sequence, Tuple, Union
 
 from errors import (
     AccessDeniedError,
@@ -53,7 +57,9 @@ __all__ = [
     "catalogue_codes",
     "describe_code",
     "error_class_for",
+    "main",
     "render_catalogue_markdown",
+    "write_catalogue",
 ]
 
 
@@ -190,4 +196,113 @@ def error_class_for(code: str) -> type:
     )
 
 
+def render_catalogue_markdown() -> str:
+    """Render the error catalogue as the Markdown body of ``docs/error_catalogue.md``.
 
+    The generated text is committed verbatim, and a test asserts that the file
+    on disk matches this function's output — so the documentation cannot drift
+    away from the code.
+
+    Returns:
+        A Markdown document describing every error class.
+    """
+    lines: List[str] = [
+        "# Error catalogue",
+        "",
+        "Every error a Datheon tool raises on purpose derives from `DatheonError`,",
+        "so `except DatheonError` catches all of them. Each class carries a stable",
+        "machine-readable code, a process exit code, and the guidance below.",
+        "",
+        "Exit codes: `0` success · `1` user or data error · `2` usage error.",
+        "",
+        "| Code | Class | Title | Meaning | What to do |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for entry in catalogue():
+        rendered = " | ".join(cell.replace("|", "\\|") for cell in entry.as_row())
+        lines.append(f"| {rendered} |")
+    lines.extend(
+        [
+            "",
+            "## Builtin compatibility",
+            "",
+            "The leaf classes also inherit the builtin exception they replace, so",
+            "handlers written before this taxonomy existed keep working:",
+            "",
+            "| Class | Also catchable as |",
+            "| --- | --- |",
+        ]
+    )
+    for entry in catalogue():
+        if entry.bases:
+            names = ", ".join(f"`{base}`" for base in entry.bases)
+            lines.append(f"| `{entry.name}` | {names} |")
+    lines.extend(
+        [
+            "",
+            "## Rendering an error for the user",
+            "",
+            "`DatheonError.render()` produces the block the CLIs print, and",
+            "`DatheonError.to_dict()` produces the structured form for logs:",
+            "",
+            "```python",
+            "from errors import ValidationError",
+            "",
+            "exc = ValidationError('symbol: must not be empty', hint='e.g. AAPL')",
+            "print(exc.render())",
+            "# ! [DT-1001] symbol: must not be empty",
+            "#   hint: e.g. AAPL",
+            "print(exc.to_dict())",
+            "# {'code': 'DT-1001', 'type': 'ValidationError', 'message': 'symbol: ...', ...}",
+            "```",
+            "",
+            "## Regenerating this document",
+            "",
+            "The tables above are generated from the classes in `errors.py`. Edit the",
+            "class metadata, never this file, then rewrite it from the repository",
+            "root:",
+            "",
+            "```bash",
+            "python error_catalogue.py",
+            "```",
+            "",
+            "A different destination path may be passed as the first argument.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_catalogue(path: Union[str, Path] = "docs/error_catalogue.md") -> Path:
+    """Write the generated catalogue to ``path`` and return the path written.
+
+    Args:
+        path: Destination file. Defaults to ``docs/error_catalogue.md``.
+
+    Returns:
+        The path that was written, for logging.
+    """
+    target = Path(path)
+    target.write_text(render_catalogue_markdown(), encoding="utf-8")
+    return target
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Regenerate the catalogue file, then exit with code ``0``.
+
+    Args:
+        argv: Command-line arguments; the first, when present, is the
+            destination path. Defaults to :data:`sys.argv` without the program
+            name.
+
+    Returns:
+        :data:`errors.EXIT_SUCCESS`.
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
+    written = write_catalogue(args[0] if args else "docs/error_catalogue.md")
+    print(f"wrote {written}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
