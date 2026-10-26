@@ -16,10 +16,11 @@ Every validator offers two modes:
   number, an existing path of the right kind, an ASCII letter, a non-future
   date) and refuse anything ambiguous.
 
-Failures raise :class:`ValidationError`, a :class:`ValueError` subclass, so
-:func:`cli_contract.run_cli` already maps them onto exit code ``1``. Messages
-name the offending field, quote the offending value, and (where useful) show a
-concrete example of valid input.
+Failures raise :class:`errors.ValidationError` — a :class:`DatheonError` and a
+:class:`ValueError` — so :func:`cli_contract.run_cli` maps them onto exit code
+``1``. Messages name the offending field and quote the offending value; a
+concrete example of valid input travels as the exception's ``hint``, which
+:meth:`errors.DatheonError.render` prints on its own line.
 """
 
 from __future__ import annotations
@@ -29,6 +30,8 @@ import math
 import re
 from datetime import date
 from pathlib import Path
+
+from errors import ValidationError
 
 __all__ = [
     "MAX_PRICE",
@@ -65,17 +68,12 @@ _PLAIN_INT = re.compile(r"[+-]?\d+")
 MAX_PRICE: float = 1_000_000_000.0
 
 
-class ValidationError(ValueError):
-    """Raised when user input fails validation.
-
-    Subclasses :class:`ValueError` so that :func:`cli_contract.run_cli` maps an
-    uncaught instance onto exit code ``1`` — a user or data error — instead of
-    leaking a traceback.
-    """
-
-
 def _fail(field: str, message: str, example: str | None = None) -> None:
-    """Raise a :class:`ValidationError` with an actionable, single-line message.
+    """Raise a :class:`~errors.ValidationError` with an actionable message.
+
+    The message names the field and quotes the offending value; the concrete
+    example of valid input becomes the exception's ``hint``, so the shared CLI
+    contract can print it on a second line without crowding the error itself.
 
     Args:
         field: Name of the offending field or flag.
@@ -85,10 +83,7 @@ def _fail(field: str, message: str, example: str | None = None) -> None:
     Raises:
         ValidationError: Always.
     """
-    text = f"{field}: {message}"
-    if example:
-        text += f" — e.g. {example}"
-    raise ValidationError(text)
+    raise ValidationError(f"{field}: {message}", hint=f"e.g. {example}" if example else None)
 
 
 def _require_text(raw: object, field: str, example: str) -> str:
