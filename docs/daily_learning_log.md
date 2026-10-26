@@ -483,8 +483,10 @@ the code so the two can never drift.
   (`InventoryError` moved into the taxonomy), organizer and assistant.
 - Taught `cli_contract.run_cli` to read the exit code and the rendered message
   off the exception instead of inferring both from its builtin type.
-- Generated `docs/error_catalogue.md` from `errors.render_catalogue_markdown()`
-  and added a test that fails if the committed file differs by a single byte.
+- Generated `docs/error_catalogue.md` from `error_catalogue.py` — the catalogue
+  tables are reflected out of the class metadata — and added a test that fails
+  if the committed file differs by a single byte. `python error_catalogue.py`
+  rewrites the document in place.
 - Added `tests/test_errors.py` (47 tests, 84 assertions); the suite is now
   **376 tests**, all green, with `flake8`, `black --check` and
   `compileall` clean.
@@ -537,10 +539,13 @@ DatheonError                   DT-0000   exit 1
    offending values travel in a dict rather than being interpolated into
    English, so `to_dict()` produces a record a future JSON log handler can
    emit verbatim (Day 10).
-5. **Documentation is generated, not written.** `render_catalogue_markdown()`
-   walks the class metadata and emits `docs/error_catalogue.md`; a test
-   compares the file to the generator's output. Adding a class without
-   documenting it, or editing the table by hand, fails CI.
+5. **Documentation is generated, not written.** `error_catalogue.py` reflects
+   over the class metadata and emits `docs/error_catalogue.md`; a test compares
+   the file to the generator's output. Adding a class without documenting it,
+   or editing the table by hand, fails CI. The taxonomy and its catalogue live
+   in separate modules so each has one job: `errors.py` is imported on every
+   code path, while `error_catalogue.py` is only needed by the docs build and
+   the tests.
 6. **`DatasetEncodingError` subclasses `DatasetFormatError`.** Bytes that
    cannot be decoded *are* a format problem, so the Day 6 test that expects
    `DatasetFormatError` for an undecodable file keeps passing while callers who
