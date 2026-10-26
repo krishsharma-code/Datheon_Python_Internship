@@ -42,11 +42,13 @@ from errors import (
     UnknownCategoryError,
     UsageError,
     ValidationError,
+    exit_code_for,
+)
+from error_catalogue import (
     catalogue,
     catalogue_codes,
     describe_code,
     error_class_for,
-    exit_code_for,
     render_catalogue_markdown,
 )
 
