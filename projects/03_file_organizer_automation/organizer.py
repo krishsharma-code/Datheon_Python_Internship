@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from edge_cases import iter_files
+from errors import ValidationError
 
 #: Default extension → category mapping.
 CATEGORY_MAP: Dict[str, str] = {
@@ -292,7 +293,11 @@ class FileOrganizer:
         max_workers: int = 4,
     ) -> None:
         if max_workers < 1:
-            raise ValueError("max_workers must be at least 1.")
+            raise ValidationError(
+                f"max_workers must be at least 1, got {max_workers}.",
+                hint="use a pool size of 1 or more",
+                context={"field": "max_workers", "value": max_workers},
+            )
         self.mapping: Dict[str, str] = dict(mapping) if mapping else dict(CATEGORY_MAP)
         self.max_workers = max_workers
 
