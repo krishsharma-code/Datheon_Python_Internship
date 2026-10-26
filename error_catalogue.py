@@ -118,5 +118,76 @@ _BUILTIN_BASES: Tuple[type, ...] = (
 )
 
 
+def catalogue() -> Tuple[ErrorEntry, ...]:
+    """Return the full error catalogue, parents before children.
 
-# TRUNCATED PROBE
+    Returns:
+        One :class:`ErrorEntry` per class in :data:`_ERROR_CLASSES`.
+    """
+    entries: List[ErrorEntry] = []
+    for cls in _ERROR_CLASSES:
+        bases = tuple(base.__name__ for base in _BUILTIN_BASES if issubclass(cls, base))
+        entries.append(
+            ErrorEntry(
+                code=cls.code,
+                name=cls.__name__,
+                title=cls.title,
+                summary=cls.summary,
+                resolution=cls.resolution,
+                exit_code=cls.exit_code,
+                bases=bases,
+            )
+        )
+    return tuple(entries)
+
+
+def catalogue_codes() -> Tuple[str, ...]:
+    """Return every catalogue code, in catalogue order."""
+    return tuple(entry.code for entry in catalogue())
+
+
+def describe_code(code: str) -> ErrorEntry:
+    """Look up one catalogue entry by its code.
+
+    Args:
+        code: A code such as ``"DT-1001"``.
+
+    Returns:
+        The matching :class:`ErrorEntry`.
+
+    Raises:
+        UnknownCategoryError: If ``code`` is not in the catalogue.
+    """
+    for entry in catalogue():
+        if entry.code == code:
+            return entry
+    raise UnknownCategoryError(
+        f"Unknown error code {code!r}.",
+        hint=f"Known codes: {', '.join(catalogue_codes())}",
+        context={"code": code},
+    )
+
+
+def error_class_for(code: str) -> type:
+    """Return the exception class registered under ``code``.
+
+    Args:
+        code: A code such as ``"DT-2101"``.
+
+    Returns:
+        The matching exception class.
+
+    Raises:
+        UnknownCategoryError: If ``code`` is not in the catalogue.
+    """
+    for cls in _ERROR_CLASSES:
+        if cls.code == code:
+            return cls
+    raise UnknownCategoryError(
+        f"Unknown error code {code!r}.",
+        hint=f"Known codes: {', '.join(catalogue_codes())}",
+        context={"code": code},
+    )
+
+
+
