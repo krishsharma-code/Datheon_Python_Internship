@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Sequence, Union
 
 from dataset_loader import DatasetFormatError, LoadReport, TextSource, read_text_robust
 from edge_cases import check_file_size
+from errors import ValidationError
 
 #: Inputs that end the session.
 DEFAULT_EXIT_COMMANDS = ("bye", "exit", "quit", "goodbye", "stop")
@@ -216,11 +217,19 @@ class Intent:
         name = data.get("name")
         raw_patterns = data.get("patterns")
         if not name or not isinstance(raw_patterns, list) or not raw_patterns:
-            raise ValueError(f"Intent requires a name and non-empty patterns: {data!r}")
+            raise ValidationError(
+                f"Intent requires a name and non-empty patterns: {data!r}",
+                hint="each intent needs a 'name' string and a non-empty 'patterns' list",
+                context={"field": "patterns"},
+            )
         compiled = [re.compile(p, re.IGNORECASE) for p in raw_patterns]
         responses = data.get("responses") or [f"[{name}]"]
         if not isinstance(responses, list):
-            raise ValueError(f"Intent {name!r} responses must be a list.")
+            raise ValidationError(
+                f"Intent {name!r} responses must be a list.",
+                hint="set 'responses' to a list of strings",
+                context={"field": "responses", "intent": str(name)},
+            )
         return cls(
             name=str(name),
             patterns=compiled,
@@ -307,7 +316,11 @@ class IntentEngine:
         exit_commands: Optional[Sequence[str]] = None,
     ) -> None:
         if not intents:
-            raise ValueError("IntentEngine requires at least one intent.")
+            raise ValidationError(
+                "IntentEngine requires at least one intent.",
+                hint="load intents.json, or pass at least one Intent",
+                context={"field": "intents"},
+            )
         self.intents: List[Intent] = list(intents)
         self.fallbacks: List[str] = list(
             fallbacks or ["I'm not sure I understood that. Could you rephrase?"]
