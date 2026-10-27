@@ -19,8 +19,15 @@ from typing import List
 # contract module regardless of the directory the script is launched from.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from cli_contract import (  # noqa: E402
+    EXIT_CODE_EPILOG,
+    PROGRAM_VERSION,
+    ExitCode,
+    build_parser,
+    run_cli,
+)
 from dataset_loader import LoadReport  # noqa: E402
+from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from portfolio import (  # noqa: E402
     Portfolio,
     load_prices_from_csv,
@@ -35,6 +42,9 @@ from validators import (  # noqa: E402
     validate_quantity,
     validate_symbol,
 )
+
+#: Program name, shared by the parser, the version banner and the logger.
+PROG = "portfolio"
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_PRICES = HERE / "data" / "sample_prices.csv"
@@ -184,7 +194,7 @@ def main(argv: List[str] | None = None) -> int:
         (see :mod:`cli_contract`).
     """
     parser = build_parser(
-        "portfolio",
+        PROG,
         "Stock portfolio performance tracker.",
         epilog=EXIT_CODE_EPILOG,
     )
@@ -204,6 +214,7 @@ def main(argv: List[str] | None = None) -> int:
         help="Optional constituents CSV used to flag unknown tickers.",
     )
     add_strict_flag(parser)
+    add_logging_flags(parser)
     parser.add_argument(
         "--validate",
         action="store_true",
@@ -211,10 +222,23 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    session = configure_logging_from_args(PROG, args)
+    logger = session.logger
+    logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
+    logger.debug(
+        "options: prices=%s output=%s demo=%s constituents=%s strict=%s",
+        args.prices,
+        args.output,
+        args.demo,
+        args.constituents,
+        args.strict,
+    )
+
     if args.validate:
         return _run_validation(args)
 
     prices = _load_prices(args.prices, strict=args.strict)
+    logger.info("loaded %d price rows from %s", len(prices), args.prices)
     portfolio = Portfolio.from_prices(prices)
 
     if args.demo:
@@ -224,6 +248,7 @@ def main(argv: List[str] | None = None) -> int:
         _prompt_positions(portfolio, strict=args.strict)
 
     _print_report(portfolio)
+    logger.info("valued %d position(s)", len(portfolio.holdings))
 
     if args.constituents is not None:
         if args.strict:
@@ -245,6 +270,7 @@ def main(argv: List[str] | None = None) -> int:
 
     if portfolio.holdings:
         out = write_summary_csv(portfolio, args.output)
+        logger.info("summary written to %s", out)
         print(f"\nSummary written to {out}")
     return int(ExitCode.OK)
 

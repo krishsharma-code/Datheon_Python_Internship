@@ -31,6 +31,7 @@ from typing import Callable, Optional
 
 from edge_cases import guard_broken_pipe
 from errors import EXIT_DATA_ERROR, EXIT_SUCCESS, EXIT_USAGE_ERROR, DatheonError
+from logging_config import shutdown_logging
 
 __all__ = [
     "PROGRAM_VERSION",
@@ -137,6 +138,12 @@ def run_cli(main: Callable[[], int]) -> int:
         ``OSError`` branch because several taxonomy leaves — for instance
         :class:`~errors.MissingFileError` — are also :class:`OSError`
         subclasses.
+
+        Whatever the outcome, the ``finally`` block calls
+        :func:`logging_config.shutdown_logging`, so the rotating file handler a
+        tool opened for ``--log-level`` is flushed and closed exactly once, at
+        the process boundary, on the success path as well as on every error
+        path.
     """
     try:
         return int(main())
@@ -152,3 +159,5 @@ def run_cli(main: Callable[[], int]) -> int:
     except (ValueError, OSError) as exc:
         print(f"! {exc}", file=sys.stderr)
         return int(ExitCode.DATA_ERROR)
+    finally:
+        shutdown_logging()

@@ -23,10 +23,17 @@ from typing import List, Optional
 # contract module regardless of the directory the script is launched from.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from cli_contract import (  # noqa: E402
+    EXIT_CODE_EPILOG,
+    PROGRAM_VERSION,
+    ExitCode,
+    build_parser,
+    run_cli,
+)
 from dataset_loader import LoadReport  # noqa: E402
 from edge_cases import InputClosed, safe_input  # noqa: E402
 from hangman import HangmanGame, ScoreBoard  # noqa: E402
+from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from validators import (  # noqa: E402
     ValidationError,
     add_strict_flag,
@@ -41,6 +48,9 @@ from words import (  # noqa: E402
     get_random_word_from_list,
     load_words_from_file,
 )
+
+#: Program name, shared by the parser, the version banner and the logger.
+PROG = "hangman"
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_WORDS_FILE = HERE / "data" / "words.txt"
@@ -201,8 +211,9 @@ def main(argv: List[str] | None = None) -> int:
         Process exit code: ``0`` on success, ``1`` if a word file fails to
         load (see :mod:`cli_contract`).
     """
-    parser = build_parser("hangman", "Console Hangman game.", epilog=EXIT_CODE_EPILOG)
+    parser = build_parser(PROG, "Console Hangman game.", epilog=EXIT_CODE_EPILOG)
     add_strict_flag(parser)
+    add_logging_flags(parser)
     parser.add_argument(
         "--categories",
         action="store_true",
@@ -233,6 +244,18 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    session = configure_logging_from_args(PROG, args)
+    logger = session.logger
+    logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
+    logger.debug(
+        "options: categories=%s words_file=%s min_length=%s max_length=%s strict=%s",
+        args.categories,
+        args.words_file,
+        args.min_length,
+        args.max_length,
+        args.strict,
+    )
+
     # Reject nonsensical length bounds before any file I/O happens.
     args.min_length = validate_int(args.min_length, minimum=1, field="--min-length")
     if args.max_length is not None:
@@ -246,6 +269,10 @@ def main(argv: List[str] | None = None) -> int:
         return _run_validation(args)
 
     word_list = _load_word_list(args)
+    if word_list is not None:
+        logger.info("drawing secret words from %d loaded words", len(word_list))
+    else:
+        logger.info("drawing secret words from the themed category banks")
 
     print(BANNER)
     print("Welcome to Hangman — Datheon Python Internship, Task 1.")
@@ -275,6 +302,13 @@ def main(argv: List[str] | None = None) -> int:
         if again not in {"y", "yes"}:
             break
 
+    logger.info(
+        "session finished: played=%d wins=%d losses=%d win_rate=%.2f",
+        score.played,
+        score.wins,
+        score.losses,
+        score.win_rate,
+    )
     print("\nThanks for playing! Final record:")
     print(f"  Rounds played : {score.played}")
     print(f"  Wins          : {score.wins}")

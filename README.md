@@ -64,6 +64,7 @@ Datheon_Python_Internship/
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
 │   ├── cli_contract.md             # shared command-line & exit-code contract
+│   ├── logging.md                  # shared logging contract (--log-level)
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
@@ -75,6 +76,7 @@ Datheon_Python_Internship/
 ├── cli_contract.py                 # shared argparse / --version / exit codes
 ├── errors.py                       # exception taxonomy (DatheonError root)
 ├── error_catalogue.py              # generates docs/error_catalogue.md
+├── logging_config.py               # shared --log-level / rotating file logging
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -158,6 +160,26 @@ Every error a tool raises on purpose derives from `DatheonError` in
 The full list — code, class, meaning and resolution for each — is the
 generated [`docs/error_catalogue.md`](docs/error_catalogue.md), rebuilt from the
 class metadata by `python error_catalogue.py`.
+
+### Logging
+
+All five tools share one opt-in logging setup from
+[`logging_config.py`](logging_config.py). Nothing is written to disk unless you
+ask for it:
+
+```bash
+# Console (stderr) + rotating file at ~/.datheon/logs/hangman.log
+python projects/01_hangman_game/main.py --log-level DEBUG
+
+# Pick the destination explicitly, or move every tool's log dir at once
+python projects/02_portfolio_tracker/main.py --demo --log-level INFO --log-file /tmp/p.log
+DATHEON_LOG_DIR=/var/log/datheon python projects/03_file_organizer_automation/main.py . --log-level INFO
+```
+
+`--log-level` accepts `DEBUG`, `INFO`, `WARNING`, `ERROR` and `CRITICAL`; the
+file rotates at 1 MiB and keeps three generations. The contract — formats,
+per-tool log points, and failure behaviour — is documented in
+[`docs/logging.md`](docs/logging.md) and verified by `tests/test_logging.py`.
 
 ---
 
