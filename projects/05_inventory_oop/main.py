@@ -19,10 +19,20 @@ from typing import List
 # contract module regardless of the directory the script is launched from.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from cli_contract import (  # noqa: E402
+    EXIT_CODE_EPILOG,
+    PROGRAM_VERSION,
+    ExitCode,
+    build_parser,
+    run_cli,
+)
 from inventory import InventoryError, InventoryManager  # noqa: E402
+from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from models import Book, DigitalMedia, Magazine  # noqa: E402
 from validators import add_strict_flag, validate_date, validate_int, validate_name  # noqa: E402
+
+#: Program name, shared by the parser, the version banner and the logger.
+PROG = "inventory"
 
 
 def build_demo_inventory() -> InventoryManager:
@@ -83,11 +93,12 @@ def main(argv: List[str] | None = None) -> int:
         Process exit code (``0`` on success — see :mod:`cli_contract`).
     """
     parser = build_parser(
-        "inventory",
+        PROG,
         "OOP library inventory and asset management demo.",
         epilog=EXIT_CODE_EPILOG,
     )
     add_strict_flag(parser)
+    add_logging_flags(parser)
     parser.add_argument(
         "--borrower",
         default=None,
@@ -103,10 +114,22 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    session = configure_logging_from_args(PROG, args)
+    logger = session.logger
+    logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
+    logger.debug(
+        "options: borrower=%s days=%s borrow_date=%s strict=%s",
+        args.borrower,
+        args.days,
+        args.borrow_date,
+        args.strict,
+    )
+
     if args.borrower is not None:
         return _single_checkout(args)
 
     manager = build_demo_inventory()
+    logger.info("demo inventory built with %d item(s)", len(manager))
 
     print("== Initial inventory ==")
     print(manager.audit_report())
@@ -139,6 +162,11 @@ def main(argv: List[str] | None = None) -> int:
 
     print("\n== Final audit ==")
     print(manager.audit_report())
+    logger.info(
+        "demo finished: on_loan=%d revenue=%.2f",
+        manager.items_on_loan,
+        manager.total_revenue,
+    )
 
     print("\n== Dunder method showcase ==")
     book = manager.get("B002")

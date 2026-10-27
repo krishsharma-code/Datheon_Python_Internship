@@ -19,15 +19,25 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from chatbot import ConversationLogger, IntentEngine  # noqa: E402
-from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from cli_contract import (  # noqa: E402
+    EXIT_CODE_EPILOG,
+    PROGRAM_VERSION,
+    ExitCode,
+    build_parser,
+    run_cli,
+)
 from dataset_loader import LoadReport  # noqa: E402
 from edge_cases import InputClosed, safe_input  # noqa: E402
+from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from validators import (  # noqa: E402
     ValidationError,
     add_strict_flag,
     validate_message,
     validate_path,
 )
+
+#: Program name, shared by the parser, the version banner and the logger.
+PROG = "assistant"
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_INTENTS = HERE / "intents.json"
@@ -110,7 +120,7 @@ def main(argv: List[str] | None = None) -> int:
         (see :mod:`cli_contract`).
     """
     parser = build_parser(
-        "assistant",
+        PROG,
         "Rule-based terminal assistant.",
         epilog=EXIT_CODE_EPILOG,
     )
@@ -128,12 +138,25 @@ def main(argv: List[str] | None = None) -> int:
     )
     parser.add_argument("--no-log", action="store_true", help="Disable conversation logging.")
     add_strict_flag(parser)
+    add_logging_flags(parser)
     parser.add_argument(
         "--validate",
         action="store_true",
         help="Validate the intent/FAQ dataset (schema, encoding, entries) and exit.",
     )
     args = parser.parse_args(argv)
+
+    session = configure_logging_from_args(PROG, args)
+    logger = session.logger
+    logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
+    logger.debug(
+        "options: intents=%s faq=%s log=%s no_log=%s strict=%s",
+        args.intents,
+        args.faq,
+        args.log,
+        args.no_log,
+        args.strict,
+    )
 
     if args.validate:
         return _run_validation(args)
@@ -152,6 +175,7 @@ def main(argv: List[str] | None = None) -> int:
         else:
             engine = IntentEngine.from_json(args.intents)
     except (FileNotFoundError, ValueError) as exc:
+        logger.error("could not load intents: %s", exc)
         print(f"! Could not load intents: {exc}")
         return int(ExitCode.DATA_ERROR)
 
@@ -175,6 +199,12 @@ def main(argv: List[str] | None = None) -> int:
             logger = _log_turn(logger, "user", user_input)
 
         response = engine.respond(user_input)
+        logger.debug(
+            "turn: intent=%s confidence=%.3f exit=%s",
+            response.intent,
+            response.confidence,
+            response.is_exit,
+        )
         print(f"bot > {response.text}  [{response.intent} · {response.confidence:.0%}]")
 
         if logger:

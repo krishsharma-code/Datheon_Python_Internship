@@ -19,9 +19,19 @@ from typing import List
 # contract module regardless of the directory the script is launched from.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from cli_contract import EXIT_CODE_EPILOG, ExitCode, build_parser, run_cli  # noqa: E402
+from cli_contract import (  # noqa: E402
+    EXIT_CODE_EPILOG,
+    PROGRAM_VERSION,
+    ExitCode,
+    build_parser,
+    run_cli,
+)
+from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
 from validators import add_strict_flag, validate_int, validate_path  # noqa: E402
+
+#: Program name, shared by the parser, the version banner and the logger.
+PROG = "organizer"
 
 
 def _print_report(report) -> None:
@@ -73,7 +83,7 @@ def main(argv: List[str] | None = None) -> int:
         (see :mod:`cli_contract`).
     """
     parser = build_parser(
-        "organizer",
+        PROG,
         "Organize a directory into category subfolders by file type.",
         epilog=EXIT_CODE_EPILOG,
     )
@@ -96,7 +106,12 @@ def main(argv: List[str] | None = None) -> int:
         "--log", type=Path, default=None, help="Write a JSON activity log to this path."
     )
     add_strict_flag(parser)
+    add_logging_flags(parser)
     args = parser.parse_args(argv)
+
+    session = configure_logging_from_args(PROG, args)
+    logger = session.logger
+    logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
 
     # Validate the boundary inputs up front so the failure is one clear line.
     args.workers = validate_int(
@@ -108,6 +123,15 @@ def main(argv: List[str] | None = None) -> int:
     if args.log is not None:
         args.log = validate_path(args.log, strict=args.strict, field="--log")
 
+    logger.debug(
+        "options: directory=%s dry_run=%s duplicates=%s workers=%d log=%s strict=%s",
+        args.directory,
+        args.dry_run,
+        args.duplicates,
+        args.workers,
+        args.log,
+        args.strict,
+    )
     print("Categories: " + ", ".join(CATEGORIES))
 
     try:
@@ -120,13 +144,23 @@ def main(argv: List[str] | None = None) -> int:
     except OSError as exc:
         # Covers a non-directory argument and a directory we cannot list
         # (permission denied) with a single actionable line.
+        logger.error("could not organize %s: %s", args.directory, exc)
         print(f"! {exc}")
         return int(ExitCode.DATA_ERROR)
 
+    logger.info(
+        "processed=%d moved=%d planned=%d errors=%d duplicates=%d",
+        report.total_processed,
+        report.moved,
+        report.planned,
+        len(report.errors),
+        len(report.duplicates),
+    )
     _print_report(report)
 
     if args.log:
         out = write_json_log(report, args.log)
+        logger.info("activity log written to %s", out)
         print(f"\nActivity log written to {out}")
     return int(ExitCode.OK)
 

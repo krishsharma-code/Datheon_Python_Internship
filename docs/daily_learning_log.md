@@ -596,3 +596,111 @@ Day 13's caching work can revisit this if a CLI ever needs it per invocation.
   handlers, and a consistent format wired into all five projects. The
   `to_dict()` record shape added today is the natural payload for Day 10's
   JSON log lines.
+
+---
+
+## Day 8 — Logging architecture: one flag, two handlers, five tools
+
+**Branch:** `feat/datheon-day-8-logging` · **PR:** #9
+**Scope:** Give every tool the same opt-in observability layer —
+`--log-level` with a console handler and a rotating file handler — without
+changing what a plain run does.
+
+### Milestones
+
+- Added `logging_config.py`: `add_logging_flags`, `configure_logging`,
+  `configure_logging_from_args`, `resolve_level`, `default_log_dir`,
+  `default_log_file`, `installed_handlers`, `shutdown_logging` and the
+  `LoggingSession` value object.
+- Wired the flags and a `PROG` constant into all five CLIs (`hangman`,
+  `portfolio`, `organizer`, `assistant`, `inventory`), each now logging a
+  `"<prog> <version> starting"` DEBUG line plus meaningful INFO/DEBUG records.
+- `cli_contract.run_cli` closes every open session in a `finally`, so the file
+  handler is flushed exactly once on success, on a data error, on `Ctrl-C` and
+  on a broken pipe.
+- Wrote `docs/logging.md` (contract, formats, per-tool log points, failure
+  behaviour) and a README *Logging* section.
+- Added `tests/test_logging.py` — 52 tests, including a subprocess assertion
+  per CLI that `--log-level DEBUG` writes a log file and that a default run
+  writes nothing. Suite: 188 → 240 tests, all green.
+
+### Architectural decisions
+
+1. **One module, five tools.** A `logging.basicConfig` call in each `main.py`
+   would drift within a week — different formats, different destinations, some
+   tool forgetting rotation. One module makes the contract testable in
+   isolation and identical everywhere, exactly as `cli_contract.py` did for
+   argparse and `errors.py` did for exceptions.
+2. **Opt-in, not always-on.** Writing to `~/.datheon/logs` on every casual run
+   of a console game is surprising. Requiring `--log-level` keeps the default
+   silent (so Day 1–7 behaviour is byte-identical), keeps the test suite
+   hermetic, and still gives the cron use case a one-flag switch. The file
+   handler is installed *because* the flag was given, not on a timer.
+3. **A session object, not a global.** `configure_logging` returns a
+   `LoggingSession` that owns its handlers and exposes `log_file`,
+   `file_error`, `file_enabled`, `close()` and the context-manager protocol.
+   Nothing hides in module state a test cannot reset — the one module-level
+   list that exists (`_ACTIVE_SESSIONS`) is drained by `shutdown_logging()`.
+4. **`propagate = False` on every tool logger.** A tool must not inherit a
+   host application's root configuration, and `pytest`'s capture handler must
+   not silently double a tool's records. Each logger is self-contained, which
+   is also why `installed_handlers()` filters by an ownership attribute rather
+   than trusting `logger.handlers`.
+5. **Ownership stamping instead of `logger.handlers.clear()`.** Reconfiguration
+   removes only the handlers this module installed, so an embedding
+   application — or `caplog` — keeps its own. This is what makes
+   `configure_logging` idempotent without being destructive.
+6. **Console on `stderr`, detail in the file.** `stdout` stays
+   machine-readable: `organizer . | jq` still works with logging on. The
+   console line is terse (`LEVEL    prog: message`); the file line carries the
+   ISO-8601 timestamp and `file:line`, because that is what a post-mortem
+   actually needs.
+7. **A logging failure is never fatal.** An unwritable log path degrades to
+   console-only with a single warning, mirroring the Day 5 edge-case policy:
+   losing diagnostics must not lose the run.
+8. **The formatter is a constant, not a code path.** `FILE_FORMAT` is a single
+   string; Day 10 swaps it for a JSON formatter and the `DatheonError.to_dict()`
+   record shape without touching a call site.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `resolve_level` | logging_config | O(1) | O(1) | Tuple membership over 5 names |
+| `configure_logging` | logging_config | O(H) | O(H) | H = handlers on that logger (2 ours) |
+| `installed_handlers` | logging_config | O(H) | O(H) | Attribute probe per handler |
+| `LoggingSession.close` | logging_config | O(K) | O(1) | K = handlers this session installed (≤2) |
+| `shutdown_logging` | logging_config | O(S·K) | O(1) | S open sessions, normally 1 |
+| A logged record | logging | O(M) | O(M) | M = formatted message length, one `write` per handler |
+| Rotation | logging.handlers | O(B) | O(1) amortised | Copy of B bytes, once per 1 MiB written |
+
+Rotation is the only non-constant cost and it is amortised: one file copy per
+mebibyte of output, bounded to three generations, so disk use is capped at
+4 MiB per tool regardless of runtime.
+
+### Edge cases covered by tests
+
+- Levels: every documented name, case-insensitivity, numeric levels, numeric
+  strings, `None` → `WARNING`, and rejection of unknown names, out-of-range
+  numbers and `bool` (which is an `int` subclass — a real trap).
+- Flags: both default to `None`; `--log-level debug` is upper-cased by
+  `type=str.upper`; an unknown level exits `2` at the argparse boundary.
+- Files: created on demand, nested parent directories created, exact path
+  honoured, format includes timestamp + `file:line`, rotation produces `.1`
+  and respects the backup count.
+- Failure: a path whose parent is a regular file degrades to console-only,
+  reports once, and keeps logging to the console.
+- Lifecycle: reconfiguring detaches the previous pair; `close()` is
+  idempotent; the context manager closes on exit; `run_cli` closes a session it
+  never created.
+- Definition of done, per CLI in a subprocess: `--log-level DEBUG` writes
+  `<DATHEON_LOG_DIR>/<prog>.log` containing the start-up line; a run without
+  the flag creates no log directory at all; `--help` documents both switches.
+
+### Next up
+
+- Day 9: atomic, versioned persistence — temp file + `os.replace`, a schema
+  version field, and round-trip tests. The `organizer`'s JSON activity log and
+  the portfolio summary CSV are the first callers.
+- Day 10 builds directly on today's work: the file handler's formatter becomes
+  a JSON encoder, with a run ID and duration per record.
