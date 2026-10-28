@@ -28,7 +28,9 @@ This module gives every deliberate failure one root:
     │   ├── InventoryError         DT-3001   exit 1
     │   ├── OrganizerError         DT-3002   exit 1
     │   ├── PortfolioError         DT-3003   exit 1
-    │   └── AssistantError         DT-3004   exit 1
+    │   ├── AssistantError         DT-3004   exit 1
+    │   ├── PersistenceError       DT-3005   exit 1   (also OSError)
+    │   └── SchemaVersionError     DT-3006   exit 1
     └── ConfigurationError         DT-4000   exit 1
 
 Three properties matter:
@@ -80,7 +82,9 @@ __all__ = [
     "MissingFileError",
     "OperationError",
     "OrganizerError",
+    "PersistenceError",
     "PortfolioError",
+    "SchemaVersionError",
     "UnknownCategoryError",
     "UsageError",
     "ValidationError",
@@ -430,6 +434,38 @@ class AssistantError(OperationError):
 
 
 # -- configuration ---------------------------------------------------------
+class PersistenceError(OperationError, OSError):
+    """Raised when a file could not be written atomically.
+
+    Also an :class:`OSError`, so the project entry points — which already catch
+    ``OSError`` — keep reporting a failed write without a traceback.
+    """
+
+    code = "DT-3005"
+    title = "Write failed"
+    summary = "A file could not be staged or published; the destination was left unchanged."
+    resolution = (
+        "Check that the destination directory is writable and has free space, and that no "
+        "other program holds the file open, then re-run the command."
+    )
+
+
+class SchemaVersionError(PersistenceError):
+    """Raised when a stored document's schema version is missing or unusable.
+
+    A subclass of :class:`PersistenceError`, so a handler written against the
+    broader class keeps catching it.
+    """
+
+    code = "DT-3006"
+    title = "Unsupported document version"
+    summary = "A saved document has no schema version, or one this tool cannot read."
+    resolution = (
+        "Re-create the document with the current tool. If it was written by a newer "
+        "version, upgrade the Datheon tools first."
+    )
+
+
 class ConfigurationError(DatheonError):
     """Raised when the tool's own configuration is unusable."""
 
