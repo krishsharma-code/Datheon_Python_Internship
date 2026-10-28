@@ -26,6 +26,7 @@ from typing import Dict, List, Optional, Sequence, Union
 from dataset_loader import DatasetFormatError, LoadReport, TextSource, read_text_robust
 from edge_cases import check_file_size
 from errors import ValidationError
+from persistence import SCHEMA_VERSION, SCHEMA_VERSION_FIELD, atomic_append_text
 
 #: Inputs that end the session.
 DEFAULT_EXIT_COMMANDS = ("bye", "exit", "quit", "goodbye", "stop")
@@ -547,6 +548,13 @@ class IntentEngine:
 class ConversationLogger:
     """Appends conversation turns to a JSONL file.
 
+    Each turn is one JSON object on its own line, stamped with the persistence
+    schema version so a future reader can tell which format produced it. A turn
+    is published atomically (the file is rewritten through a temporary file and
+    :func:`os.replace`), which costs O(size) per turn but guarantees the log
+    never ends in a half-written line — the failure mode a plain append leaves
+    behind after a crash.
+
     Args:
         path: Destination ``.jsonl`` path. The parent directory is created if
             needed.
@@ -567,11 +575,11 @@ class ConversationLogger:
             confidence: Match confidence (assistant turns).
         """
         entry = {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "role": role,
             "text": text,
             "intent": intent,
             "confidence": confidence,
         }
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        atomic_append_text(self.path, json.dumps(entry, ensure_ascii=False) + "\n")

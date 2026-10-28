@@ -65,6 +65,7 @@ Datheon_Python_Internship/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
 │   ├── cli_contract.md             # shared command-line & exit-code contract
 │   ├── logging.md                  # shared logging contract (--log-level)
+│   ├── persistence.md              # atomic, versioned write contract
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
@@ -77,6 +78,7 @@ Datheon_Python_Internship/
 ├── errors.py                       # exception taxonomy (DatheonError root)
 ├── error_catalogue.py              # generates docs/error_catalogue.md
 ├── logging_config.py               # shared --log-level / rotating file logging
+├── persistence.py                  # atomic writes + schema_version stamping
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -180,6 +182,28 @@ DATHEON_LOG_DIR=/var/log/datheon python projects/03_file_organizer_automation/ma
 file rotates at 1 MiB and keeps three generations. The contract — formats,
 per-tool log points, and failure behaviour — is documented in
 [`docs/logging.md`](docs/logging.md) and verified by `tests/test_logging.py`.
+
+### Safe, versioned writes
+
+Everything the tools save — the portfolio summary CSV, the organizer's JSON
+activity log, the assistant's conversation log — is published by
+[`persistence.py`](persistence.py) instead of a plain `open(path, "w")`:
+
+```python
+from persistence import atomic_write_json, read_json_document
+
+atomic_write_json("run.json", report.to_dict())   # temp file + os.replace
+read_json_document("run.json", field="activity log")
+# {'schema_version': 1, 'summary': {...}, 'records': [...]}
+```
+
+The content is written to a temporary file in the destination directory,
+`fsync`ed, then moved into place with a single `os.replace`, so an interrupted
+run leaves the previous file byte-for-byte intact instead of a truncated one.
+Every JSON document carries a `schema_version`, and the reader rejects a
+missing, malformed, newer or unsupported version rather than guessing. The full
+contract is in [`docs/persistence.md`](docs/persistence.md), verified by
+`tests/test_persistence.py`.
 
 ---
 

@@ -17,15 +17,15 @@ Typical use::
 from __future__ import annotations
 
 import hashlib
-import json
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from edge_cases import iter_files
 from errors import ValidationError
+from persistence import atomic_write_json, read_json_document, stamp_schema
 
 #: Default extension → category mapping.
 CATEGORY_MAP: Dict[str, str] = {
@@ -397,16 +397,46 @@ class FileOrganizer:
 def write_json_log(report: OrganizeReport, path: Union[str, Path]) -> Path:
     """Write an organisation report to a JSON activity log.
 
+    The log is published atomically (temporary file + :func:`os.replace`), so an
+    interrupted run leaves the previous log intact rather than a truncated one,
+    and it carries the persistence schema version so :func:`read_json_log` can
+    reject a log written by an incompatible tool.
+
     Args:
         report: The report to serialise.
-        path: Destination ``.json`` path.
+        path: Destination ``.json`` path. Parent directories are created.
 
     Returns:
         The resolved destination :class:`~pathlib.Path`.
+
+    Raises:
+        PersistenceError: If the log cannot be written; the previous log is
+            left unchanged.
     """
-    out_path = Path(path)
-    if out_path.parent and not out_path.parent.exists():
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", encoding="utf-8") as handle:
-        json.dump(report.to_dict(), handle, indent=2)
+    out_path = Path(path).expanduser()
+    atomic_write_json(out_path, stamp_schema(report.to_dict()), indent=2)
     return out_path
+
+
+def read_json_log(path: Union[str, Path]) -> Dict[str, Any]:
+    """Read a JSON activity log written by :func:`write_json_log`.
+
+    Args:
+        path: The log to read.
+
+    Returns:
+        The decoded log, including its ``schema_version`` and the ``summary``
+        and ``records`` sections.
+
+    Raises:
+        MissingFileError: If ``path`` is not an existing file.
+        PersistenceError: If the log is not valid JSON, or lacks the expected
+            sections.
+        SchemaVersionError: If the log's schema version is missing or
+            unsupported.
+    """
+    return read_json_document(
+        Path(path).expanduser(),
+        field="activity log",
+        require_keys=("summary", "records"),
+    )

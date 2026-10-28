@@ -26,6 +26,8 @@ Exit codes: `0` success · `1` user or data error · `2` usage error.
 | DT-3002 | OrganizerError | File operation failed | A file could not be classified or moved into its category folder. | Check free space and permissions on the source and destination folders. |
 | DT-3003 | PortfolioError | Portfolio operation refused | A holding, price update or summary export violated the portfolio's rules. | Check the ticker and the price, then retry the command. |
 | DT-3004 | AssistantError | Assistant unavailable | The intent engine could not be constructed or queried. | Check that `intents.json` defines at least one valid intent. |
+| DT-3005 | PersistenceError | Write failed | A file could not be staged or published; the destination was left unchanged. | Check that the destination directory is writable and has free space, and that no other program holds the file open, then re-run the command. |
+| DT-3006 | SchemaVersionError | Unsupported document version | A saved document has no schema version, or one this tool cannot read. | Re-create the document with the current tool. If it was written by a newer version, upgrade the Datheon tools first. |
 | DT-4000 | ConfigurationError | Configuration error | A mapping, limit or setting the tool depends on is missing or invalid. | Review the configuration mentioned in the message and correct it. |
 
 ## Builtin compatibility
@@ -44,6 +46,8 @@ handlers written before this taxonomy existed keep working:
 | `DatasetError` | `ValueError` |
 | `DatasetFormatError` | `ValueError` |
 | `DatasetEncodingError` | `ValueError` |
+| `PersistenceError` | `OSError` |
+| `SchemaVersionError` | `OSError` |
 
 ## Rendering an error for the user
 

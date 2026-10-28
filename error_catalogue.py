@@ -45,11 +45,14 @@ from errors import (
     MissingFileError,
     OperationError,
     OrganizerError,
+    PersistenceError,
     PortfolioError,
+    SchemaVersionError,
     UnknownCategoryError,
     UsageError,
     ValidationError,
 )
+from persistence import atomic_write_text
 
 __all__ = [
     "ErrorEntry",
@@ -110,6 +113,8 @@ _ERROR_CLASSES: Tuple[type, ...] = (
     OrganizerError,
     PortfolioError,
     AssistantError,
+    PersistenceError,
+    SchemaVersionError,
     ConfigurationError,
 )
 
@@ -283,7 +288,7 @@ def write_catalogue(path: Union[str, Path] = "docs/error_catalogue.md") -> Path:
         The path that was written, for logging.
     """
     target = Path(path)
-    target.write_text(render_catalogue_markdown(), encoding="utf-8")
+    atomic_write_text(target, render_catalogue_markdown())
     return target
 
 

@@ -19,11 +19,12 @@ import csv
 import io
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, TextIO, Union
 
 from dataset_loader import LoadReport, read_text_robust, require_columns
 from edge_cases import check_file_size
 from errors import ValidationError
+from persistence import atomic_write_with
 
 #: Header names (lower-cased) accepted as the ticker column in a price CSV.
 _SYMBOL_KEYS = ("symbol", "ticker", "code")
@@ -443,16 +444,23 @@ def write_summary_csv(portfolio: Portfolio, path: Union[str, Path]) -> Path:
     The file contains one row per holding followed by a ``TOTAL`` row carrying
     the aggregate cost, value, gain, and percentage.
 
+    The file is published atomically: the rows are written to a temporary file
+    beside the destination and moved into place with :func:`os.replace`, so a
+    run interrupted mid-write leaves the previous summary untouched instead of
+    a half-written CSV.
+
     Args:
         portfolio: The portfolio to persist.
-        path: Destination CSV path.
+        path: Destination CSV path. Parent directories are created.
 
     Returns:
         The resolved destination :class:`~pathlib.Path`.
+
+    Raises:
+        PersistenceError: If the summary cannot be written; an existing file is
+            left unchanged.
     """
-    out_path = Path(path)
-    if out_path.parent and not out_path.parent.exists():
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path = Path(path).expanduser()
 
     fieldnames = [
         "symbol",
@@ -464,7 +472,8 @@ def write_summary_csv(portfolio: Portfolio, path: Union[str, Path]) -> Path:
         "gain",
         "gain_pct",
     ]
-    with out_path.open("w", newline="", encoding="utf-8") as handle:
+
+    def _write(handle: TextIO) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in portfolio.rows():
@@ -483,4 +492,6 @@ def write_summary_csv(portfolio: Portfolio, path: Union[str, Path]) -> Path:
                 "gain_pct": totals["total_gain_pct"],
             }
         )
+
+    atomic_write_with(out_path, _write, newline="")
     return out_path
