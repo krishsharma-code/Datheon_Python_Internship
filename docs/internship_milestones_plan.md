@@ -26,7 +26,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 6 | 2026-10-25 | Dataset loader hardening | `feat/datheon-day-6-loader-hardening` | Schema validation, BOM/CRLF/encoding tolerance, malformed-row reporting | done | #7 |
 | 7 | 2026-10-26 | Week 1 consolidation | `feat/datheon-day-7-error-taxonomy` | Custom exception taxonomy + user-facing error catalogue + docs | done | #8 |
 | 8 | 2026-10-27 | Logging architecture | `feat/datheon-day-8-logging` | `--log-level`, console + rotating file handlers wired into all projects | done | #9 |
-| 9 | 2026-10-28 | Atomic & versioned persistence | `feat/datheon-day-9-persistence` | Temp-file + `os.replace` writes, schema version field, round-trip tests | pending | — |
+| 9 | 2026-10-28 | Atomic & versioned persistence | `feat/datheon-day-9-persistence` | Temp-file + `os.replace` writes, schema version field, round-trip tests | done | #10 |
 | 10 | 2026-10-29 | Structured logging | `feat/datheon-day-10-structured-logs` | JSON log records, run IDs, durations | pending | — |
 | 11 | 2026-10-30 | Async I/O | `feat/datheon-day-11-async-io` | File organizer on `asyncio` with bounded concurrency; sync API preserved | pending | — |
 | 12 | 2026-10-31 | Performance profiling | `feat/datheon-day-12-profiling` | `cProfile` hot-path analysis + optimisations with before/after numbers | pending | — |

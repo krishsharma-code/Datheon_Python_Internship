@@ -704,3 +704,106 @@ mebibyte of output, bounded to three generations, so disk use is capped at
   the portfolio summary CSV are the first callers.
 - Day 10 builds directly on today's work: the file handler's formatter becomes
   a JSON encoder, with a run ID and duration per record.
+
+---
+
+## Day 9 — Atomic & versioned persistence: temp file, `os.replace`, `schema_version`
+
+**Branch:** `feat/datheon-day-9-persistence` · **PR:** #10
+**Scope:** Put every write in the repository behind one shared layer that can
+never leave a half-written file behind, and stamp the format version into every
+JSON document it produces.
+
+### Milestones
+
+- Added `persistence.py`: `atomic_write_text`, `atomic_write_bytes`,
+  `atomic_write_with`, `atomic_write_json`, `atomic_append_text`,
+  `stamp_schema`, `check_schema_version`, `read_json_document` and the
+  `WriteReceipt` value object.
+- Extended the Day 7 taxonomy with `PersistenceError` (DT-3005) and
+  `SchemaVersionError` (DT-3006) — both under `OperationError`, the first also
+  an `OSError` so the entry points' existing `except OSError` still works —
+  and regenerated `docs/error_catalogue.md`.
+- Moved all four write paths onto the new layer: the organizer's JSON activity
+  log, the portfolio summary CSV, the assistant's JSONL conversation log, and
+  the generated error catalogue itself.
+- Added `organizer.read_json_log`, the read-back half of the activity log, so
+  the round trip is exercised by a real caller and not only by the tests.
+- Documented the contract in `docs/persistence.md` and linked it from the
+  README.
+
+### Architectural decisions
+
+1. **Stage beside the destination, never in `/tmp`.** `os.replace` is only
+   atomic within one filesystem; a temporary file in the system temp directory
+   would silently degrade to a copy across mount points. `_create_temp` uses
+   `tempfile.mkstemp(dir=target.parent)` so the rename is always a rename.
+2. **`fsync` before the rename, not after.** Flushing the file descriptor and
+   then the directory entry is what makes a *completed* write survive a power
+   loss. Without it the rename can reach the journal while the data has not,
+   which is the "zero-length file after a crash" bug. The directory `fsync` is
+   best effort — Windows cannot open a directory for `fsync`, and the data file
+   is already synced by then.
+3. **Failure deletes the temp, never the target.** Every writer wraps its body
+   in `try/except` that removes the staged file on *any* exception — including
+   `KeyboardInterrupt` — and re-raises. The target is only touched by the single
+   `os.replace`, so "the write failed" and "the file is unchanged" are the same
+   statement.
+4. **Preserve the mode.** `_publish` copies the existing file's permission bits
+   onto the replacement before the rename. A temp file from `mkstemp` is `0600`;
+   without this step an atomic rewrite of a world-readable report would quietly
+   make it private.
+5. **A version header, not a version guess.** `stamp_schema` writes
+   `schema_version` as the first key, and `read_json_document` refuses a
+   document with no version, a non-integer version (`true` is rejected even
+   though it is an `int`), a version newer than the code, or one older than
+   every supported version. The reader's job is to refuse clearly, not to
+   migrate silently — a migration belongs in an explicit step.
+6. **Append means rewrite.** `O_APPEND` shares the offset but not the write, so
+   a crash can leave half a line. `atomic_append_text` reads the current
+   content and publishes old-plus-new in one rename: atomic, at O(size) per
+   call. For a conversation log of a few thousand short lines that is the right
+   trade; a high-volume log should rotate instead.
+7. **Reuse the Day 6 loader for reads.** `read_json_document` decodes through
+   `read_text_robust`, so a BOM or CRLF-authored document still loads and the
+   version check is not defeated by an encoding quirk.
+
+### Complexity
+
+| Operation | Time | Space | Notes |
+| --- | --- | --- | --- |
+| `atomic_write_text` / `_bytes` | O(n) | O(n) | One write, one `fsync`, one rename |
+| `atomic_write_json` | O(n) | O(n) | `json.dumps` in memory, then O(n) |
+| `atomic_append_text` | O(n) | O(n) | Reads n, writes n + m — quadratic over k appends |
+| `read_json_document` | O(n) | O(n) | Decode + parse, one pass each |
+| `check_schema_version` | O(1) | O(1) | Dict lookup + tuple membership |
+| `stamp_schema` | O(k) | O(k) | k = top-level keys |
+
+The dominant real-world cost is the `fsync` — milliseconds, not microseconds —
+which is why a run should batch its output into one document rather than write
+per record.
+
+### Edge cases covered by tests
+
+- A writer that raises mid-way, a failing `os.replace`, a failing `fsync`, an
+  unwritable parent, a target that is a directory, and an interrupted
+  (`KeyboardInterrupt`) write: each leaves the previous file byte-for-byte
+  intact, raises the documented error, and leaves **no** `.tmp` behind.
+- `PersistenceError` raised inside the rename is not double-wrapped.
+- Mode preservation, parent-directory creation, `fsync=False`, compact JSON
+  (`indent=None`), BOM + CRLF tolerance on read.
+- Every `SchemaVersionError` branch: missing, non-integer, `bool`, below 1,
+  newer than the code, older than every supported version; plus `require_keys`
+  reporting the exact missing key.
+- The four real call sites: organizer log write→read round trip, the same log
+  surviving a failed rewrite, the portfolio CSV still parsing as before, the
+  conversation log's entries carrying `schema_version`, and the catalogue
+  regenerating atomically.
+
+### Next up
+
+- Day 10 turns the file handler's formatter into a JSON encoder with a run ID
+  and per-record duration — `persistence.py`'s receipts already carry the
+  bytes and the replaced/created distinction those records will want.
+- Day 13's cache invalidation can key off `WriteReceipt.path` plus its mtime,
+  which the atomic rename now updates predictably.
