@@ -64,7 +64,7 @@ Datheon_Python_Internship/
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
 │   ├── cli_contract.md             # shared command-line & exit-code contract
-│   ├── logging.md                  # shared logging contract (--log-level)
+│   ├── logging.md                  # logging contract (--log-level, --json-logs)
 │   ├── persistence.md              # atomic, versioned write contract
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -78,6 +78,7 @@ Datheon_Python_Internship/
 ├── errors.py                       # exception taxonomy (DatheonError root)
 ├── error_catalogue.py              # generates docs/error_catalogue.md
 ├── logging_config.py               # shared --log-level / rotating file logging
+├── structured_logging.py           # JSON records, run IDs, durations, outcomes
 ├── persistence.py                  # atomic writes + schema_version stamping
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
@@ -179,9 +180,21 @@ DATHEON_LOG_DIR=/var/log/datheon python projects/03_file_organizer_automation/ma
 ```
 
 `--log-level` accepts `DEBUG`, `INFO`, `WARNING`, `ERROR` and `CRITICAL`; the
-file rotates at 1 MiB and keeps three generations. The contract — formats,
-per-tool log points, and failure behaviour — is documented in
-[`docs/logging.md`](docs/logging.md) and verified by `tests/test_logging.py`.
+file rotates at 1 MiB and keeps three generations.
+
+Add `--json-logs` and every record becomes one JSON object carrying a `run_id`,
+the `project`, the elapsed `duration_ms` and the run's `outcome` — so a cron
+job's logs can be queried instead of read:
+
+```bash
+DATHEON_RUN_ID=cron-20261029 python projects/03_file_organizer_automation/main.py . \
+  --log-level INFO --json-logs
+jq -c 'select(.run_outcome == "error")' ~/.datheon/logs/organizer.log
+```
+
+The contract — formats, record schema, per-tool log points, and failure
+behaviour — is documented in [`docs/logging.md`](docs/logging.md) and verified
+by `tests/test_logging.py` and `tests/test_structured_logging.py`.
 
 ### Safe, versioned writes
 

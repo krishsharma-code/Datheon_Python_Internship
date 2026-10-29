@@ -31,7 +31,7 @@ from typing import Callable, Optional
 
 from edge_cases import guard_broken_pipe
 from errors import EXIT_DATA_ERROR, EXIT_SUCCESS, EXIT_USAGE_ERROR, DatheonError
-from logging_config import shutdown_logging
+from logging_config import finish_active_runs, shutdown_logging
 
 __all__ = [
     "PROGRAM_VERSION",
@@ -139,25 +139,51 @@ def run_cli(main: Callable[[], int]) -> int:
         :class:`~errors.MissingFileError` — are also :class:`OSError`
         subclasses.
 
-        Whatever the outcome, the ``finally`` block calls
+        Whatever the outcome, the ``finally`` block first calls
+        :func:`logging_config.finish_active_runs` and then
         :func:`logging_config.shutdown_logging`, so the rotating file handler a
         tool opened for ``--log-level`` is flushed and closed exactly once, at
         the process boundary, on the success path as well as on every error
         path.
+
+        Since Day 10 the same ``finally`` block also closes the structured run:
+        the outcome (``success``, ``error`` or ``interrupted``) and the total
+        ``duration_ms`` are written as one ``run finished`` record that shares
+        its ``run_id`` with every other record of the invocation, and a
+        :class:`~errors.DatheonError` contributes its full
+        :meth:`~errors.DatheonError.to_dict` payload. Nothing here changes a
+        printed line or an exit code — only the log records gain structure.
     """
+    outcome = "success"
+    error_payload = None
     try:
-        return int(main())
+        code = int(main())
     except BrokenPipeError:
+        outcome = "interrupted"
         guard_broken_pipe()
-        return int(ExitCode.OK)
+        code = int(ExitCode.OK)
     except KeyboardInterrupt:
+        outcome = "interrupted"
         print("\nInterrupted.", file=sys.stderr)
-        return int(ExitCode.OK)
+        code = int(ExitCode.OK)
     except DatheonError as exc:
+        outcome = "error"
+        error_payload = exc.to_dict()
         print(exc.render(), file=sys.stderr)
-        return int(exc.exit_code)
+        code = int(exc.exit_code)
     except (ValueError, OSError) as exc:
+        outcome = "error"
+        error_payload = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "exit_code": int(ExitCode.DATA_ERROR),
+        }
         print(f"! {exc}", file=sys.stderr)
-        return int(ExitCode.DATA_ERROR)
+        code = int(ExitCode.DATA_ERROR)
+    else:
+        if code != int(ExitCode.OK):
+            outcome = "error"
     finally:
+        finish_active_runs(outcome, error=error_payload)
         shutdown_logging()
+    return code
