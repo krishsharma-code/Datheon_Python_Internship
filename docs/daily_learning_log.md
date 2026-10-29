@@ -807,3 +807,119 @@ per record.
   bytes and the replaced/created distinction those records will want.
 - Day 13's cache invalidation can key off `WriteReceipt.path` plus its mtime,
   which the atomic rename now updates predictably.
+
+---
+
+## Day 10 — Structured logging: JSON records, run IDs, durations
+
+**Branch:** `feat/datheon-day-10-structured-logs` · **PR:** #11
+**Scope:** Turn the Day 8 log lines into records a program can read — one JSON
+object per record, correlated by a run ID, carrying the elapsed duration and
+the run's eventual outcome — without changing a single call site in the five
+projects.
+
+### Milestones
+
+- Added `structured_logging.py`: `JsonFormatter`, `RunContext`, `begin_run`,
+  `current_run`, `end_run`, `new_run_id`, `structured_extra` and `log_error`.
+- `logging_config.py` gained `--json-logs` and `--run-id`; `configure_logging`
+  opens a run and logs `run_start`, `LoggingSession.finish` logs exactly one
+  `run_finish` record with the outcome and total `duration_ms`, and
+  `finish_active_runs` lets `run_cli` close the run from its existing
+  `finally` block. Reconfiguring closes the previous run as `incomplete`
+  before starting a fresh one.
+- `cli_contract.run_cli` now distinguishes `success`, `error` and
+  `interrupted`, and attaches the `DatheonError.to_dict()` payload to the
+  finish record — the same description the CLI prints, now machine-readable.
+- Documented the contract in `docs/logging.md` (new *Structured logs* section:
+  switches, schema table, run-ID sources, outcome semantics, `jq` recipes) and
+  in the README.
+- Added `tests/test_structured_logging.py` — 50 tests, including a subprocess
+  assertion per CLI that `--json-logs` emits only parseable JSON sharing one
+  `run_id` and ending in `run_finish`. Suite: 479 → 529 tests, all green.
+
+### Architectural decisions
+
+1. **A formatter, not a new logging path.** Day 8 deliberately kept the format
+   in a constant so this day could be a *strategy* swap: `JsonFormatter` is
+   handed to the same two handlers. No `main.py` changed, the rotation policy
+   is untouched, and the text format stays the default — a human tailing a log
+   is never punished by a feature aimed at machines.
+2. **Run identity in a `ContextVar`, not in a parameter.** Threading a
+   `run_id` through five entry points and every helper between them would
+   touch dozens of signatures and still miss the record emitted by a library
+   call. A context variable makes the ID ambient: any record logged while the
+   run is current carries it, and asyncio tasks inherit their own copy for
+   Day 11.
+3. **Durations from `time.monotonic`, wall-clock for display.** Elapsed time is
+   computed against a monotonic clock so an NTP correction cannot make
+   `duration_ms` negative; the record also carries the wall-clock `started`
+   and `ts` so two machines can be compared. Both, because each answers a
+   question the other cannot.
+4. **Caller fields are nested under `fields`.** Flat merging would let a
+   caller's `message` or `level` silently shadow the record's own — a bug that
+   only surfaces in a log pipeline, months later. Nesting makes the reserved
+   namespace a documented guarantee instead of a convention.
+5. **`seq` numbers the record, not the formatting.** Both handlers format the
+   same `LogRecord`; the first draft advanced the counter per format call, so
+   the file copy disagreed with the console copy. The number is now computed
+   once and cached on the record.
+6. **`finish` is idempotent, `close` is not a silent drop.** `run_cli` finishes
+   the run and then `shutdown_logging` closes it; a session closed without an
+   explicit outcome is recorded as `incomplete` rather than losing its end
+   record. The first outcome wins, so two askers never produce two finishes.
+7. **A failure to log must never change the exit code.** The `finally` block
+   records the outcome *after* the exit code is decided, and `log_error` only
+   describes the exception — it never re-raises. Observability stays a
+   passenger.
+
+### Complexity analysis
+
+| Operation | Module | Time | Space | Notes |
+| --- | --- | --- | --- | --- |
+| `begin_run` / `end_run` | structured_logging | O(1) | O(1) | One `ContextVar` set |
+| `new_run_id` | structured_logging | O(1) | O(1) | One `strftime` + one `uuid4` hex slice |
+| `RunContext.elapsed_ms` | structured_logging | O(1) | O(1) | One `monotonic` call |
+| `JsonFormatter.format` | structured_logging | O(F + M) | O(F + M) | F = caller fields, M = message length; one `json.dumps` |
+| `log_error` | structured_logging | O(C) | O(C) | C = error context entries (copied into `to_dict`) |
+| `finish_active_runs` | logging_config | O(S) | O(1) | S open sessions, normally 1 |
+
+Serialisation dominates and is linear in the record: the format change costs
+one `json.dumps` per record instead of one `%` interpolation, which is the
+honest price of machine-readable output — measured at ~10 µs per record, two
+orders of magnitude below the `fsync` Day 9 added to a write.
+
+### Edge cases covered by tests
+
+- Run IDs: shape, sortability, uniqueness across calls, prefix, explicit value
+  beating `DATHEON_RUN_ID`, and `end_run` refusing to clear a superseded
+  context.
+- Formatting: message interpolation, a message containing a newline (still one
+  JSON line), `include_source=False`, no run fields without a context, a
+  caller field that collides with a reserved key (stays nested), and
+  non-serialisable values (`Path`, `set`) rendered with `str`.
+- Records: `exc_info` captured as text; `log_error` emitting the taxonomy
+  payload for a `DatheonError` and a reduced type/message pair for anything
+  else.
+- Lifecycle: `finish` idempotent under two calls, `close` recording
+  `incomplete`, `finish_active_runs` carrying an error payload, reconfiguring
+  starting a fresh run ID while closing the old one, and a disabled session
+  reporting no run ID and writing nothing.
+- Outcomes through `run_cli`: `success`, a `DatheonError` (with hint and
+  context in the record), a bare `ValueError`, `KeyboardInterrupt`, and a
+  non-zero return.
+- Definition of done, per CLI in a subprocess: `--json-logs` yields only
+  parseable JSON, one `project`, one `run_id`, a `run_start` first and a
+  `run_finish` last with `run_outcome: success` and a non-negative
+  `duration_ms`; `--run-id` is stamped on every record; `--help` documents
+  both switches.
+
+### Next up
+
+- Day 11 ports the organizer's moves to `asyncio` with a bounded semaphore. The
+  run context is already a `ContextVar`, so each task inherits the run ID
+  without plumbing — the only work is to log the per-task durations the
+  benchmark will want.
+- Day 12's `cProfile` pass can now emit its numbers as `structured_extra`
+  fields, so before/after timings land in the same records as the run they
+  belong to instead of in a separate text file.
