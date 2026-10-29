@@ -23,6 +23,16 @@ The contract has three parts:
   on Day 7. ``--log-level DEBUG`` turns the whole pipeline on and writes a log
   file in every project.
 
+Since Day 10 the same module also carries the *structured* layer: passing
+``--json-logs`` swaps both formatters for
+:class:`structured_logging.JsonFormatter`, so every line becomes one JSON object
+carrying a ``run_id``, the ``project``, the elapsed ``duration_ms`` and the
+eventual ``run_outcome``. Each session opens a
+:class:`~structured_logging.RunContext`, and :func:`finish_active_runs` closes
+it with an outcome and a total duration, so the first and last record of a run
+correlate without a single call site changing shape. The text format remains
+the default: a human tailing a log file is never punished by the new mode.
+
 Where the file goes is deliberately not hard-coded: :func:`default_log_dir`
 honours the ``DATHEON_LOG_DIR`` environment variable and otherwise falls back
 to ``~/.datheon/logs``. That keeps the repository clean, keeps the tests
@@ -60,6 +70,18 @@ from pathlib import Path
 from typing import List, Optional, TextIO, Union
 
 from errors import ConfigurationError
+from structured_logging import (
+    JSON_SCHEMA_VERSION,
+    RUN_ID_ENV,
+    JsonFormatter,
+    RunContext,
+    begin_run,
+    current_run,
+    end_run,
+    log_error,
+    new_run_id,
+    structured_extra,
+)
 
 __all__ = [
     "CONSOLE_FORMAT",
@@ -69,16 +91,27 @@ __all__ = [
     "DEFAULT_LOG_LEVEL",
     "DEFAULT_MAX_BYTES",
     "FILE_FORMAT",
+    "JSON_SCHEMA_VERSION",
     "LOG_LEVELS",
+    "RUN_ID_ENV",
+    "JsonFormatter",
     "LoggingSession",
+    "RunContext",
     "add_logging_flags",
+    "begin_run",
     "configure_logging",
     "configure_logging_from_args",
+    "current_run",
     "default_log_dir",
-    "installed_handlers",
     "default_log_file",
+    "end_run",
+    "finish_active_runs",
+    "installed_handlers",
+    "log_error",
+    "new_run_id",
     "resolve_level",
     "shutdown_logging",
+    "structured_extra",
 ]
 
 #: Accepted ``--log-level`` values, quietest last, in the order a user reads
@@ -232,6 +265,24 @@ def add_logging_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParse
             f"(default: <log dir>/<prog>.log; set {DEFAULT_LOG_DIR_ENV} to move the log dir)."
         ),
     )
+    parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help=(
+            "Emit one JSON object per record (run ID, project, duration, outcome) "
+            "instead of text lines; needs --log-level or --log-file to have any effect."
+        ),
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        metavar="ID",
+        help=(
+            "Correlation ID stamped on every record of this run "
+            f"(default: generated; {RUN_ID_ENV} overrides)."
+        ),
+    )
     return parser
 
 
@@ -258,6 +309,9 @@ class LoggingSession:
     handlers: List[logging.Handler] = field(default_factory=list)
     log_file: Optional[Path] = None
     file_error: Optional[str] = None
+    run: Optional[RunContext] = None
+    json_logs: bool = False
+    finished: bool = False
 
     @property
     def enabled(self) -> bool:
@@ -269,17 +323,66 @@ class LoggingSession:
         """Whether a rotating file handler is writing to :attr:`log_file`."""
         return self.log_file is not None
 
-    def close(self) -> None:
-        """Remove and close every handler this session installed.
+    @property
+    def run_id(self) -> Optional[str]:
+        """The correlation ID stamped on this session's records, if any."""
+        return self.run.run_id if self.run is not None else None
 
-        Safe to call twice: the second call is a no-op. Any records still
-        buffered in a handler are flushed by :meth:`logging.Handler.close`.
+    def finish(
+        self,
+        outcome: str = "success",
+        *,
+        error: Optional[dict] = None,
+        level: int = logging.INFO,
+    ) -> None:
+        """Record the outcome and total duration of this run.
+
+        Emits exactly one ``run finished`` record — the counterpart of the
+        ``run started`` record :func:`configure_logging` writes — carrying
+        ``event``, ``outcome``, ``duration_ms`` and, when the run failed, the
+        machine-readable ``error`` payload. The record's ``run_id`` matches
+        every other record of the session, so ``start`` and ``finish``
+        correlate.
+
+        Idempotent: the first call wins and later calls are ignored, so
+        :func:`finish_active_runs` and :meth:`close` can both ask without
+        producing a second finish line.
+
+        Args:
+            outcome: Terminal state — ``"success"``, ``"error"``,
+                ``"interrupted"`` or ``"incomplete"``.
+            error: Optional ``DatheonError.to_dict()`` style payload describing
+                the failure.
+            level: Level for the finish record; ``INFO`` by default, so the
+                line is present at the level a cron job normally runs at.
         """
+        if self.finished:
+            return
+        self.finished = True
+        if self.run is None or not self.handlers:
+            return
+
+        self.run.finish(outcome)
+        fields: dict = {"event": "run_finish", "outcome": outcome}
+        if error is not None:
+            fields["error"] = error
+        self.logger.log(level, "run finished", extra=structured_extra(**fields))
+
+    def close(self) -> None:
+        """Finish the run, then remove and close every handler it installed.
+
+        A run that is closed without an explicit :meth:`finish` is recorded as
+        ``incomplete`` rather than silently losing its end record. Safe to call
+        twice: the second call is a no-op. Any records still buffered in a
+        handler are flushed by :meth:`logging.Handler.close`.
+        """
+        self.finish("incomplete")
         for handler in self.handlers:
             self.logger.removeHandler(handler)
             handler.close()
         self.handlers.clear()
         self.log_file = None
+        end_run(self.run)
         if self in _ACTIVE_SESSIONS:
             _ACTIVE_SESSIONS.remove(self)
 
@@ -303,6 +406,21 @@ def _remove_owned_handlers(logger: logging.Logger) -> None:
         if getattr(handler, _OWNED_ATTRIBUTE, False):
             logger.removeHandler(handler)
             handler.close()
+
+
+def _close_sessions_for(logger: logging.Logger) -> None:
+    """Close any active session that already owns ``logger``.
+
+    Reconfiguring a program must not leave the previous session holding a
+    finished run: closing it first writes its ``run finished`` record while its
+    handlers are still open, then detaches them, so the new session starts from
+    a clean slate with a fresh run ID.
+
+    Args:
+        logger: The logger about to be reconfigured.
+    """
+    for session in [item for item in _ACTIVE_SESSIONS if item.logger is logger]:
+        session.close()
 
 
 def installed_handlers(logger: logging.Logger) -> List[logging.Handler]:
@@ -329,6 +447,8 @@ def configure_logging(
     stream: Optional[TextIO] = None,
     max_bytes: int = DEFAULT_MAX_BYTES,
     backup_count: int = DEFAULT_BACKUP_COUNT,
+    json_logs: bool = False,
+    run_id: Optional[str] = None,
 ) -> LoggingSession:
     """Configure console and rotating-file logging for one tool.
 
@@ -347,17 +467,24 @@ def configure_logging(
             parseable. Passing an explicit stream is mainly useful in tests.
         max_bytes: Rotation threshold in bytes.
         backup_count: Number of rotated generations to keep.
+        json_logs: Emit one JSON object per record on both handlers
+            (:class:`~structured_logging.JsonFormatter`) instead of text lines.
+        run_id: Explicit run ID for the structured records; when ``None`` the
+            ``DATHEON_RUN_ID`` environment variable is honoured, and otherwise
+            one is generated.
 
     Returns:
         A :class:`LoggingSession` describing what was installed. The session is
         disabled (:attr:`LoggingSession.enabled` is ``False``) when neither
-        ``level`` nor ``log_file`` was supplied.
+        ``level`` nor ``log_file`` was supplied; a disabled session opens no
+        run context and writes nothing anywhere.
 
     Raises:
         ConfigurationError: If ``level`` is not a recognised level.
     """
     logger = logging.getLogger(prog)
     logger.propagate = False
+    _close_sessions_for(logger)
     _remove_owned_handlers(logger)
 
     if level is None and log_file is None:
@@ -366,11 +493,11 @@ def configure_logging(
 
     level_value = resolve_level(DEFAULT_LOG_LEVEL if level is None else level)
     logger.setLevel(level_value)
-    session = LoggingSession(logger=logger, level=level_value)
+    session = LoggingSession(logger=logger, level=level_value, json_logs=json_logs)
 
     console = logging.StreamHandler(sys.stderr if stream is None else stream)
     console.setLevel(level_value)
-    console.setFormatter(logging.Formatter(CONSOLE_FORMAT))
+    console.setFormatter(JsonFormatter() if json_logs else logging.Formatter(CONSOLE_FORMAT))
     setattr(console, _OWNED_ATTRIBUTE, True)
     logger.addHandler(console)
     session.handlers.append(console)
@@ -391,11 +518,26 @@ def configure_logging(
         logger.warning("file logging disabled: %s", exc)
     else:
         file_handler.setLevel(level_value)
-        file_handler.setFormatter(logging.Formatter(FILE_FORMAT, datefmt=DATE_FORMAT))
+        file_handler.setFormatter(
+            JsonFormatter() if json_logs else logging.Formatter(FILE_FORMAT, datefmt=DATE_FORMAT)
+        )
         setattr(file_handler, _OWNED_ATTRIBUTE, True)
         logger.addHandler(file_handler)
         session.handlers.append(file_handler)
         session.log_file = target
+
+    # Open the run context last: the "file logging disabled" warning above
+    # belongs to no run, and every record from here on carries the run ID.
+    session.run = begin_run(prog, run_id)
+    logger.info(
+        "run started",
+        extra=structured_extra(
+            event="run_start",
+            project=prog,
+            json_logs=json_logs,
+            log_file=str(session.log_file) if session.log_file else None,
+        ),
+    )
 
     _ACTIVE_SESSIONS.append(session)
     return session
@@ -431,7 +573,26 @@ def configure_logging_from_args(
         stream=stream,
         max_bytes=max_bytes,
         backup_count=backup_count,
+        json_logs=bool(getattr(args, "json_logs", False)),
+        run_id=getattr(args, "run_id", None),
     )
+
+
+def finish_active_runs(outcome: str = "success", *, error: Optional[dict] = None) -> None:
+    """Record a terminal outcome for every run that is still open.
+
+    :func:`cli_contract.run_cli` calls this in its ``finally`` block, before
+    :func:`shutdown_logging`, so every invocation ends with exactly one
+    ``run finished`` record carrying the outcome and the total duration — on
+    the success path, on a domain error, and on ``Ctrl-C``.
+
+    Args:
+        outcome: Terminal state to record — ``"success"``, ``"error"``,
+            ``"interrupted"`` or ``"incomplete"``.
+        error: Optional machine-readable error payload for the finish record.
+    """
+    for session in list(_ACTIVE_SESSIONS):
+        session.finish(outcome, error=error)
 
 
 def shutdown_logging() -> None:
@@ -439,7 +600,8 @@ def shutdown_logging() -> None:
 
     Called by :func:`cli_contract.run_cli` in a ``finally`` block, and by tests
     that configure logging directly. Only handlers installed by this module are
-    closed, so an embedding application's own logging is untouched.
+    closed, so an embedding application's own logging is untouched. A session
+    that was never finished is recorded as ``incomplete`` before it closes.
     """
     for session in list(_ACTIVE_SESSIONS):
         session.close()
