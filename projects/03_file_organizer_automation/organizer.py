@@ -1,9 +1,13 @@
 """Automated file organizer and cleanup utility.
 
 The module scans a directory, classifies each file by extension, and moves it
-into a category subfolder. Moves run concurrently on a thread pool, collisions
-are resolved by renaming, duplicates are detected by SHA-256 content hash, and
-every action is recorded so it can be serialised to a JSON activity log.
+into a category subfolder. Moves run concurrently on the ``asyncio`` engine in
+:mod:`async_organizer` with a bounded number of files in flight, collisions are
+resolved by renaming, duplicates are detected by SHA-256 content hash, and every
+action is recorded so it can be serialised to a JSON activity log.
+
+:class:`FileOrganizer` remains the blocking, thread-agnostic API: it drives the
+asyncio engine internally, so existing callers are unaffected.
 
 Typical use::
 
@@ -17,15 +21,16 @@ Typical use::
 from __future__ import annotations
 
 import hashlib
-import shutil
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
 from edge_cases import iter_files
 from errors import ValidationError
 from persistence import atomic_write_json, read_json_document, stamp_schema
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, avoids an import cycle
+    from async_organizer import AsyncFileOrganizer
 
 #: Default extension → category mapping.
 CATEGORY_MAP: Dict[str, str] = {
@@ -230,12 +235,18 @@ class OrganizeReport:
         dry_run: Whether this was a preview run.
         records: Per-file outcomes.
         duplicates: Content-hash → list of duplicate paths (if detected).
+        duration_ms: Wall-clock time the run took, in milliseconds. Zero for a
+            report assembled by hand.
+        engine: Which execution engine produced the report; ``"asyncio"`` for
+            every run since Day 11.
     """
 
     directory: str
     dry_run: bool = False
     records: List[MoveRecord] = field(default_factory=list)
     duplicates: Dict[str, List[str]] = field(default_factory=dict)
+    duration_ms: float = 0.0
+    engine: str = "asyncio"
 
     @property
     def moved(self) -> int:
@@ -273,6 +284,8 @@ class OrganizeReport:
                 "planned": self.planned,
                 "skipped": self.skipped,
                 "errors": len(self.errors),
+                "duration_ms": self.duration_ms,
+                "engine": self.engine,
             },
             "duplicates": self.duplicates,
             "records": [asdict(r) for r in self.records],
@@ -282,15 +295,27 @@ class OrganizeReport:
 class FileOrganizer:
     """Organises a directory into category subfolders.
 
+    The blocking facade over :class:`async_organizer.AsyncFileOrganizer`. Moves
+    are executed on an asyncio event loop with at most ``max_workers`` files in
+    flight; the call itself still blocks and returns a report, so callers need
+    no knowledge of asyncio.
+
     Args:
         mapping: Extension → category mapping. Defaults to :data:`CATEGORY_MAP`.
-        max_workers: Thread-pool size for concurrent moves.
+        max_workers: Maximum number of moves in flight at once. Kept under its
+            original name for backwards compatibility; it is now the
+            concurrency bound of the asyncio engine rather than a thread-pool
+            size.
+        mover: Optional replacement for the move call. Tests inject a fake to
+            observe scheduling without real I/O.
     """
 
     def __init__(
         self,
         mapping: Optional[Dict[str, str]] = None,
         max_workers: int = 4,
+        *,
+        mover: Optional[Callable[[Path, Path], Any]] = None,
     ) -> None:
         if max_workers < 1:
             raise ValidationError(
@@ -300,39 +325,31 @@ class FileOrganizer:
             )
         self.mapping: Dict[str, str] = dict(mapping) if mapping else dict(CATEGORY_MAP)
         self.max_workers = max_workers
+        self.mover = mover
 
     def _target_dir(self, root: Path, category: str) -> Path:
-        """Return (and, on a real run, create) the category subfolder."""
+        """Return the category subfolder for ``category`` under ``root``."""
         return root / category
 
-    def _process(
-        self,
-        source: Path,
-        root: Path,
-        dry_run: bool,
-    ) -> MoveRecord:
-        """Classify and (optionally) move a single file."""
-        category = category_for(source, self.mapping)
-        try:
-            dest_dir = self._target_dir(root, category)
-            destination = unique_destination(source, dest_dir)
-            if dry_run:
-                return MoveRecord(
-                    str(source),
-                    str(destination),
-                    category,
-                    "planned",
-                    "dry run — no change made",
-                )
-            dest_dir.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(source), str(destination))
-            return MoveRecord(str(source), str(destination), category, "moved")
-        except PermissionError as exc:
-            return MoveRecord(str(source), "", category, "error", f"permission denied: {exc}")
-        except FileExistsError as exc:
-            return MoveRecord(str(source), "", category, "error", f"exists: {exc}")
-        except OSError as exc:
-            return MoveRecord(str(source), "", category, "error", f"os error: {exc}")
+    def engine(self, concurrency: Optional[int] = None) -> "AsyncFileOrganizer":
+        """Build the asyncio engine this facade delegates to.
+
+        Args:
+            concurrency: Explicit concurrency bound; defaults to
+                :attr:`max_workers`.
+
+        Returns:
+            A configured :class:`async_organizer.AsyncFileOrganizer`.
+        """
+        # Imported here rather than at module scope: async_organizer imports the
+        # report types from this module, so a top-level import would be circular.
+        from async_organizer import AsyncFileOrganizer
+
+        return AsyncFileOrganizer(
+            mapping=self.mapping,
+            concurrency=concurrency if concurrency is not None else self.max_workers,
+            mover=self.mover,
+        )
 
     def organize(
         self,
@@ -343,8 +360,8 @@ class FileOrganizer:
         """Organise every file directly inside ``directory``.
 
         Category subfolders are never themselves moved. Moves are dispatched to
-        a thread pool and the results are collected in deterministic source
-        order.
+        the asyncio engine with a bounded number in flight, and the results are
+        collected in deterministic source order.
 
         Args:
             directory: Directory to organise.
@@ -359,39 +376,11 @@ class FileOrganizer:
             NotADirectoryError: If ``directory`` is not a directory.
             PermissionError: If ``directory`` cannot be listed.
         """
-        root = Path(directory).expanduser()
-        files = iter_files(root)
-
-        report = OrganizeReport(directory=str(root), dry_run=dry_run)
-
-        if detect_duplicates:
-            report.duplicates = {
-                digest: [str(p) for p in paths] for digest, paths in find_duplicates(root).items()
-            }
-
-        if not files:
-            return report
-
-        results: Dict[str, MoveRecord] = {}
-        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
-            futures = {
-                pool.submit(self._process, source, root, dry_run): source for source in files
-            }
-            for future in as_completed(futures):
-                source = futures[future]
-                try:
-                    results[str(source)] = future.result()
-                except Exception as exc:  # defensive: never lose a file silently
-                    results[str(source)] = MoveRecord(
-                        str(source),
-                        "",
-                        category_for(source, self.mapping),
-                        "error",
-                        f"unexpected: {exc}",
-                    )
-
-        report.records = [results[str(source)] for source in files if str(source) in results]
-        return report
+        return self.engine().organize_sync(
+            directory,
+            dry_run=dry_run,
+            detect_duplicates=detect_duplicates,
+        )
 
 
 def write_json_log(report: OrganizeReport, path: Union[str, Path]) -> Path:

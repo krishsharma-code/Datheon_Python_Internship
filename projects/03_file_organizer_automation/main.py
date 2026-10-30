@@ -27,6 +27,7 @@ from cli_contract import (  # noqa: E402
     run_cli,
 )
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
+from async_organizer import DEFAULT_CONCURRENCY, MAX_CONCURRENCY  # noqa: E402
 from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
 from validators import add_strict_flag, validate_int, validate_path  # noqa: E402
 
@@ -63,6 +64,7 @@ def _print_report(report) -> None:
     if report.dry_run:
         print(f"Planned   : {report.planned}")
     print(f"Errors    : {len(report.errors)}")
+    print(f"Duration  : {report.duration_ms:.1f} ms ({report.engine} engine)")
 
     if report.duplicates:
         print(f"\nDuplicate groups found: {len(report.duplicates)}")
@@ -100,7 +102,19 @@ def main(argv: List[str] | None = None) -> int:
         "--duplicates", action="store_true", help="Also detect duplicate files via SHA-256."
     )
     parser.add_argument(
-        "--workers", type=int, default=4, help="Number of concurrent move threads (default: 4)."
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        help=(
+            "Maximum number of moves in flight at once on the asyncio engine "
+            f"(default: {DEFAULT_CONCURRENCY})."
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Deprecated alias for --concurrency; kept for script compatibility.",
     )
     parser.add_argument(
         "--log", type=Path, default=None, help="Write a JSON activity log to this path."
@@ -114,8 +128,17 @@ def main(argv: List[str] | None = None) -> int:
     logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
 
     # Validate the boundary inputs up front so the failure is one clear line.
-    args.workers = validate_int(
-        args.workers, minimum=1, maximum=32 if args.strict else None, field="--workers"
+    bound_field = "--concurrency"
+    if args.workers is not None:
+        print("! --workers is deprecated; use --concurrency instead.")
+        args.concurrency = args.workers
+        # Report a bad value against the flag the user actually typed.
+        bound_field = "--workers"
+    args.concurrency = validate_int(
+        args.concurrency,
+        minimum=1,
+        maximum=MAX_CONCURRENCY if args.strict else None,
+        field=bound_field,
     )
     args.directory = str(
         validate_path(args.directory, must_be_dir=True, strict=args.strict, field="directory")
@@ -124,18 +147,18 @@ def main(argv: List[str] | None = None) -> int:
         args.log = validate_path(args.log, strict=args.strict, field="--log")
 
     logger.debug(
-        "options: directory=%s dry_run=%s duplicates=%s workers=%d log=%s strict=%s",
+        "options: directory=%s dry_run=%s duplicates=%s concurrency=%d log=%s strict=%s",
         args.directory,
         args.dry_run,
         args.duplicates,
-        args.workers,
+        args.concurrency,
         args.log,
         args.strict,
     )
     print("Categories: " + ", ".join(CATEGORIES))
 
     try:
-        organizer = FileOrganizer(max_workers=args.workers)
+        organizer = FileOrganizer(max_workers=args.concurrency)
         report = organizer.organize(
             args.directory,
             dry_run=args.dry_run,
@@ -149,12 +172,13 @@ def main(argv: List[str] | None = None) -> int:
         return int(ExitCode.DATA_ERROR)
 
     logger.info(
-        "processed=%d moved=%d planned=%d errors=%d duplicates=%d",
+        "processed=%d moved=%d planned=%d errors=%d duplicates=%d duration_ms=%.1f",
         report.total_processed,
         report.moved,
         report.planned,
         len(report.errors),
         len(report.duplicates),
+        report.duration_ms,
     )
     _print_report(report)
 
