@@ -923,3 +923,115 @@ orders of magnitude below the `fsync` Day 9 added to a write.
 - Day 12's `cProfile` pass can now emit its numbers as `structured_extra`
   fields, so before/after timings land in the same records as the run they
   belong to instead of in a separate text file.
+
+---
+
+## Day 11 — Async I/O: the organizer on `asyncio` with a bounded fan-out
+
+**Branch:** `feat/datheon-day-11-async-io` · **PR:** #12
+**Scope:** Move the organizer's per-file work off the thread pool and onto an
+`asyncio` event loop, with an explicit ceiling on how many moves can be in
+flight — while `FileOrganizer.organize(...)` keeps the exact signature, return
+type and exceptions it had on Day 10.
+
+### Milestones
+
+- Added `async_organizer.py`: `AsyncFileOrganizer` (async `organize`, blocking
+  `organize_sync`), `run_coroutine_sync` for the sync bridge, and
+  `_DestinationReserver` for race-free collision resolution.
+- `organizer.FileOrganizer` is now a thin blocking facade over the engine: the
+  `ThreadPoolExecutor` dispatch and the per-file `_process` are gone, and
+  `max_workers` survives as the concurrency bound. `OrganizeReport` gained
+  `duration_ms` and `engine`, both surfaced in the activity-log `summary`.
+- The CLI gained `--concurrency` (default 8, hard ceiling 64, `--strict`
+  enforced); `--workers` is retained as a deprecated alias that still reports a
+  bad value against the flag the user actually typed.
+- Added `benchmark.py`: a harness that measures every concurrency level and
+  prints throughput and speed-up against the serial baseline, in both a
+  simulated-latency mode and a real-moves mode.
+- Documented the contract in `docs/async_io.md` and the README; added
+  `tests/test_async_organizer.py` — 36 tests. Suite: 529 → 565 tests (774
+  assertions), all green; `flake8`, `black --check` and `compileall` clean.
+
+### Measured numbers
+
+| Mode | 1 | 4 | 8 | 16 |
+| --- | --- | --- | --- | --- |
+| 3 ms/file latency, 400 files (speed-up) | 1.00× | 2.05× | 2.69× | 3.95× |
+| Real moves, 500 files (speed-up) | 1.00× | 0.98× | 1.13× | 1.17× |
+
+Both rows are the finding, not a caveat. With latency in the picture the engine
+scales — but sub-linearly, because the ceiling is the executor serving
+`asyncio.to_thread` plus the disk, not the event loop. With real local moves
+there is almost nothing to overlap: the filesystem is the bottleneck at
+~380 files/s even serially, and 16-way fan-out buys 17%. That is why the default
+is 8 and the ceiling is 64.
+
+### Architectural decisions
+
+1. **A worker pool, not a semaphore.** `asyncio.gather` over every file with a
+   `Semaphore(concurrency)` looks equivalent and is not: it creates one task per
+   file, so a 50 000-file directory allocates 50 000 coroutines and 50 000
+   `Task` objects to run 8 at a time. A queue drained by exactly `concurrency`
+   worker tasks bounds the *memory* as well as the I/O, and the bound is a
+   property of the code's shape rather than of a token count that a future
+   refactor can leak. `peak_in_flight` makes the bound observable in a test
+   instead of a claim in a docstring.
+2. **Reservation is a separate concern from the move.** `unique_destination` is
+   correct for one caller and racy for two: both workers can see the same free
+   name before either has moved a file, and the second `shutil.move` silently
+   overwrites the first. The fix is not a lock around the move — that would
+   serialise the whole point of the exercise — but a lock around the *claim*,
+   with claimed-but-not-yet-created paths remembered in a set. The critical
+   section is one `stat`, the move stays concurrent, and the collision
+   guarantee survives the port.
+3. **The blocking API is a facade, not a fork.** Keeping the old thread-pool
+   implementation alongside the new engine would mean two code paths to test
+   and two places for behaviour to drift. Instead `FileOrganizer.organize`
+   builds the engine and drives it, so parity is structural. The one awkward
+   case — a caller already inside an event loop, where `asyncio.run` refuses to
+   start — is handled by `run_coroutine_sync`, which drives the coroutine on a
+   private loop in a worker thread; the test suite exercises both branches.
+4. **Failures stay per-file.** `asyncio.gather` propagates the first exception
+   and abandons its siblings, which for a file mover means a directory half
+   organised with no record of where it stopped. The worker catches
+   `PermissionError`/`FileExistsError`/`OSError` into an `error` record and
+   everything else into `unexpected: …`, so one locked file costs one line and
+   the other 999 still move.
+5. **Per-file timings go into the log, not a side file.** Day 10's
+   `structured_extra` was the point of Day 10: the engine now emits one DEBUG
+   record per file with `source`, `category` and `duration_ms`, and one per run
+   with `concurrency`, `peak_in_flight` and `duration_ms`. Day 12's `cProfile`
+   pass has a correlation key and a duration field waiting for it.
+
+### Edge cases covered by tests
+
+- Construction: `concurrency` of 0, -1, above the ceiling, a string, a float,
+  `True` and `None` all raise `ValidationError` rather than being clamped.
+- Parity: the async and sync engines, run over two identical trees, produce the
+  same multiset of `(name, category, status, destination)` records; records come
+  back in source order, not completion order.
+- Bounding: `peak_in_flight <= 3` for `concurrency=3` on 12 files with a slow
+  mover, `>= 2` so the bound is used rather than merely respected, and exactly
+  `1` for a serial run; the counter resets between runs.
+- Reservation: two reservations of the same filename yield `report.pdf` and
+  `report (1).pdf`; `max_attempts=1` with both names taken raises
+  `FileExistsError`.
+- Isolation: `PermissionError`, `OSError` and `RuntimeError` from the mover each
+  become an error record, and a run with one locked file still moves the rest.
+- Bridge: the blocking facade works when called from inside a running loop,
+  `run_coroutine_sync` returns the coroutine's value and propagates its
+  exceptions, and `NotADirectoryError` still escapes the sync API.
+- CLI: `--concurrency 2` organizes and prints the engine and duration,
+  `--concurrency 0 --strict` exits 1, and `--workers` still works while warning
+  that it is deprecated.
+
+### Next up
+
+- Day 12 profiles the hot paths — the organizer's per-file path (now with
+  `duration_ms` already attached to every record), the dataset loaders, and the
+  chatbot's regex matcher — and optimises the top three costs with before/after
+  numbers.
+- The benchmark harness is the measuring stick for that day: `run_benchmark`
+  already returns throughput and speed-up per level, so a regression can be
+  spotted as a number moving the wrong way rather than as a feeling.

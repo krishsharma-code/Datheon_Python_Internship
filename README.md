@@ -218,6 +218,27 @@ missing, malformed, newer or unsupported version rather than guessing. The full
 contract is in [`docs/persistence.md`](docs/persistence.md), verified by
 `tests/test_persistence.py`.
 
+### Non-blocking file moves
+
+The organizer's moves run on `asyncio` with a hard ceiling on how many files are
+in flight, while `FileOrganizer.organize(...)` keeps its blocking signature:
+
+```python
+from organizer import FileOrganizer                  # unchanged, blocking
+report = FileOrganizer(max_workers=8).organize("~/Downloads")
+
+import asyncio
+from async_organizer import AsyncFileOrganizer        # native coroutine API
+report = asyncio.run(AsyncFileOrganizer(concurrency=8).organize("~/Downloads"))
+```
+
+Concurrency is bounded by a worker-pool queue rather than a semaphore, so no more
+than `concurrency` moves are ever in flight, and a per-category destination
+reserver keeps two concurrent workers from claiming the same free filename. The
+engine, its benchmark numbers and the collision argument are in
+[`docs/async_io.md`](docs/async_io.md), verified by
+`tests/test_async_organizer.py`.
+
 ---
 
 ## 🧩 Projects
@@ -247,9 +268,10 @@ used via `--constituents` to flag tickers that are not in the reference list.
 `projects/03_file_organizer_automation/`
 
 Organizes a cluttered directory into category subfolders (`Documents`,
-`Images`, `Videos`, `Audio`, `Archives`, `Code`, `Other`), using a
-`ThreadPoolExecutor` for concurrent moves, collision-safe renaming, SHA-256
-duplicate detection, a `--dry-run` preview mode, and a JSON activity log.
+`Images`, `Videos`, `Audio`, `Archives`, `Code`, `Other`), moving files on an
+`asyncio` engine with a **bounded** number of moves in flight
+(`--concurrency`, default 8), collision-safe renaming, SHA-256 duplicate
+detection, a `--dry-run` preview mode, and a JSON activity log.
 
 ### Task 4 — Rule-Based Interactive Terminal Assistant
 `projects/04_terminal_assistant/`
