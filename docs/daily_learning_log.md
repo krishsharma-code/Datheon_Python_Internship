@@ -928,7 +928,7 @@ orders of magnitude below the `fsync` Day 9 added to a write.
 
 ## Day 11 — Async I/O: the organizer on `asyncio` with a bounded fan-out
 
-**Branch:** `feat/datheon-day-11-async-io` · **PR:** PR_NUMBER
+**Branch:** `feat/datheon-day-11-async-io` · **PR:** #12
 **Scope:** Move the organizer's per-file work off the thread pool and onto an
 `asyncio` event loop, with an explicit ceiling on how many moves can be in
 flight — while `FileOrganizer.organize(...)` keeps the exact signature, return
