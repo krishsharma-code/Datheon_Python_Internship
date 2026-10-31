@@ -1035,3 +1035,115 @@ is 8 and the ceiling is 64.
 - The benchmark harness is the measuring stick for that day: `run_benchmark`
   already returns throughput and speed-up per level, so a regression can be
   spotted as a number moving the wrong way rather than as a feeling.
+
+---
+
+## Day 12 — Performance profiling: finding and fixing the hot spots
+
+**Branch:** `feat/datheon-day-12-profiling`
+**Scope:** Profile the organizer, the duplicate detector and the dataset loaders
+with `cProfile`; optimise the three largest costs; record before/after numbers.
+
+### Milestones
+
+- Added `profiling.py`: a stdlib-only harness exposing `profile_callable`
+  (per-function `tottime`/`cumtime` in milliseconds), `time_callable` (best,
+  median, mean and σ of N samples) and `compare_timings` (speedup and
+  percentage change), plus a `profiling` CLI that profiles any of the five hot
+  paths against a throwaway fixture and prints a table or `--json`.
+- Profiled the organizer, the duplicate detector, the word-list loader, the
+  price-CSV loader and the chatbot matcher; recorded the numbers in
+  `docs/performance_profiling.md`.
+- Optimised the top three costs: `iter_files` (`os.scandir`), `category_for`
+  and the destination reserver (no `Path` churn in the per-file loop), and
+  `find_duplicates` (size pre-filter before hashing).
+- Extended the suite with `tests/test_profiling.py` — 77 new tests covering the
+  harness, its error paths, the CLI, and the two re-implemented naming rules.
+
+### Measurements
+
+| Hot path | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| `iter_files` (2,000 files) | 198.9 ms | 14.1 ms | 14.1× faster |
+| `category_for` × 20,000 | 205.8 ms | 45.1 ms | 4.6× faster |
+| `organize` dry run (2,000 files) | 645.4 ms | 431.3 ms | 1.50× faster |
+| `find_duplicates` (660 files, 60 copies) | 522.2 ms | 129.7 ms | 4.0× faster |
+| `find_duplicates` (600 unique sizes) | 398.9 ms | 85.5 ms | 4.7× faster |
+
+Call counts, which are hardware-independent: `stat` in the dry-run profile fell
+from 1,385 to 785; `open` in the duplicate profile fell from 660 to 120.
+
+### Architectural decisions
+
+1. **Two measurements, two questions.** A profile says *which function* burns
+   the time; a repeated timing says *how fast the whole call is, repeatably*.
+   Quoting only one of them invites the classic mistake — "I optimised the top
+   function and the run got no faster", because the top function was 3% of the
+   total. Every change here is justified by both: a function drops down the
+   `tottime` table *and* the wall clock moves.
+2. **Best sample, not mean.** On a shared machine the slowest samples are the
+   ones that lost the CPU. The minimum is the most stable estimator of the
+   code's own cost, so `time_callable` reports `best_ms` alongside median, mean
+   and σ, and the doc quotes it. A single untimed warm-up precedes every series
+   so imports and cold page cache do not land in the first sample.
+3. **Fix the layer below the loop, not the loop.** The profile's top entry was
+   `posix.stat`, called 1,385 times for 600 files — not from the organizer's
+   logic but from `Path.is_file()` inside `iter_files`. Replacing `iterdir()`
+   with `os.scandir` deletes a syscall per file from every tool's startup path
+   at once, and does it without touching a single caller. Optimising inside the
+   organizer would have left the same waste in the portfolio and chatbot tools.
+4. **Re-implementing `pathlib` is only safe if you re-implement its quirks.**
+   `Path(path).suffix.lower()` costs ~10 µs; the string version costs ~0.5 µs.
+   The temptation is `os.path.splitext`, which disagrees on exactly the inputs a
+   user will eventually hit: `"trailing."` (no suffix), `"..x"` (`".x"`), and
+   `".bashrc"` (no suffix). `_suffix_of` and `_split_name` reproduce
+   `pathlib`'s `rpartition` rule, and the tests assert parity with `Path`
+   itself across a table of awkward names rather than against hand-written
+   expectations — so the check cannot drift with the implementation.
+5. **An algorithmic filter beats a faster loop.** Hashing is I/O-bound: no
+   amount of micro-tuning makes reading 660 files cheap. But two files can only
+   be identical if they are the same length, so grouping by `st_size` first
+   turns "read everything" into "read only the files that share a size" — 660
+   opens became 120 on the fixture. The output dict is unchanged, including the
+   zero-byte case, because the filter is a necessary condition, never a
+   substitute for the hash.
+6. **Record the null results.** The word-list loader, the price-CSV loader and
+   the chatbot matcher were profiled and left alone: they are dominated by a
+   single file read or by ~10 regex searches, and the difference between their
+   before and after numbers is noise. Writing that down stops a future run from
+   "optimising" them for the sake of a diff. Their baselines are the starting
+   point for Day 13's caching work.
+7. **The harness is not on the product path.** Nothing under `projects/` imports
+   `profiling`; it exists for developers and CI. The five tools stay
+   standard-library only and gain nothing to install.
+
+### Edge cases covered by tests
+
+- Harness: `iterations`, `repeat`, `number` and `warmup` of 0 or below raise
+  `ValidationError`; an unknown `sort_by` is rejected; `top(0)` is rejected;
+  `compare_timings` refuses a zero measurement; `--json` output round-trips
+  through `json.loads`; the table output carries the label and header.
+- Fixtures: a non-positive file count is rejected; every payload gets a
+  distinct size so the size pre-filter is exercised as it would be in the wild.
+- Suffix parity: `_suffix_of` matches `Path(...).suffix.lower()` for
+  `"report.pdf"`, `"archive.tar.gz"`, `"trailing."`, `".bashrc"`, `"..x"`,
+  `"..."`, `""`, `"dir.with.dots/file.csv"` and a spaced, mixed-case name —
+  for both `str` and `Path` inputs.
+- Naming parity: `_split_name` matches `Path.stem`/`Path.suffix`, and the
+  reserver and `unique_destination` produce the same `" (1)"` name for
+  `report.pdf`, `trailing.` and a suffix-less file.
+- Duplicate detection: only files whose size repeats are hashed (a monkeypatched
+  digest counter proves it); identical files still group; two empty files still
+  group; a directory of distinct sizes returns `{}`.
+- Listing: sorted case-insensitively, directories excluded, file symlinks
+  followed, broken symlinks skipped, a file path still raises
+  `NotADirectoryError`.
+
+### Next up
+
+- Day 13 caches the static data — the word list, the constituents table and the
+  compiled intent regexes — with explicit invalidation, measured against the
+  loaders' Day 12 baselines (8.7 ms, 3.3 ms and 8.3 ms respectively).
+- Day 14 consolidates the week into a performance and observability report,
+  reusing `profiling.py` so the numbers are reproducible rather than quoted
+  from memory.

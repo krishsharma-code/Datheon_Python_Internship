@@ -29,7 +29,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 9 | 2026-10-28 | Atomic & versioned persistence | `feat/datheon-day-9-persistence` | Temp-file + `os.replace` writes, schema version field, round-trip tests | done | #10 |
 | 10 | 2026-10-29 | Structured logging | `feat/datheon-day-10-structured-logs` | JSON log records, run IDs, durations | done | #11 |
 | 11 | 2026-10-30 | Async I/O | `feat/datheon-day-11-async-io` | File organizer on `asyncio` with bounded concurrency; sync API preserved | done | #12 |
-| 12 | 2026-10-31 | Performance profiling | `feat/datheon-day-12-profiling` | `cProfile` hot-path analysis + optimisations with before/after numbers | pending | — |
+| 12 | 2026-10-31 | Performance profiling | `feat/datheon-day-12-profiling` | `cProfile` hot-path analysis + optimisations with before/after numbers | done | #13 |
 | 13 | 2026-11-01 | Caching & memoisation | `feat/datheon-day-13-caching` | Cached dataset loads (word list, constituents) with invalidation | pending | — |
 | 14 | 2026-11-02 | Week 2 consolidation | `feat/datheon-day-14-perf-report` | Performance & observability report + docs | pending | — |
 | 15 | 2026-11-03 | Test expansion | `feat/datheon-day-15-test-expansion` | Suite crosses **200+ assertions** | pending | — |
