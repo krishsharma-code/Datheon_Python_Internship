@@ -34,11 +34,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, TypeVar, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 from edge_cases import iter_files
 from errors import ValidationError
@@ -116,6 +117,27 @@ def run_coroutine_sync(factory: Callable[[], Awaitable[T]]) -> T:
         return pool.submit(lambda: asyncio.run(factory())).result()
 
 
+def _split_name(name: str) -> Tuple[str, str]:
+    """Split a filename into ``(stem, suffix)`` the way :mod:`pathlib` does.
+
+    ``"report.pdf"`` → ``("report", ".pdf")``, ``"archive.tar.gz"`` →
+    ``("archive.tar", ".gz")``, ``"trailing."`` → ``("trailing.", "")`` and
+    ``".bashrc"`` → ``(".bashrc", "")``. Matching :mod:`pathlib` exactly here
+    keeps the ``" (n)"`` collision suffixes identical to the ones
+    :func:`organizer.unique_destination` produces.
+
+    Args:
+        name: The final path component.
+
+    Returns:
+        The stem and the suffix, suffix empty when there is none.
+    """
+    head, dot, tail = name.rpartition(".")
+    if not dot or not head or not tail:
+        return name, ""
+    return name[: -len(dot + tail)], dot + tail
+
+
 class _DestinationReserver:
     """Hand out collision-free destination paths to concurrent workers.
 
@@ -125,6 +147,12 @@ class _DestinationReserver:
     "look, then claim" step behind an :class:`asyncio.Lock` and remembers the
     names it has already handed out, so a claimed-but-not-yet-created path is
     never issued twice.
+
+    Candidates are built and tested as plain strings — :func:`os.path.join` plus
+    :func:`os.path.exists` — and wrapped in a :class:`~pathlib.Path` only for the
+    value handed back. Building the same candidate through :mod:`pathlib` four
+    times per file was, after ``stat`` itself, the largest single cost in the
+    organizer's dry-run profile.
 
     Args:
         max_attempts: How many ``" (n)"`` suffixes to try before giving up.
@@ -149,31 +177,31 @@ class _DestinationReserver:
         Raises:
             FileExistsError: If no free name is found within ``max_attempts``.
         """
-        source_path = Path(source)
-        target_dir = Path(dest_dir)
+        source_name = Path(source).name
+        target_dir = os.fspath(dest_dir)
         async with self._lock:
-            candidate = target_dir / source_path.name
+            candidate = os.path.join(target_dir, source_name)
             if self._is_free(candidate):
                 return self._claim(candidate)
 
-            stem, suffix = source_path.stem, source_path.suffix
+            stem, suffix = _split_name(source_name)
             for counter in range(1, self._max_attempts + 1):
-                candidate = target_dir / f"{stem} ({counter}){suffix}"
+                candidate = os.path.join(target_dir, f"{stem} ({counter}){suffix}")
                 if self._is_free(candidate):
                     return self._claim(candidate)
         raise FileExistsError(
-            f"could not find a free name for {source_path.name!r} in {target_dir} "
+            f"could not find a free name for {source_name!r} in {target_dir} "
             f"after {self._max_attempts} attempts"
         )
 
-    def _is_free(self, candidate: Path) -> bool:
+    def _is_free(self, candidate: str) -> bool:
         """Return whether ``candidate`` is unclaimed and absent from disk."""
-        return str(candidate) not in self._taken and not candidate.exists()
+        return candidate not in self._taken and not os.path.exists(candidate)
 
-    def _claim(self, candidate: Path) -> Path:
-        """Record ``candidate`` as taken and return it."""
-        self._taken.add(str(candidate))
-        return candidate
+    def _claim(self, candidate: str) -> Path:
+        """Record ``candidate`` as taken and return it as a path."""
+        self._taken.add(candidate)
+        return Path(candidate)
 
 
 class AsyncFileOrganizer:
@@ -225,6 +253,7 @@ class AsyncFileOrganizer:
         root: Path,
         dry_run: bool,
         reserver: _DestinationReserver,
+        dest_dirs: Dict[str, Path],
     ) -> MoveRecord:
         """Classify one file and, unless this is a dry run, move it.
 
@@ -237,6 +266,9 @@ class AsyncFileOrganizer:
             root: Directory being organised.
             dry_run: When ``True``, only plan the move.
             reserver: Shared destination allocator for this run.
+            dest_dirs: Per-run cache of category → destination folder, so the
+                folder path is joined once per category rather than once per
+                file.
 
         Returns:
             A :class:`~organizer.MoveRecord` describing the outcome. Filesystem
@@ -244,7 +276,10 @@ class AsyncFileOrganizer:
             file cannot abort the run.
         """
         category = category_for(source, self.mapping)
-        dest_dir = root / category
+        dest_dir = dest_dirs.get(category)
+        if dest_dir is None:
+            dest_dir = root / category
+            dest_dirs[category] = dest_dir
         started = time.perf_counter()
         self._in_flight += 1
         self.peak_in_flight = max(self.peak_in_flight, self._in_flight)
@@ -324,6 +359,7 @@ class AsyncFileOrganizer:
             return report
 
         reserver = _DestinationReserver()
+        dest_dirs: Dict[str, Path] = {}
         queue: "asyncio.Queue[Path]" = asyncio.Queue()
         for source in files:
             queue.put_nowait(source)
@@ -337,7 +373,7 @@ class AsyncFileOrganizer:
                 except asyncio.QueueEmpty:
                     return
                 try:
-                    record = await self._process(source, root, dry_run, reserver)
+                    record = await self._process(source, root, dry_run, reserver, dest_dirs)
                 except Exception as exc:  # defensive: never lose a file silently
                     record = MoveRecord(
                         str(source),

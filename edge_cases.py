@@ -123,6 +123,28 @@ def check_file_size(
     return size
 
 
+def _is_regular_file(entry: "os.DirEntry[str]") -> bool:
+    """Return whether a directory entry is a regular file, without raising.
+
+    :meth:`os.DirEntry.is_file` answers from the type recorded in the directory
+    entry where the filesystem provides one, and only falls back to a ``stat``
+    when it does not — unlike :meth:`pathlib.Path.is_file`, which always costs a
+    ``stat``. A per-entry :class:`OSError` (a file removed mid-scan, or one whose
+    own metadata is unreadable) is treated as "not a file", matching the
+    :meth:`~pathlib.Path.is_file` behaviour this replaced.
+
+    Args:
+        entry: The directory entry to classify.
+
+    Returns:
+        ``True`` for a regular file (symlinks followed), otherwise ``False``.
+    """
+    try:
+        return entry.is_file()
+    except OSError:  # pragma: no cover - depends on a mid-scan deletion
+        return False
+
+
 def iter_files(directory: Union[str, Path]) -> List[Path]:
     """List the regular files directly inside ``directory``, sorted by name.
 
@@ -130,6 +152,12 @@ def iter_files(directory: Union[str, Path]) -> List[Path]:
     missing ``r`` bit, a ``chmod 000`` fixture) raises a
     :class:`PermissionError` that names the directory, so the CLI can report it
     as one actionable line instead of a traceback.
+
+    The listing is taken with :func:`os.scandir`, which yields each entry's type
+    alongside its name: the "is this a file?" test then needs no ``stat`` on
+    filesystems that record the type in the directory entry. That removes one
+    ``stat`` per file from every tool's startup path — the single largest cost
+    the Day 12 profile found in the organizer and the duplicate detector.
 
     Args:
         directory: The directory to scan.
@@ -152,14 +180,16 @@ def iter_files(directory: Union[str, Path]) -> List[Path]:
             context={"path": str(root)},
         )
     try:
-        entries = list(root.iterdir())
+        with os.scandir(root) as scan:
+            found = [(entry.name, Path(entry.path)) for entry in scan if _is_regular_file(entry)]
     except PermissionError as exc:
         raise AccessDeniedError(
             f"cannot read directory (permission denied): {root}",
             hint="fix the permissions on the directory, or run as a user that may read it",
             context={"path": str(root)},
         ) from exc
-    return sorted((entry for entry in entries if entry.is_file()), key=lambda p: p.name.lower())
+    found.sort(key=lambda item: item[0].lower())
+    return [path for _name, path in found]
 
 
 def guard_broken_pipe() -> None:

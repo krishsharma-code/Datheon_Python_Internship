@@ -21,6 +21,7 @@ Typical use::
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
@@ -97,6 +98,31 @@ DEFAULT_CATEGORY: str = "Other"
 CATEGORIES: List[str] = sorted(set(CATEGORY_MAP.values()) | {DEFAULT_CATEGORY})
 
 
+def _suffix_of(path: Union[str, Path]) -> str:
+    """Return the lower-cased final extension of ``path``.
+
+    Identical to ``Path(path).suffix.lower()`` — including the awkward cases a
+    hand-rolled split gets wrong (``"trailing."`` has *no* suffix, ``".bashrc"``
+    is all stem, ``"..x"`` has the suffix ``".x"``) — but without building a
+    :class:`~pathlib.Path`. :func:`category_for` runs once per file inside the
+    organizer's hot loop, where the :mod:`pathlib` parsing overhead dominated the
+    Day 12 profile: roughly 10 µs per call, of which the extension lookup itself
+    is a few percent.
+
+    Args:
+        path: The file (or filename) to inspect.
+
+    Returns:
+        The extension including its leading dot, lower-cased, or ``""`` when the
+        final path component has none.
+    """
+    name = os.path.basename(os.fspath(path))
+    head, dot, tail = name.rpartition(".")
+    if not dot or not head or not tail:
+        return ""
+    return (dot + tail).lower()
+
+
 def category_for(path: Union[str, Path], mapping: Optional[Dict[str, str]] = None) -> str:
     """Return the category folder a file belongs to.
 
@@ -110,8 +136,31 @@ def category_for(path: Union[str, Path], mapping: Optional[Dict[str, str]] = Non
         unknown.
     """
     table = mapping if mapping is not None else CATEGORY_MAP
-    suffix = Path(path).suffix.lower()
-    return table.get(suffix, DEFAULT_CATEGORY)
+    return table.get(_suffix_of(path), DEFAULT_CATEGORY)
+
+
+def _sha256_digest(path: Union[str, Path], chunk_size: int = 65536) -> str:
+    """Hash a file's contents without checking that it exists first.
+
+    The unchecked core of :func:`sha256_of_file`. :func:`find_duplicates` has
+    already stat-ed and listed every candidate, so the extra ``is_file()`` probe
+    would cost one ``stat`` per file for an answer it already has.
+
+    Args:
+        path: Path to an existing file.
+        chunk_size: Read buffer size in bytes.
+
+    Returns:
+        The lowercase hexadecimal digest.
+
+    Raises:
+        OSError: If the file cannot be opened or read.
+    """
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(chunk_size), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def sha256_of_file(path: Union[str, Path], chunk_size: int = 65536) -> str:
@@ -131,15 +180,18 @@ def sha256_of_file(path: Union[str, Path], chunk_size: int = 65536) -> str:
     file_path = Path(path)
     if not file_path.is_file():
         raise FileNotFoundError(f"Not a file: {file_path}")
-    digest = hashlib.sha256()
-    with file_path.open("rb") as handle:
-        for block in iter(lambda: handle.read(chunk_size), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    return _sha256_digest(file_path, chunk_size)
 
 
 def find_duplicates(directory: Union[str, Path]) -> Dict[str, List[Path]]:
     """Group files in ``directory`` by content hash.
+
+    Hashing reads every byte, so it is preceded by a size check: two files can
+    only be identical if they are the same length, which means only files whose
+    size occurs more than once need to be read at all. On a directory with no
+    duplicates that turns a full read of every file into one ``stat`` each — the
+    Day 12 profile measured a 4× drop on a 600-file fixture, with identical
+    output.
 
     Args:
         directory: Directory to scan (non-recursive).
@@ -154,13 +206,24 @@ def find_duplicates(directory: Union[str, Path]) -> Dict[str, List[Path]]:
         PermissionError: If ``directory`` cannot be listed.
     """
     root = Path(directory).expanduser()
-    by_hash: Dict[str, List[Path]] = {}
+    by_size: Dict[int, List[Path]] = {}
     for entry in iter_files(root):
         try:
-            digest = sha256_of_file(entry)
+            size = entry.stat().st_size
         except OSError:
             continue
-        by_hash.setdefault(digest, []).append(entry)
+        by_size.setdefault(size, []).append(entry)
+
+    by_hash: Dict[str, List[Path]] = {}
+    for candidates in by_size.values():
+        if len(candidates) < 2:
+            continue
+        for entry in candidates:
+            try:
+                digest = _sha256_digest(entry)
+            except OSError:
+                continue
+            by_hash.setdefault(digest, []).append(entry)
     return {digest: paths for digest, paths in by_hash.items() if len(paths) > 1}
 
 
