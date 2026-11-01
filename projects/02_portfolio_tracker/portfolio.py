@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, TextIO, Union
 
+from caching import CONSTITUENTS_CACHE, file_signature, path_key
 from dataset_loader import LoadReport, read_text_robust, require_columns
 from edge_cases import check_file_size
 from errors import ValidationError
@@ -376,6 +377,7 @@ def load_symbols_from_csv(
     *,
     strict: bool = False,
     report: Optional[LoadReport] = None,
+    use_cache: bool = True,
 ) -> Dict[str, str]:
     """Load a ticker → company-name map from a constituents CSV.
 
@@ -388,12 +390,21 @@ def load_symbols_from_csv(
     A row with no ticker is a *malformed row*: it is skipped and recorded as a
     warning (escalated to an error under ``strict``).
 
+    The 500-row table is parsed once and memoised in
+    :data:`caching.CONSTITUENTS_CACHE`, keyed by the resolved path and
+    ``strict``. The entry carries the file's ``(mtime, size, inode)`` signature,
+    so replacing the dataset invalidates it automatically; the returned mapping
+    is a copy, so callers may mutate it freely.
+
     Args:
         path: Path to the constituents CSV.
         strict: When ``True``, treat a row with a missing ticker as an error
             rather than skipping it.
         report: Optional :class:`~dataset_loader.LoadReport` to populate with
-            the file's encoding metadata and any malformed-row issues.
+            the file's encoding metadata and any malformed-row issues. Passing
+            a report always re-reads the file and refreshes the cache entry.
+        use_cache: Set to ``False`` to bypass the cache and re-parse the file.
+            Defaults to ``True``.
 
     Returns:
         A mapping of upper-cased ticker symbol to company name (falling back
@@ -407,6 +418,14 @@ def load_symbols_from_csv(
     """
     csv_path = Path(path)
     check_file_size(csv_path, field="constituents file")
+
+    cache_key = ("symbols", path_key(csv_path), strict)
+    cache_signature = file_signature(csv_path) if use_cache and report is None else None
+    if cache_signature is not None:
+        cached = CONSTITUENTS_CACHE.get(cache_key, cache_signature)
+        if cached is not None:
+            return cached
+
     source = read_text_robust(csv_path, field="constituents file")
     local = report if report is not None else LoadReport(csv_path)
     local.source = source
@@ -435,6 +454,8 @@ def load_symbols_from_csv(
         symbols[symbol] = name or symbol
         local.rows_accepted += 1
     local.raise_if_errors("constituents file")
+    if cache_signature is not None:
+        CONSTITUENTS_CACHE.put(cache_key, symbols, cache_signature)
     return symbols
 
 
