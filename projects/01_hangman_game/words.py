@@ -17,6 +17,7 @@ import random
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+from caching import WORD_LIST_CACHE, file_signature, path_key
 from dataset_loader import LoadReport, read_text_robust
 from edge_cases import check_file_size
 from errors import UnknownCategoryError, ValidationError
@@ -124,6 +125,7 @@ def load_words_from_file(
     *,
     strict: bool = False,
     report: Optional[LoadReport] = None,
+    use_cache: bool = True,
 ) -> List[str]:
     """Load and sanitise a newline-delimited word list from a text file.
 
@@ -139,6 +141,14 @@ def load_words_from_file(
     finishes, raises :class:`~dataset_loader.DatasetFormatError` naming the
     offending line numbers.
 
+    Results are memoised in :data:`caching.WORD_LIST_CACHE`, keyed by the
+    resolved path plus the three filtering arguments. The entry carries the
+    file's ``(mtime, size, inode)`` signature, so editing, replacing or deleting
+    the word list invalidates it automatically; use
+    :func:`caching.invalidate_path` to force a re-read of a file whose content
+    changed without its signature changing. The returned list is a copy, so a
+    caller that mutates it cannot corrupt the cache.
+
     Args:
         path: Path to the word list (one word per line).
         min_length: Minimum accepted word length. Defaults to
@@ -146,7 +156,11 @@ def load_words_from_file(
         max_length: Optional maximum accepted word length.
         strict: When ``True``, reject a file containing any malformed row.
         report: Optional :class:`~dataset_loader.LoadReport` to populate with
-            the file's encoding metadata and any malformed-row issues.
+            the file's encoding metadata and any malformed-row issues. Passing
+            a report always re-reads the file (the report describes one
+            physical read) and refreshes the cache entry.
+        use_cache: Set to ``False`` to bypass the cache and re-read the file.
+            Defaults to ``True``.
 
     Returns:
         A list of unique, lower-case, alphabetic words.
@@ -175,6 +189,14 @@ def load_words_from_file(
 
     file_path = Path(path)
     check_file_size(file_path, field="word list")
+
+    cache_key = ("words", path_key(file_path), min_length, max_length, strict)
+    cache_signature = file_signature(file_path) if use_cache and report is None else None
+    if cache_signature is not None:
+        cached = WORD_LIST_CACHE.get(cache_key, cache_signature)
+        if cached is not None:
+            return cached
+
     source = read_text_robust(file_path, field="word list")
     local = report if report is not None else LoadReport(file_path)
     local.source = source
@@ -204,6 +226,8 @@ def load_words_from_file(
         words.append(word)
     local.rows_accepted = len(words)
     local.raise_if_errors("word list")
+    if cache_signature is not None:
+        WORD_LIST_CACHE.put(cache_key, words, cache_signature)
     return words
 
 

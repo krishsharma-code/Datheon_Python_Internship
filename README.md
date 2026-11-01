@@ -66,6 +66,7 @@ Datheon_Python_Internship/
 │   ├── cli_contract.md             # shared command-line & exit-code contract
 │   ├── logging.md                  # logging contract (--log-level, --json-logs)
 │   ├── persistence.md              # atomic, versioned write contract
+│   ├── caching.md                  # dataset cache + invalidation contract
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
@@ -80,6 +81,7 @@ Datheon_Python_Internship/
 ├── logging_config.py               # shared --log-level / rotating file logging
 ├── structured_logging.py           # JSON records, run IDs, durations, outcomes
 ├── persistence.py                  # atomic writes + schema_version stamping
+├── caching.py                      # bounded dataset cache with signature invalidation
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration

@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+from caching import compile_pattern
 from dataset_loader import DatasetFormatError, LoadReport, TextSource, read_text_robust
 from edge_cases import check_file_size
 from errors import ValidationError
@@ -223,7 +224,7 @@ class Intent:
                 hint="each intent needs a 'name' string and a non-empty 'patterns' list",
                 context={"field": "patterns"},
             )
-        compiled = [re.compile(p, re.IGNORECASE) for p in raw_patterns]
+        compiled = [compile_pattern(p) for p in raw_patterns]
         responses = data.get("responses") or [f"[{name}]"]
         if not isinstance(responses, list):
             raise ValidationError(
@@ -443,7 +444,7 @@ class IntentEngine:
             intents.append(
                 Intent(
                     name="greeting",
-                    patterns=[re.compile(greeting_pattern, re.IGNORECASE)],
+                    patterns=[compile_pattern(greeting_pattern)],
                     responses=["Hello! How can I help you today?"],
                     priority=1,
                 )
@@ -472,7 +473,7 @@ class IntentEngine:
             intents.append(
                 Intent(
                     name=f"faq_{index + 1}",
-                    patterns=[re.compile(pattern, re.IGNORECASE)],
+                    patterns=[compile_pattern(pattern)],
                     responses=[answer],
                     priority=2,
                 )

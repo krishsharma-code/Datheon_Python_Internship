@@ -1147,3 +1147,121 @@ from 1,385 to 785; `open` in the duplicate profile fell from 660 to 120.
 - Day 14 consolidates the week into a performance and observability report,
   reusing `profiling.py` so the numbers are reproducible rather than quoted
   from memory.
+
+## Day 13 — Caching & memoisation: static data loaded once
+
+**Branch:** `feat/datheon-day-13-caching`
+**Scope:** Cache the three static datasets Day 12 measured — the Hangman word
+list, the S&P 500 constituents table and the compiled intent regexes — with
+explicit invalidation, and prove the drop with numbers rather than adjectives.
+
+### Milestones
+
+- Added `caching.py`: `FileSignature` (path + `mtime_ns` + size + inode, captured
+  with one `os.stat`), `DatasetCache` (bounded LRU, thread-safe, optional TTL,
+  loader runs outside the lock), `CacheStats` (hits, misses, stores,
+  invalidations, evictions, expirations, stale drops, `hit_rate`),
+  `compile_pattern`, and the registry helpers `cache_stats()`,
+  `clear_all_caches()`, `invalidate_path()` and `path_key()`.
+- Wired it into `words.load_words_from_file` (`WORD_LIST_CACHE`, keyed by path +
+  `min_length` + `max_length` + `strict`) and
+  `portfolio.load_symbols_from_csv` (`CONSTITUENTS_CACHE`, keyed by path +
+  `strict`), each gaining a keyword-only `use_cache: bool = True`.
+- Routed the chatbot's three `re.compile` sites — `Intent.from_dict`, the FAQ
+  keyword builder and the greeting builder — through `compile_pattern`, so an
+  `(pattern, flags)` pair is compiled once, counted, and clearable.
+- Added `tests/test_caching.py` (54 tests): cache mechanics, thread safety, the
+  regex cache, and both loader integrations asserted on loader call counts and
+  cache counters rather than wall-clock time.
+- Added `docs/caching.md` with the design, the invalidation contract, the
+  measurements and the known limits; listed the module and the doc in the README
+  tree.
+
+### Measured numbers
+
+Best sample, `profiling.time_callable` (cold: 7 samples, no warm-up; warm: 200
+samples after 2 warm-ups), same container:
+
+| Dataset | Cold (parse) | Warm (hit) | Speedup |
+| --- | ---: | ---: | ---: |
+| word list (75 KB) | 7.91 ms | 0.28 ms | 28.4× |
+| constituents (500 rows) | 4.24 ms | 0.25 ms | 17.0× |
+| intent regexes (11 patterns) | 0.77 ms | 0.68 ms | 1.1× |
+
+200 loads of each dataset: 2429.1 ms uncached, 105.7 ms cached. The residual
+~0.25 ms of a warm hit is the single `os.stat` that proves the file is unchanged.
+
+### Architectural decisions
+
+1. **Freshness is a signature, not a timer.** A TTL-only cache either expires
+   data that did not change or serves data that did. Capturing
+   `(mtime_ns, size, inode)` and re-stat-ing on lookup answers the real question
+   for one syscall, and it means editing a dataset invalidates it *without
+   anyone remembering to*. The inode is in there because `os.replace` can land a
+   new file with the same size and a coarse mtime.
+2. **The key includes every argument that changes the answer.** A
+   `min_length=7` load and a `min_length=4` load are different datasets; a
+   `strict=True` load can fail where a lenient one succeeds. Keying on the path
+   alone would have served the wrong list and looked correct in a test that only
+   checked the length.
+3. **Clone in, clone out.** The loaders return mutable containers, and the first
+   caller that does `words.append(...)` would otherwise poison every later call.
+   A shallow copy is complete here — the leaves are `str`/`float` — and costs
+   far less than the parse it replaces.
+4. **A `LoadReport` means one physical read.** A report carries the encoding
+   that won, the line endings and the row counts *of a specific read*. Serving
+   one from cache would hand the caller metadata about a read that never
+   happened, so passing `report=` bypasses the read path and refreshes the entry
+   instead.
+5. **Report the dud honestly.** The intent-regex row is 1.1×, because 11 patterns
+   over 3.4 KB are already sub-millisecond and `re` memoises internally. The win
+   there is observability and explicit clearing, not speed — and the doc says so
+   instead of quietly dropping the row. A cache that claims credit it did not
+   earn is worse than no cache.
+6. **`path_key` instead of `Path.resolve()`.** The first cut keyed on
+   `resolve()`, which `lstat`s every path component on every call and pushed a
+   warm hit to 0.7 ms. `os.path.abspath` normalises without touching the
+   filesystem, matching the normalisation `FileSignature` already used; warm hits
+   fell to 0.25 ms. Measuring the cache you just built is not optional.
+
+### Complexity analysis
+
+- Cache hit: one `os.stat` plus O(1) dict lookup and move-to-end — the O(n)
+  parse and decode collapse to O(1) per repeat call.
+- Cache miss: unchanged from before — O(n) in rows/lines for the load, plus one
+  `stat` and one container copy.
+- Memory: one cloned copy per distinct `(path, arguments)` key, bounded by
+  `maxsize` (16 entries for both loaders, 512 for patterns); eviction is LRU, so
+  a process that walks many datasets keeps the working set rather than refusing
+  the newest.
+- Invalidation: `invalidate_path` is O(size) over the cache's entries, which is
+  bounded and tiny; the common case (a file changed) costs nothing until the next
+  lookup notices.
+
+### Edge cases covered by tests
+
+- Cache: miss-then-hit accounting; `lookup` distinguishing a cached `None` from
+  a miss; `load` running its loader exactly once; values copied in and out for
+  both lists and dicts; LRU order (a re-read key survives, the untouched one is
+  evicted); TTL expiry; stale-signature drops counted as `stale`; `invalidate`
+  reporting whether it removed anything; `invalidate_path` touching only its own
+  file and ignoring unknown paths; `clear` keeping counters; `reset_stats`
+  keeping values; blank name, `maxsize=0`, `ttl=0` and negative `ttl` all
+  rejected with `ValidationError`; eight threads × 50 rounds leaving
+  `requests == hits + misses` and `size <= maxsize` with no escaping exception.
+- Regex cache: same pattern returns the same object, flags are part of the key,
+  an invalid pattern still raises `re.error`, clearing forces a recompile, and two
+  `Intent`s sharing a pattern share the compiled object.
+- Word list: two calls are 1 miss + 1 hit + 1 store; the returned list is a copy;
+  an edit is picked up with `stale == 1`; explicit invalidation forces a re-read;
+  `report=` bypasses; `use_cache=False` never hits but refreshes; `min_length` is
+  part of the key; a `strict` failure is not cached and the fixed file then
+  loads; a missing file still raises `FileNotFoundError`.
+- Constituents: the same set, plus a check against the real 500-row dataset
+  (more than 400 symbols, `AAPL` present, second call a hit).
+
+### Next up
+
+- Day 14 consolidates Week 2 into a performance and observability report,
+  reusing `profiling.py` for the timings and `cache_stats()` for the cache
+  evidence, so the figures are reproducible rather than quoted from memory.
