@@ -1265,3 +1265,118 @@ samples after 2 warm-ups), same container:
 - Day 14 consolidates Week 2 into a performance and observability report,
   reusing `profiling.py` for the timings and `cache_stats()` for the cache
   evidence, so the figures are reproducible rather than quoted from memory.
+
+---
+
+## Day 14 — Week 2 consolidation: the performance and observability report
+
+**Branch:** `feat/datheon-day-14-perf-report`
+**Scope:** Close Week 2 by joining six days of separate changes into one report —
+what they bought in wall-clock terms, and what an operator can learn about a run
+from the logs alone — and by shipping the reader that computes the second half.
+
+### Milestones
+
+- Added `observability.py`: a read-only reducer over the JSON logs written since
+  Day 10. `read_json_records` parses one file and counts the lines it could not
+  use; `discover_log_files` expands files and directories (rotated `*.log.1`
+  siblings included); `summarize_runs` groups records by `run_id` and reduces
+  each group to a `RunSummary` (outcome, duration, error code and type);
+  `ProjectSummary` carries per-project outcome counts, error-code counts and
+  p50/p95/worst durations; `ObservabilityReport` renders either a fixed-width
+  table or JSON.
+- Added `percentile()` on the nearest-rank rule and `duration_stats()`, so a
+  reported p95 is always a duration some run actually took rather than an
+  interpolation between two that did.
+- Added a `observability` CLI with the shared command-line contract: `paths` or
+  `--log-dir`, `--top`, `--json`, `--no-caches`, exit codes `0`/`1`/`2`.
+- Added `docs/week2_performance_observability_report.md`: the consolidated
+  performance tables (Days 11–13), the observability contract at a glance with
+  the guarantee-to-test mapping, the report's design decisions, and the commands
+  that reproduce every figure.
+- Added `tests/test_observability.py` (49 tests, 107 assertions): the reader, the
+  reducer, the percentile rule, the report, the CLI, and one end-to-end run of a
+  real tool's `--json-logs` output through the report.
+- Listed the module and the report in the README tree, linked the report from
+  `docs/logging.md`, and added a "Reading the logs back" section to the README.
+
+### Measured numbers
+
+Consolidated from the Week 2 documents; same container, Python 3.12.13:
+
+| Hot path | Before Week 2 | After Week 2 | Change |
+| --- | ---: | ---: | ---: |
+| `iter_files` (2,000 files) | 198.9 ms | 14.1 ms | 14.1× |
+| `FileOrganizer.organize` dry run (2,000 files) | 645.4 ms | 431.3 ms | 1.50× |
+| `find_duplicates` (600 + 60 copies) | 522.2 ms | 129.7 ms | 4.0× |
+| word list load (75 KB) | 7.91 ms | 0.28 ms | 28.4× |
+| constituents load (500 rows) | 4.24 ms | 0.25 ms | 17.0× |
+
+Six real runs through the new report (five tools plus one deliberate failure)
+produced `6 run(s)`, `success=5 error=1`, one `DT-1001`, and 0 malformed lines —
+the failure being an `organizer` invocation pointed at a directory that does not
+exist. Suite: 745 tests green in ~34 s.
+
+### Architectural decisions
+
+1. **Nearest-rank percentiles, never interpolated.** A duration in this report is
+   a measurement; quoting an interpolated p95 would report a number no
+   invocation ever cost. The result is always one of the samples.
+2. **A malformed line is counted, never fatal.** A log file is written by a
+   process that may be killed mid-write, so a truncated tail is normal. Each
+   rejection keeps its line number and an 80-character preview, and the read
+   continues — one bad line must not hide the other 900 records.
+3. **`incomplete` is a first-class outcome.** A run that opened and never
+   finished is exactly what an operator is hunting for, so it is reported rather
+   than dropped or counted as a success. The same rule catches a killed process.
+4. **Empty input is a data error, not an empty report.** "0 runs" and "you
+   pointed me at the wrong directory" look identical in a table; the second one
+   exits `1` with a hint instead of quietly reporting a quiet day.
+5. **Rotated files are in scope.** The `*.log*` glob picks up `organizer.log.1`,
+   because a rotation may have moved the run being investigated.
+6. **Cache counters are labelled live, because they are.** They come from
+   `caching.cache_stats()` of the *reporting* process. Run the module from a
+   script that loaded the datasets and they are populated; run it from a bare CLI
+   and they read zero. Both readings are honest, and the doc shows the populated
+   case rather than hiding the empty one.
+
+### Complexity analysis
+
+- Reading: O(L) over the total number of log lines, one `json.loads` per
+  non-blank line, with no second pass over any file.
+- Grouping: O(R) over records, one dictionary insert per record plus one
+  reduction per run — no sorting until display.
+- Percentiles: O(n log n) per project over that project's run durations, on a set
+  bounded by the number of runs in the log directory (tens, not millions).
+- Memory: one parsed record held at a time plus the retained record list per file
+  read; the report object itself holds one `RunSummary` per run.
+- Malformed handling: O(1) per rejected line — no retry, no re-read.
+
+### Edge cases covered by tests
+
+- Reader: blank lines skipped; invalid JSON and JSON-that-is-not-an-object
+  reported with line numbers and reasons; reading continues after a bad line; the
+  preview is truncated to 80 characters; a missing file raises `AccessDeniedError`
+  rather than leaking `FileNotFoundError`.
+- Discovery: directory expansion including rotations; a non-log file in the
+  directory ignored; an explicit file accepted; the same path given twice
+  deduplicated; a missing path and an empty directory both raise
+  `MissingFileError`.
+- Reducer: outcome and duration taken from the finish record, not from a larger
+  earlier offset; a run with no terminal record reported `incomplete` with its
+  largest offset; error code and type extracted from `fields.error`; records
+  without a `run_id` excluded and counted separately; first-seen run order kept.
+- Report: totals, project grouping busiest-first, failures and success rate,
+  error codes ranked by frequency, malformed lines aggregated across files,
+  every outcome key present on every project summary, JSON round-trip, the
+  empty-report table, `--top` limiting the table, and a non-positive `--top`
+  rejected.
+- CLI: JSON and table output, `--log-dir`, `paths` plus `--log-dir` rejected,
+  missing path a data error, `--version` exiting `0`, and a real
+  `inventory --json-logs` run reduced end to end.
+
+### Next up
+
+- Day 15 expands the suite past 200+ assertions on top of the current 745 tests,
+  starting from the gaps this week's modules still have: the async organizer's
+  cancellation paths and the cache's cold-key race.
