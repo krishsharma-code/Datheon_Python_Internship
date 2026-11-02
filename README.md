@@ -67,6 +67,7 @@ Datheon_Python_Internship/
 │   ├── logging.md                  # logging contract (--log-level, --json-logs)
 │   ├── persistence.md              # atomic, versioned write contract
 │   ├── caching.md                  # dataset cache + invalidation contract
+│   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
 │   ├── 01_hangman_game/            # Task 1 — console Hangman game
@@ -82,6 +83,7 @@ Datheon_Python_Internship/
 ├── structured_logging.py           # JSON records, run IDs, durations, outcomes
 ├── persistence.py                  # atomic writes + schema_version stamping
 ├── caching.py                      # bounded dataset cache with signature invalidation
+├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── pyproject.toml                  # black + flake8 configuration
@@ -197,6 +199,23 @@ jq -c 'select(.run_outcome == "error")' ~/.datheon/logs/organizer.log
 The contract — formats, record schema, per-tool log points, and failure
 behaviour — is documented in [`docs/logging.md`](docs/logging.md) and verified
 by `tests/test_logging.py` and `tests/test_structured_logging.py`.
+
+### Reading the logs back
+
+[`observability.py`](observability.py) turns a directory of those JSON logs into
+the figures an operator wants — runs per project, outcomes, p50/p95/worst
+durations, error codes by frequency, and the live dataset-cache counters:
+
+```bash
+python observability.py --log-dir ~/.datheon/logs
+python observability.py --log-dir ~/.datheon/logs --json --no-caches
+```
+
+It is read-only, counts a malformed line instead of failing on it, and treats a
+run that never finished as `incomplete` rather than losing it. The consolidated
+Week 2 performance and observability report is
+[`docs/week2_performance_observability_report.md`](docs/week2_performance_observability_report.md),
+verified by `tests/test_observability.py`.
 
 ### Safe, versioned writes
 

@@ -15,6 +15,11 @@ record becomes one JSON object carrying a `run_id`, the `project`, the elapsed
 `duration_ms` and the run's `outcome`. The text format stays the default, so
 nothing a human reads today changes. See [Structured logs](#structured-logs).
 
+Since Day 14 those records can be read back: [`observability.py`](../observability.py)
+reduces a directory of them to per-project run counts, outcomes, p50/p95/worst
+durations and error codes by frequency. The consolidated Week 2 report is
+[`week2_performance_observability_report.md`](week2_performance_observability_report.md).
+
 ## Switches
 
 | Switch | Argument | Default | Effect |
