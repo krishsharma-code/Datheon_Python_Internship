@@ -32,7 +32,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 12 | 2026-10-31 | Performance profiling | `feat/datheon-day-12-profiling` | `cProfile` hot-path analysis + optimisations with before/after numbers | done | #13 |
 | 13 | 2026-11-01 | Caching & memoisation | `feat/datheon-day-13-caching` | Cached dataset loads (word list, constituents) with invalidation | done | #14 |
 | 14 | 2026-11-02 | Week 2 consolidation | `feat/datheon-day-14-perf-report` | Performance & observability report + docs | done | #15 |
-| 15 | 2026-11-03 | Test expansion | `feat/datheon-day-15-test-expansion` | Suite crosses **200+ assertions** | pending | — |
+| 15 | 2026-11-03 | Test expansion | `feat/datheon-day-15-test-expansion` | Suite crosses **200+ assertions** (now 1,221 assertions / 644 test functions, gated by `tools/assertion_census.py`) | done | #PRNUMBER |
 | 16 | 2026-11-04 | Mocking external IO | `feat/datheon-day-16-mocking` | Filesystem/clock/network mocked; no real IO in unit tests | pending | — |
 | 17 | 2026-11-05 | Property-based testing | `feat/datheon-day-17-property-tests` | Hypothesis strategies for validators, parsers, loaders | pending | — |
 | 18 | 2026-11-06 | Fuzz testing | `feat/datheon-day-18-fuzzing` | Random/malformed input to CLIs, loaders, chatbot — crash-free | pending | — |

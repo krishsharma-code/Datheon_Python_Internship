@@ -179,7 +179,11 @@ def main(argv: List[str] | None = None) -> int:
         print(f"! Could not load intents: {exc}")
         return int(ExitCode.DATA_ERROR)
 
-    logger = None if args.no_log else ConversationLogger(args.log)
+    # The conversation transcript and the diagnostic logger are two different
+    # streams: keep them in separate names so --no-log disables only the JSONL
+    # transcript and never blanks out the logger the turn-level debug records
+    # are written to.
+    conversation = None if args.no_log else ConversationLogger(args.log)
     print("Type a message, or 'bye'/'exit'/'quit' to finish.\n")
 
     while True:
@@ -195,8 +199,8 @@ def main(argv: List[str] | None = None) -> int:
             print(f"  ! {exc}")
             continue
 
-        if logger:
-            logger = _log_turn(logger, "user", user_input)
+        if conversation:
+            conversation = _log_turn(conversation, "user", user_input)
 
         response = engine.respond(user_input)
         logger.debug(
@@ -207,9 +211,9 @@ def main(argv: List[str] | None = None) -> int:
         )
         print(f"bot > {response.text}  [{response.intent} · {response.confidence:.0%}]")
 
-        if logger:
-            logger = _log_turn(
-                logger,
+        if conversation:
+            conversation = _log_turn(
+                conversation,
                 "assistant",
                 response.text,
                 intent=response.intent,
@@ -219,8 +223,8 @@ def main(argv: List[str] | None = None) -> int:
         if response.is_exit:
             break
 
-    if logger:
-        print(f"\nConversation saved to {logger.path}")
+    if conversation:
+        print(f"\nConversation saved to {conversation.path}")
     return int(ExitCode.OK)
 
 

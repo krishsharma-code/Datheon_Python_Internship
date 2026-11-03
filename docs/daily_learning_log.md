@@ -1380,3 +1380,96 @@ exist. Suite: 745 tests green in ~34 s.
 - Day 15 expands the suite past 200+ assertions on top of the current 745 tests,
   starting from the gaps this week's modules still have: the async organizer's
   cancellation paths and the cache's cold-key race.
+
+## Day 15 — Test expansion: the 200+ assertion budget
+
+**Branch:** `feat/datheon-day-15-test-expansion`
+**Scope:** Turn "the suite crosses 200+ assertions" from a claim into a
+measured gate, and close the largest remaining coverage hole: the five CLI
+entry points, which stood at 0% coverage.
+
+### Milestones
+
+- Added `tools/assertion_census.py`: an `ast`-based census of test functions and
+  assertion statements per module, with `--json` and a `--minimum N` mode that
+  reports the verdict through the exit code.
+- Added `tests/test_cli_entrypoints.py` (51 tests): every `main.py` imported by
+  path and driven in process through its demo, interactive, validation and
+  failure paths.
+- Added `tests/test_assertion_census.py` (17 tests): the budget itself is now
+  asserted on every run, along with the census tool's counting rules.
+- Fixed a real defect the new tests found: `assistant --no-log` crashed with
+  `AttributeError` on the first turn because the flag rebound the diagnostic
+  logger to `None`.
+- Wrote `docs/test_expansion.md` with the before/after numbers, the per-entry
+  point coverage table and the reasoning behind the order of work.
+
+### Numbers
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Assertion statements | 1,111 | 1,221 |
+| Test functions | 592 | 644 |
+| Collected pytest items | 745 | 813 |
+| Whole-repo line coverage | 91% | 98% |
+| `projects/*/main.py` coverage | 0% | 76–96% |
+
+### Architectural decisions
+
+- **Measure with `ast`, not grep.** Counting the literal string `assert` counts
+  docstrings, comments and string literals, and misses nothing else — which is
+  to say it is both too generous and too fragile. Walking the syntax tree counts
+  real statements, including the ones nested inside `with` blocks, loops and
+  helper functions, and it is immune to a `# assert` comment.
+- **Call `main(argv)` in process rather than spawning subprocesses.** The
+  subprocess smoke tests from Day 3 prove a tool starts; they cannot show which
+  branch ran, and they contribute nothing to coverage. Importing the entry point
+  under a namespaced alias — `datheon_entry_01_hangman_game` — sidesteps both the
+  numeric folder prefixes and the fact that all five modules are called `main`.
+- **Normalise the exit code in one helper.** Most paths return an `ExitCode`,
+  but a closed stdin deliberately raises `SystemExit(0)` from inside the guess
+  loop (the Day 5 policy). A single `_code()` helper converts both shapes so each
+  test asserts behaviour, and one dedicated test still pins the raw
+  `SystemExit(0)` contract.
+- **Keep the tests hermetic by construction.** `DATHEON_LOG_DIR` points into
+  `tmp_path` and every writable path is passed explicitly, so the suite never
+  writes into the repository or `~/.datheon`. That is what makes it safe to run
+  the entry points for real instead of mocking them.
+
+### Complexity analysis
+
+- Census: O(F) file reads plus one O(A) `ast.walk` per module, where A is the
+  number of syntax nodes in that module — linear in the source size, no second
+  pass.
+- Totals: O(M) over modules for the table, O(M log M) only because the module
+  list is sorted for stable output.
+- Entry-point tests: each in-process call repeats argument parsing and demo
+  setup — O(1) in the size of the project, and no process spawn, which is why
+  the 68 new items cost about two seconds.
+
+### Edge cases covered by tests
+
+- Hangman: EOF inside the guess loop (raw `SystemExit(0)`), EOF at the category
+  prompt (graceful return with the summary), a non-UTF-8 word list rejected as
+  malformed, non-positive `--min-length`, and `--max-length` below `--min-length`.
+- Portfolio: blank line ends the prompt, a two-field line is reported and
+  skipped, a non-numeric price is reported and skipped, `--strict` with an
+  unknown ticker fails, and `--constituents` reports the validation count.
+- Organizer: real moves into category folders, `--dry-run` leaving every file in
+  place, the deprecated `--workers` alias folding into `--concurrency`, a JSON
+  activity log written, duplicate detection, `--concurrency 0`, and a missing
+  directory.
+- Assistant: a full turn answered then exit, EOF printing `(interrupted)`, the
+  conversation log written, `--faq` dataset mode, `--validate`, a missing
+  intents file, and `--no-log` (which is how the logger bug surfaced).
+- Inventory: the full demo through every section, `--borrower`, `--days` with
+  `--borrow-date`, zero days, a malformed date, and the strict 90-day cap.
+- Census tool: docstrings and comments not counted, nested assertions counted,
+  a thin module flagged, `--minimum` passing and failing, and JSON output whose
+  totals agree with the per-module rows.
+
+### Next up
+
+- Day 16 replaces the remaining real-IO touches in the unit tests with
+  `monkeypatch` and `unittest.mock` — clock, filesystem and network — so the
+  suite stops depending on the machine it runs on.
