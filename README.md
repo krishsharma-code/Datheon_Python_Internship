@@ -67,6 +67,7 @@ Datheon_Python_Internship/
 │   ├── logging.md                  # logging contract (--log-level, --json-logs)
 │   ├── persistence.md              # atomic, versioned write contract
 │   ├── caching.md                  # dataset cache + invalidation contract
+│   ├── mocking.md                  # external-I/O isolation policy for tests
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -259,6 +260,28 @@ reserver keeps two concurrent workers from claiming the same free filename. The
 engine, its benchmark numbers and the collision argument are in
 [`docs/async_io.md`](docs/async_io.md), verified by
 `tests/test_async_organizer.py`.
+
+### Hermetic tests (no real I/O)
+
+No unit test touches the network, the wall clock, or anything outside the pytest
+sandbox. Three autouse fixtures redirect `HOME`, the working directory and the
+log directory, block every socket entry point, and the shared doubles in
+`tests/io_fakes.py` freeze time on demand:
+
+```python
+from tests.io_fakes import FakeClock, FakeFileSystem, install_fake_clock
+
+clock = install_fake_clock(monkeypatch, structured_logging)   # frozen clock
+run = structured_logging.begin_run("organizer", run_id="run-fixed")
+clock.advance(0.25)                                            # 250 ms later
+assert run.elapsed_ms() == 250.0
+```
+
+The policy is enforced statically as well — `python tools/io_audit.py --strict`
+parses every test module and fails on a stray `import socket`, a
+`datetime.now()` call or a `Path.home()` lookup. CI runs it before `pytest`. See
+[`docs/mocking.md`](docs/mocking.md), verified by `tests/test_mocking.py` and
+`tests/test_io_audit.py`.
 
 ---
 
