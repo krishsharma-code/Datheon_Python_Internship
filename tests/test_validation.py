@@ -242,11 +242,11 @@ def test_date_rejects_bad_format():
         validate_date("02/01/2026")
 
 
-def test_date_rejects_future():
-    future = (date.today() + timedelta(days=1)).isoformat()
+def test_date_rejects_future(frozen_today):
+    future = (frozen_today + timedelta(days=1)).isoformat()
     with pytest.raises(ValidationError):
         validate_date(future)
-    assert validate_date(future, allow_future=True) == date.today() + timedelta(days=1)
+    assert validate_date(future, allow_future=True) == frozen_today + timedelta(days=1)
 
 
 # --- validate_name ------------------------------------------------------
