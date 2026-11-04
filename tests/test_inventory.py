@@ -66,10 +66,10 @@ def test_borrow_date_setter_accepts_iso_string():
     assert book.borrow_date == date(2026, 1, 15)
 
 
-def test_borrow_date_setter_rejects_future():
+def test_borrow_date_setter_rejects_future(frozen_today):
     book = Book("B1", "T", 100.0, "A", 10)
     with pytest.raises(ValueError):
-        book.borrow_date = date.today() + timedelta(days=5)
+        book.borrow_date = frozen_today + timedelta(days=5)
 
 
 def test_borrow_date_setter_rejects_bad_string():

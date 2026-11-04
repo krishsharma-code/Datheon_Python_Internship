@@ -42,5 +42,8 @@ jobs:
       - name: Check formatting with black
         run: black --check .
 
+      - name: Check test isolation (no real I/O)
+        run: python tools/io_audit.py --strict
+
       - name: Run test suite
         run: pytest -q --cov=projects --cov-report=term-missing
