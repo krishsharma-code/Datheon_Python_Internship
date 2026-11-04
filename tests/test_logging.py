@@ -126,7 +126,9 @@ def test_default_log_dir_honours_environment_override(monkeypatch, tmp_path):
 
 def test_default_log_dir_falls_back_to_home(monkeypatch):
     monkeypatch.delenv(DEFAULT_LOG_DIR_ENV, raising=False)
-    assert default_log_dir() == Path.home() / ".datheon" / "logs"
+    # The autouse ``isolated_home`` fixture points HOME at a sandbox directory,
+    # so the assertion never depends on the machine running the suite.
+    assert default_log_dir() == Path(os.environ["HOME"]) / ".datheon" / "logs"
 
 
 def test_default_log_file_is_named_after_the_program():
