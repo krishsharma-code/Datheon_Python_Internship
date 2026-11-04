@@ -1473,3 +1473,100 @@ entry points, which stood at 0% coverage.
 - Day 16 replaces the remaining real-IO touches in the unit tests with
   `monkeypatch` and `unittest.mock` — clock, filesystem and network — so the
   suite stops depending on the machine it runs on.
+
+---
+
+## Day 16 — Mocking external I/O: no unit test touches the machine
+
+**Branch:** `feat/datheon-day-16-mocking`
+**Scope:** Make "no unit test touches the real network or the user filesystem"
+a property the suite *enforces*, rather than a claim a reviewer has to trust.
+
+### Milestones
+
+- Added `tests/io_fakes.py` — the shared doubles: `FakeClock` (wall time *and*
+  a monotonic counter, moved together by `advance()`), `fake_datetime_class` /
+  `fake_date_class`, `install_fake_clock` / `install_fake_date`, `NetworkGuard`
+  (patches every socket entry point and raises `RealIOAttempted`, an
+  `AssertionError` subclass), `FakeFileSystem` (dict-backed `Path.read_bytes`,
+  `read_text`, `is_file` and `builtins.open`) and `probe_network()`.
+- Added three autouse fixtures to `conftest.py`: `isolated_home` redirects
+  `HOME`, `USERPROFILE`, `TMPDIR`/`TEMP`/`TMP`, `XDG_*` and `DATHEON_LOG_DIR`
+  into a private sandbox; `isolated_cwd` runs each test from a temp directory;
+  `forbid_network` installs the guard. An opt-in `frozen_today` fixture freezes
+  the calendar at **2026-11-04** inside `validators` and `models`.
+- Added `tools/io_audit.py` — an `ast` audit of `tests/*.py` flagging
+  `network-import`, `real-clock` and `home-lookup`, with `--json` and a
+  `--strict` mode whose exit code is the verdict. CI now runs it before `pytest`.
+- Added `tests/test_mocking.py` (29 tests) and `tests/test_io_audit.py`
+  (21 tests): the doubles, the fixtures, and — just as importantly — that each
+  detector actually fires on a planted violation.
+- Removed the last three real-IO touches: `date.today()` in `test_inventory`
+  and `test_validation`, and `Path.home()` in `test_logging`.
+- Wrote `docs/mocking.md` and a README section covering the policy, the doubles,
+  the gate, and what is deliberately still real.
+
+### Architectural decisions
+
+1. **Guard, don't just mock.** A double that is merely *available* is a double
+   nobody uses. The autouse `forbid_network` fixture makes an accidental
+   outbound call a test failure with a readable message, which is the only form
+   of "we never touch the network" that survives contact with new code.
+2. **Patch the socket layer, not the client.** `requests`, `urllib`,
+   `http.client`, database drivers and `yfinance` all converge on
+   `socket.socket.connect` / `create_connection`. Patching five entry points
+   covers every client the repository might add, including ones written later.
+3. **Module-scoped clock patches, not global ones.** `install_fake_clock` swaps
+   the *module's* `datetime` and `time` names, so two tests can freeze different
+   clocks concurrently and no test can freeze another's by accident.
+4. **Sibling sandbox, not a child of `tmp_path`.** The isolation directories are
+   created with `tmp_path_factory.mktemp(...)` rather than `tmp_path / "home"`,
+   because two existing tests assert "nothing was written" against their own
+   `tmp_path`; nesting the sandbox inside it would have made them fail for the
+   wrong reason.
+5. **Static gate as well as runtime guard.** The guard only catches I/O that
+   *executes*. The auditor catches the smell at the source — a `datetime.now()`
+   that happens not to run on the covered branch is still a defect waiting for a
+   new test to trip over it.
+6. **Opt-in clock, autouse environment.** A frozen clock is only meaningful
+   relative to a module, so autouse freezing would hide the dependency instead of
+   removing it. `HOME`, `cwd` and the network have no such per-module meaning,
+   so they are autouse.
+
+### Complexity analysis
+
+- `NetworkGuard.install`: O(1) — five attribute patches per test, undone by
+  `monkeypatch` teardown.
+- `FakeFileSystem`: O(1) per lookup against a dict keyed by the path string;
+  `reads` makes the audit of "did it consult the fake" O(1) to assert.
+- `io_audit`: one `ast.parse` per module plus one `ast.walk`, so O(N) in syntax
+  nodes — the same shape as the Day 15 assertion census, and linear in the
+  suite's source size.
+- Suite cost: the isolation fixtures add roughly 40 ms across 688 test
+  functions (three `mkdir` calls plus five patches per test); total runtime is
+  unchanged within noise.
+
+### Edge cases covered by tests
+
+- `FakeClock` refuses to run backwards (`advance(-1)` → `ValueError`) and
+  refuses a naive `set()` — a clock that silently accepts either would hide
+  ordering bugs instead of exposing them.
+- `FrozenDatetime` is a real `datetime`: `isinstance`, arithmetic and
+  `fromisoformat` all still work, so freezing does not change the code path
+  under test.
+- A dataclass captures `default_factory` at class-definition time, so patching
+  the `time` module does not reach `RunContext.started_monotonic`; the duration
+  test injects that value explicitly and asserts the 250 ms it advanced.
+- `FakeFileSystem` reproduces BOM + CRLF decoding through the real
+  `read_text_robust`, raises `MissingFileError` for an unregistered path, and
+  refuses write modes.
+- The auditor reports a syntax error as a violation instead of raising, ignores
+  non-Python files, and handles a missing directory.
+- The guard blocks `urllib.request.urlopen`, proving the higher-level client
+  path is covered and not just the raw socket.
+
+### Next up
+
+- Day 17 replaces hand-written edge cases with Hypothesis strategies for the
+  validators, the CSV/JSON loaders and the keyword extractor, running with a
+  fixed seed in CI.
