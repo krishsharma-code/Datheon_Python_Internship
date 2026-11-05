@@ -1,0 +1,42 @@
+name: Record the Day 17 PR in the ledger
+
+on:
+  push:
+    branches: [feat/datheon-day-17-property-tests]
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    name: Mark ledger row 17 done with its PR number
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the feature branch
+        uses: actions/checkout@v4
+
+      - name: Patch the ledger row, then remove this workflow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("docs/internship_milestones_plan.md")
+          lines = path.read_text(encoding="utf-8").splitlines()
+          hits = [i for i, line in enumerate(lines) if line.startswith("| 17 |")]
+          assert len(hits) == 1, f"expected exactly one Day 17 row, found {hits}"
+          index = hits[0]
+          cells = lines[index].split("|")
+          assert cells[-3].strip() == "pending", cells[-3]
+          assert cells[-2].strip() == "\u2014", cells[-2]
+          cells[-3] = " done "
+          cells[-2] = " #18 "
+          lines[index] = "|".join(cells)
+          assert lines[index].endswith("| done | #18 |"), lines[index]
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print("patched:", lines[index])
+          PY
+          rm -f .github/workflows/record-day17-ledger.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/internship_milestones_plan.md .github/workflows/record-day17-ledger.yml
+          git commit -m "docs(plan): mark Day 17 done with PR #18 [skip ci]"
+          git push
