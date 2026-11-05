@@ -7,6 +7,10 @@ pytest-cov>=4.1
 flake8>=6.1
 black>=24.1
 
+# Day 17: property-based tests. `tests/test_properties.py` is skipped
+# automatically when hypothesis is absent, so the suite still runs without it.
+hypothesis>=6.98
+
 # Optional: enables live price lookups in the portfolio tracker.
 # Install with `pip install -r requirements.txt yfinance` if you want it.
 # yfinance>=0.2

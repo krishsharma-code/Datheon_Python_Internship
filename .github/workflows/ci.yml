@@ -45,5 +45,10 @@ jobs:
       - name: Check test isolation (no real I/O)
         run: python tools/io_audit.py --strict
 
+      - name: Property tests (Hypothesis, fixed seed)
+        env:
+          HYPOTHESIS_PROFILE: ci
+        run: pytest -q tests/test_properties.py
+
       - name: Run test suite
         run: pytest -q --cov=projects --cov-report=term-missing
