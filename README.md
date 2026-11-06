@@ -68,6 +68,8 @@ Datheon_Python_Internship/
 │   ├── persistence.md              # atomic, versioned write contract
 │   ├── caching.md                  # dataset cache + invalidation contract
 │   ├── mocking.md                  # external-I/O isolation policy for tests
+│   ├── property_testing.md         # Hypothesis strategies & profiles (Day 17)
+│   ├── fuzzing.md                  # hostile-input campaign & crash verdicts (Day 18)
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -84,6 +86,8 @@ Datheon_Python_Internship/
 ├── structured_logging.py           # JSON records, run IDs, durations, outcomes
 ├── persistence.py                  # atomic writes + schema_version stamping
 ├── caching.py                      # bounded dataset cache with signature invalidation
+├── fuzzing.py                      # deterministic fuzz corpus + crash verdicts
+├── tools/                          # repository tooling (census, IO audit, fuzz driver)
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
@@ -282,6 +286,25 @@ parses every test module and fails on a stray `import socket`, a
 `datetime.now()` call or a `Path.home()` lookup. CI runs it before `pytest`. See
 [`docs/mocking.md`](docs/mocking.md), verified by `tests/test_mocking.py` and
 `tests/test_io_audit.py`.
+
+### Hostile input (fuzzing)
+
+Every CLI, loader and the assistant's intent engine are also driven with input
+nobody would type on purpose — truncated UTF-8, NUL bytes, flags that do not
+exist, JSON that opens and never closes — and none of it may escape as a
+traceback:
+
+```bash
+python tools/fuzz.py                      # 400 cases across 16 targets, seed 18
+python tools/fuzz.py --cases 100 --seed 7 # a deeper, different run
+python tools/fuzz.py --kind loader --json # one campaign, machine-readable
+```
+
+The corpus is a pure function of `(kind, target, seed, count)`, so a failure
+reproduces from one integer. The exit code is the verdict: `0` clean, `1` a
+crash, `2` misuse. The same corpus is asserted by `tests/test_fuzzing.py`, and
+the campaign is documented — including the two real defects it found in the
+intent loader — in [`docs/fuzzing.md`](docs/fuzzing.md).
 
 ---
 

@@ -1666,3 +1666,105 @@ a fixed seed in CI.
 - Day 18 stops generating valid input and starts generating hostile input:
   random and malformed bytes into the five CLIs, the three loaders and the
   chatbot, asserting zero unhandled exceptions across the corpus.
+
+---
+
+## Day 18 — Fuzz testing: breaking it on purpose
+
+**Branch:** `feat/datheon-day-18-fuzzing`
+**Scope:** A deterministic fuzz corpus and crash verdict shared by a
+command-line driver and the pytest suite, aimed at the five CLIs, the dataset
+loaders and the assistant's intent engine.
+
+### Milestones
+
+- Added `fuzzing.py`: a pure-function corpus generator (`generate_cases`) plus
+  three judges (`judge_process`, `judge_exit_code`, `judge_exception`) that turn
+  "did it crash?" into a `Verdict` object.
+- Added `tools/fuzz.py`, a driver with four campaigns — `argv`, `dataset`,
+  `loader`, `text` — covering 16 targets. The exit code is the verdict, so the
+  script is usable as a CI step.
+- Added `tests/test_fuzzing.py` (52 test functions): the same corpus, asserted
+  in-process, plus unit tests for the harness and the driver.
+- Fixed two real defects the campaign found in the intent loader (below) and
+  pinned both with regression tests.
+- Documented the campaign, the crash definition and its limits in
+  `docs/fuzzing.md`; added a `--cases 3` fuzz smoke step to CI.
+- Suite: **755 test functions / 1,422 assertions**, all green.
+
+### Architectural decisions
+
+1. **The corpus is generated from a seed, not stored as fixtures.** Each case
+   comes from `random.Random(seed * 1000 + index)`, so a failure is reproduced
+   by quoting one integer and case *n* is stable as the corpus grows. A binary
+   fixture would have been a file to maintain; a seed is a number to print.
+2. **Mutation beats noise.** Pure random bytes die in the decoder, which leaves
+   the row, schema and field validators untested. `mutate_bytes` starts from a
+   real dataset and breaks one thing — a truncated row, a stray BOM, CRLF
+   translation, a duplicated line — and half of all mutations keep the opening
+   bytes intact so the file still *looks* loadable.
+3. **The verdict is shared, the tolerance is not.** `tools/fuzz.py` and the
+   test module judge through the same functions, but with different tolerances:
+   a CLI may raise anything `run_cli` converts (exit code 1 is the contract),
+   while a loader may only raise `DatheonError`. Narrowing the loader tolerance
+   is what turned a silent leak into a failing case.
+4. **The CLI campaigns run as subprocesses; the loader campaigns run
+   in-process.** A traceback is only a traceback at the process boundary, so
+   the CLIs must be measured there. A loader must be measured *inside*, because
+   `run_cli` would otherwise hide the very leak the test is looking for.
+5. **Fuzzing is not allowed to be destructive.** Absolute paths are absent from
+   the argument pool, the organizer always receives `--dry-run`, every
+   subprocess runs in a temporary sandbox as its working directory, and
+   `DATHEON_LOG_DIR` is redirected so `--log-level DEBUG` cannot write into the
+   repository.
+6. **A NUL byte in `argv` is reported as skipped, not passed.** No kernel
+   accepts it across `execve`, so the case is unreachable rather than clean; the
+   in-process suite still runs it, because `main(argv)` takes any string.
+
+### Defects found and fixed
+
+- **`re.error` escaped the intent loader.** A mutated `intents.json` produced
+  the pattern `(unclosed`. `Intent.from_dict` compiled patterns unguarded, and
+  `re.error` is not a `ValueError`, so it slipped past `_parse_intents`'
+  handler, past `run_cli`, and printed a traceback. Now each pattern is
+  compiled inside a guard that raises `ValidationError` naming the intent, the
+  pattern and a hint; `_parse_intents` records it as an `intents[i]` row error.
+- **`TypeError` from a non-integer `priority`.** `int()` on a JSON object
+  raises `TypeError`, which the same `except ValueError` did not catch. The
+  conversion is now guarded and reported the same way.
+
+Neither was reachable from the bundled dataset or from any hand-written test.
+Both were one byte-mutation from a file the tool loads happily.
+
+### Complexity analysis
+
+- One generated case is O(payload size) and allocates a single `Random`:
+  microseconds. Nothing is written to disk except the mutated file itself.
+- `mutate_bytes` is O(len(base)) per edit, at most six edits per case.
+- The `loader` and `text` campaigns are in-process and I/O-bound: 1,500 loader
+  cases finish in a few seconds.
+- The `argv` and `dataset` campaigns pay one interpreter start per case at
+  roughly 0.15 s. The default 400-case run takes about two minutes; CI runs a
+  48-case smoke version instead.
+- Memory stays flat: one `Verdict` per case, never the payloads.
+
+### Edge cases covered by tests
+
+- An empty argument vector (a user running a tool bare) is inside the corpus.
+- A 300-character token, an empty token, `-`, `--`, `---` and a NUL token all
+  reach `argparse` and leave through exit code 2, not a traceback.
+- A mutated dataset that is still valid is accepted silently — the campaign
+  asserts only that nothing *escapes*, so a clean load is a pass.
+- A file that was never text (invalid UTF-8, no BOM, random bytes) becomes a
+  `DatasetFormatError`, never a `UnicodeDecodeError`.
+- The intent engine returns a well-formed `Response` for every string the
+  validator accepts: confidence in `0..1`, non-empty text, boolean `is_exit`.
+- `normalize()` is total over control characters, bidi overrides, combining
+  marks and emoji, and always returns lower-cased text.
+- The organizer's dry-run injection is idempotent: `_harden` does not add a
+  second `--dry-run` to a vector that already carries one.
+
+### Next up
+
+- Day 19 checks whether the tests actually test: a `mutmut` run over the core
+  modules, with the surviving mutants killed.
