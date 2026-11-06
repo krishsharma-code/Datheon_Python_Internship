@@ -50,5 +50,8 @@ jobs:
           HYPOTHESIS_PROFILE: ci
         run: pytest -q tests/test_properties.py
 
+      - name: Fuzz smoke test (deterministic corpus)
+        run: python tools/fuzz.py --cases 3 --seed 18
+
       - name: Run test suite
         run: pytest -q --cov=projects --cov-report=term-missing

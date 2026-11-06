@@ -214,7 +214,12 @@ class Intent:
             The constructed intent.
 
         Raises:
-            ValueError: If ``name`` or ``patterns`` is missing or malformed.
+            ValidationError: If ``name`` or ``patterns`` is missing, if a
+                pattern is not a string, if a pattern is not a valid regular
+                expression, or if ``priority`` is not an integer. Every one of
+                those is a defect in the *dataset*, not in the program, so it is
+                reported through the taxonomy rather than escaping as a bare
+                :class:`re.error` or :class:`TypeError`.
         """
         name = data.get("name")
         raw_patterns = data.get("patterns")
@@ -224,7 +229,22 @@ class Intent:
                 hint="each intent needs a 'name' string and a non-empty 'patterns' list",
                 context={"field": "patterns"},
             )
-        compiled = [compile_pattern(p) for p in raw_patterns]
+        compiled: List["re.Pattern[str]"] = []
+        for raw in raw_patterns:
+            if not isinstance(raw, str):
+                raise ValidationError(
+                    f"Intent {name!r} has a non-string pattern: {raw!r}",
+                    hint="every entry in 'patterns' must be a regular-expression string",
+                    context={"field": "patterns", "intent": str(name)},
+                )
+            try:
+                compiled.append(compile_pattern(raw))
+            except re.error as exc:
+                raise ValidationError(
+                    f"Intent {name!r} has an invalid regular expression {raw!r}: {exc}",
+                    hint=r"fix the pattern, or escape the literal — '\(' matches a parenthesis",
+                    context={"field": "patterns", "intent": str(name), "pattern": raw},
+                ) from exc
         responses = data.get("responses") or [f"[{name}]"]
         if not isinstance(responses, list):
             raise ValidationError(
@@ -232,11 +252,20 @@ class Intent:
                 hint="set 'responses' to a list of strings",
                 context={"field": "responses", "intent": str(name)},
             )
+        priority = data.get("priority", 0)
+        try:
+            priority_value = int(priority)  # type: ignore[arg-type]
+        except (TypeError, ValueError) as exc:
+            raise ValidationError(
+                f"Intent {name!r} has a non-integer priority: {priority!r}",
+                hint="set 'priority' to a whole number, or omit it",
+                context={"field": "priority", "intent": str(name)},
+            ) from exc
         return cls(
             name=str(name),
             patterns=compiled,
             responses=[str(r) for r in responses],
-            priority=int(data.get("priority", 0)),
+            priority=priority_value,
         )
 
     def score(self, normalized_text: str) -> int:
