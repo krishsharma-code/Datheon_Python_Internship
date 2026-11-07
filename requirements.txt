@@ -11,6 +11,11 @@ black>=24.1
 # automatically when hypothesis is absent, so the suite still runs without it.
 hypothesis>=6.98
 
+# Day 19: mutation testing. `tools/mutation.py` drives it and gates the score;
+# the run takes about two minutes for the configured target, so it lives in its
+# own workflow rather than in the per-commit CI job.
+mutmut>=3.2
+
 # Optional: enables live price lookups in the portfolio tracker.
 # Install with `pip install -r requirements.txt yfinance` if you want it.
 # yfinance>=0.2

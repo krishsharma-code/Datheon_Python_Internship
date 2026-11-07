@@ -1,0 +1,56 @@
+name: Mutation testing
+
+# Day 19: a weekly audit that the test suite still has teeth, plus a run on any
+# pull request that touches the shared core or the tests. Kept out of `ci.yml`
+# because it takes about two minutes and is not a per-commit signal.
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "*.py"
+      - "tests/**"
+      - "tools/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation score gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run mutation testing
+        run: python tools/mutation.py --minimum-score 95 --show-survivors
+
+      - name: Write the JSON report
+        if: always()
+        run: python tools/mutation.py --report-only --json > mutation-report.json
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: mutation-report.json
+          if-no-files-found: warn

@@ -1768,3 +1768,114 @@ Both were one byte-mutation from a file the tool loads happily.
 
 - Day 19 checks whether the tests actually test: a `mutmut` run over the core
   modules, with the surviving mutants killed.
+
+## Day 19 — Mutation testing: proving the tests have teeth
+
+**Branch:** `feat/datheon-day-19-mutation`
+**Scope:** A `mutmut` run over the shared error-catalogue module, every
+surviving mutant killed, and a driver that turns the run into a gate a build
+can enforce.
+
+### Milestones
+
+- Added `[tool.mutmut]` to `pyproject.toml`, scoping the run to
+  `error_catalogue.py` against `tests/test_errors.py`, with the `also_copy` list
+  that ships the rest of the shared core into mutmut's sandbox.
+- Ran mutation testing: **182 mutants, 182 killed, 0 survived, 0 uncovered —
+  100.0%**, from a baseline of 143 killed / 16 survived / 23 uncovered (89.9%).
+- Added twelve tests to `tests/test_errors.py` that kill all thirty-nine
+  remaining mutants, all of them pinning text a user actually sees.
+- Added `tools/mutation.py`: runs mutmut, parses its cache, prints a per-module
+  table or JSON, lists survivors with the command that shows their diff, and
+  exits `1` below `--minimum-score`.
+- Added `tests/test_mutation_tool.py` (30 tests) covering the exit-code
+  mapping, the scoring rule, cache parsing and the gate's exit codes.
+- Added `.github/workflows/mutation.yml` — a weekly audit plus a run on any PR
+  that touches the shared core — and `docs/mutation_testing.md`.
+- Suite: **787 test functions / 1,497 assertions**, 991 tests, all green.
+
+### Architectural decisions
+
+1. **The score is computed strictly.** The denominator is every mutant mutmut
+   produced, minus only the ones it never ran, skipped, or that a user
+   interrupted. Mutants with **no covering test** count against the score.
+   Dropping them is the easiest way to make a mutation score look good, and it
+   would have hidden the twenty-three mutants in `write_catalogue` and `main`.
+2. **An interrupted run cannot look perfect.** A cache full of `not checked`
+   scores `0.0`, not `100.0`. Otherwise the gate would pass on the one run that
+   measured nothing.
+3. **`timeout` and `segfault` count as kills.** A mutant that hangs or crashes
+   the test process has been noticed; that matches mutmut's own classification.
+4. **One module, deliberately.** `error_catalogue.py` is the shared contract
+   (all five tools render failures through it) and its test module runs in
+   3.5 s, so a mutant costs well under a second in a warm forked worker: 182
+   mutants in 1 m 55 s on two cores. Mutating a project against its full test
+   module would take tens of minutes.
+5. **`also_copy` is load-bearing.** mutmut copies only the mutated file and
+   `tests/` into `mutants/`, so the first attempt died at the stats phase with
+   `ModuleNotFoundError: No module named 'errors'`. The copy list now ships
+   `conftest.py`, the rest of the shared core, `projects/`, `tools/` and
+   `docs/`.
+6. **The cache is never committed.** `mutants/` and `.mutmut-cache` are
+   gitignored; the run is reproducible from `python tools/mutation.py`, and a
+   committed cache would be a stale number pretending to be a live one.
+
+### Gaps found and closed
+
+- **The failure path of the code lookups was unasserted.** Sixteen mutants
+  survived in `describe_code` and `error_class_for`: the suite asserted *that*
+  `UnknownCategoryError` was raised, never what it said. A mutant could blank
+  the message, delete the hint, change its separator from `", "` to `"XX, XX"`,
+  rename the `context` key from `code` to `CODE`, or drop the argument
+  entirely — all green.
+- **Markdown pipe escaping was untested.** Two mutants turned
+  `cell.replace("|", "\\|")` into `cell.replace("XX|XX", "\\|")`, which
+  silently produces a broken table in a generated, committed document.
+- **`write_catalogue` and `main` had no test in the selected module** — 23
+  mutants with no covering test at all. `write_catalogue` was exercised from
+  `tests/test_persistence.py` for atomicity only; `main` was exercised nowhere.
+- **A dead default argument.** After the first round the score reached 99.0%
+  with two survivors: both mutations of `write_catalogue`'s default parameter.
+  Nothing called `write_catalogue()` bare, even though the documented command
+  `python error_catalogue.py` relies on the equivalent default inside `main`.
+  One test that calls the bare form killed both.
+
+### Complexity analysis
+
+- mutmut runs one pytest process per mutant, forked from a warm parent, so the
+  cost per mutant is the *test body*, not an interpreter start. Measured:
+  1.70 mutations/s on two cores with `--max-children 2`, i.e. ~0.6 s per mutant.
+- The whole pass is 182 mutants in 1 m 55 s. `--report-only` reads one JSON
+  object per module: microseconds, which is why the pytest suite can assert on
+  the report without needing mutmut installed.
+- `tools/mutation.py` is O(mutants) in time and memory — one frozen dataclass
+  per mutant, no source text retained.
+- Scoring is O(modules × statuses) using a per-module counter, so the gate is
+  constant-time work after parsing.
+
+### Edge cases covered by tests
+
+- A cache file that is not JSON, or that has no `exit_code_by_key`, is skipped
+  rather than crashing the report.
+- A missing `mutants/` directory yields an empty report, and the gate returns
+  `0` with an explicit "no cache found" note instead of failing on nothing.
+- A cache of nothing but `not checked` scores `0.0` and fails the gate.
+- `no tests` mutants drag the score down; `timeout`, `segfault` and `killed`
+  all count up.
+- The unknown-code error is asserted on its exact message, its code, its
+  `context` mapping, its hint (built from `catalogue_codes()`), and its
+  two-line rendered block.
+- A synthetic `ErrorEntry` whose title, summary and resolution all contain `|`
+  renders a row with exactly four unescaped `" | "` separators.
+- `write_catalogue` and `main` are covered with a `str` path, a `Path`, a
+  missing parent directory, an explicit destination, the default destination,
+  and the `sys.argv` fallback.
+
+### Next up
+
+- Day 20 locks in a coverage floor: `--cov-fail-under=90` wired into CI, so
+  coverage and mutation score gate together.
+- Then `edge_cases.py` and `validators.py` as further mutation targets —
+  `tests/test_edge_cases.py::test_run_cli_broken_pipe_end_to_end` spawns a real
+  subprocess and fails inside `mutants/`, so it has to be made sandbox-relative
+  before its module can be mutated.
