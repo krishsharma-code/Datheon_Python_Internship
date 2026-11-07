@@ -36,7 +36,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 16 | 2026-11-04 | Mocking external IO | `feat/datheon-day-16-mocking` | Filesystem/clock/network mocked; no real IO in unit tests | done | #17 |
 | 17 | 2026-11-05 | Property-based testing | `feat/datheon-day-17-property-tests` | Hypothesis strategies for validators, parsers, loaders | done | #18 |
 | 18 | 2026-11-06 | Fuzz testing | `feat/datheon-day-18-fuzzing` | Random/malformed input to CLIs, loaders, chatbot — crash-free (16 targets, 400-case default corpus, `tools/fuzz.py`, `docs/fuzzing.md`; 2 intent-loader defects found & fixed) | done | #19 |
-| 19 | 2026-11-07 | Mutation testing | `feat/datheon-day-19-mutation` | `mutmut` run; surviving mutants killed | pending | — |
+| 19 | 2026-11-07 | Mutation testing | `feat/datheon-day-19-mutation` | `mutmut` run over `error_catalogue.py` — 182 mutants, 100% killed (39 survivors killed with 12 new tests); `tools/mutation.py` score gate + `docs/mutation_testing.md` | done | #20 |
 | 20 | 2026-11-08 | Coverage gate | `feat/datheon-day-20-coverage-gate` | CI fails below 90% line coverage | pending | — |
 | 21 | 2026-11-09 | Week 3 consolidation | `feat/datheon-day-21-test-strategy` | Test strategy document + QA report | pending | — |
 | 22 | 2026-11-10 | Packaging & entrypoints | `feat/datheon-day-22-packaging` | `pyproject.toml` console scripts for all 5 tools; `pip install -e .` works | pending | — |

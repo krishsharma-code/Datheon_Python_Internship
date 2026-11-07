@@ -25,6 +25,10 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Mutation-testing artefacts (Day 19) — local cache, regenerated on demand
+mutants/
+.mutmut-cache
+
 # Environment & secrets — never commit these
 .env
 .env.*

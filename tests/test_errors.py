@@ -13,6 +13,7 @@ tool raises on purpose. These tests pin three contracts:
 from __future__ import annotations
 
 import pathlib
+import sys
 
 import pytest
 
@@ -44,12 +45,16 @@ from errors import (
     ValidationError,
     exit_code_for,
 )
+import error_catalogue
 from error_catalogue import (
+    ErrorEntry,
     catalogue,
     catalogue_codes,
     describe_code,
     error_class_for,
+    main as catalogue_main,
     render_catalogue_markdown,
+    write_catalogue,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -417,3 +422,138 @@ def test_catalogue_markdown_lists_every_code():
     markdown = render_catalogue_markdown()
     for code in catalogue_codes():
         assert f"| {code} |" in markdown
+
+
+# --- mutation-testing hardening (Day 19) --------------------------------
+#
+# The Day 19 mutmut run left sixteen mutants alive in :mod:`error_catalogue`:
+# every one of them hid inside the *failure* path of ``describe_code`` /
+# ``error_class_for`` (the message, hint and ``context`` of the
+# ``UnknownCategoryError``) or inside the table-cell pipe escaping of
+# ``render_catalogue_markdown``. The suite asserted that the error *was* raised
+# but never what it said, so a mutant could blank the message, drop the hint,
+# rename the context key or stop escaping ``|`` and still pass.
+#
+# These tests pin the exact text a user sees. They are intentionally strict —
+# an error message is a user interface, not an implementation detail.
+
+
+def _unknown_code_error(lookup, code):
+    """Call ``lookup(code)`` and return the :class:`UnknownCategoryError` it raises."""
+    with pytest.raises(UnknownCategoryError) as excinfo:
+        lookup(code)
+    return excinfo.value
+
+
+@pytest.mark.parametrize("lookup", [describe_code, error_class_for])
+def test_unknown_code_error_names_the_offending_code(lookup):
+    exc = _unknown_code_error(lookup, "DT-0001")
+
+    assert exc.message == "Unknown error code 'DT-0001'."
+    assert exc.code == UnknownCategoryError.code
+    assert exc.context == {"code": "DT-0001"}
+
+
+@pytest.mark.parametrize("lookup", [describe_code, error_class_for])
+def test_unknown_code_error_hint_lists_every_known_code(lookup):
+    exc = _unknown_code_error(lookup, "XX-1234")
+
+    assert exc.hint == f"Known codes: {', '.join(catalogue_codes())}"
+    # The hint is the whole point of the error: it must actually name codes.
+    assert "DT-1001" in exc.hint
+
+
+@pytest.mark.parametrize("lookup", [describe_code, error_class_for])
+def test_unknown_code_error_renders_the_code_and_the_hint(lookup):
+    rendered = _unknown_code_error(lookup, "NOPE").render()
+
+    assert rendered.splitlines()[0] == f"! [{UnknownCategoryError.code}] Unknown error code 'NOPE'."
+    assert rendered.splitlines()[1].startswith("  hint: Known codes: ")
+
+
+def test_render_catalogue_escapes_pipes_inside_table_cells(monkeypatch):
+    """A ``|`` in any cell must be escaped, or the Markdown table breaks."""
+    entry = ErrorEntry(
+        code="DT-9999",
+        name="FakeError",
+        title="A | B",
+        summary="left|right",
+        resolution="pick | one",
+        exit_code=EXIT_DATA_ERROR,
+        bases=(),
+    )
+    monkeypatch.setattr(error_catalogue, "catalogue", lambda: (entry,))
+
+    markdown = render_catalogue_markdown()
+    row = next(line for line in markdown.splitlines() if line.startswith("| DT-9999 |"))
+
+    assert "A \\| B" in row
+    assert "left\\|right" in row
+    assert "pick \\| one" in row
+    # Five cells means exactly four *unescaped* separators.
+    assert row.count(" | ") == 4
+
+
+def test_write_catalogue_writes_the_rendered_document(tmp_path):
+    target = tmp_path / "catalogue.md"
+
+    written = write_catalogue(target)
+
+    assert written == target
+    assert target.read_text(encoding="utf-8") == render_catalogue_markdown()
+
+
+def test_write_catalogue_creates_missing_parent_directories(tmp_path):
+    target = tmp_path / "deeply" / "nested" / "catalogue.md"
+
+    written = write_catalogue(target)
+
+    assert written == target
+    assert target.is_file()
+
+
+def test_write_catalogue_accepts_a_string_path(tmp_path):
+    target = tmp_path / "catalogue.md"
+
+    assert write_catalogue(str(target)) == target
+
+
+def test_catalogue_main_writes_the_default_path_and_reports_it(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+
+    assert catalogue_main([]) == EXIT_SUCCESS
+
+    written = tmp_path / "docs" / "error_catalogue.md"
+    assert written.read_text(encoding="utf-8") == render_catalogue_markdown()
+    assert capsys.readouterr().out.strip() == "wrote docs/error_catalogue.md"
+
+
+def test_catalogue_main_writes_to_an_explicit_destination(tmp_path, capsys):
+    target = tmp_path / "custom.md"
+
+    assert catalogue_main([str(target)]) == EXIT_SUCCESS
+
+    assert target.read_text(encoding="utf-8") == render_catalogue_markdown()
+    assert capsys.readouterr().out.strip() == f"wrote {target}"
+
+
+def test_catalogue_main_reads_sys_argv_when_called_without_arguments(tmp_path, monkeypatch, capsys):
+    target = tmp_path / "from-argv.md"
+    monkeypatch.setattr(sys, "argv", ["error_catalogue.py", str(target)])
+
+    assert catalogue_main() == EXIT_SUCCESS
+
+    assert target.is_file()
+    assert capsys.readouterr().out.strip() == f"wrote {target}"
+
+
+def test_write_catalogue_defaults_to_the_docs_path(tmp_path, monkeypatch):
+    """The no-argument form is the one the plan's docs command documents."""
+    monkeypatch.chdir(tmp_path)
+
+    written = write_catalogue()
+
+    assert written == pathlib.Path("docs") / "error_catalogue.md"
+    assert (tmp_path / "docs" / "error_catalogue.md").read_text(
+        encoding="utf-8"
+    ) == render_catalogue_markdown()
