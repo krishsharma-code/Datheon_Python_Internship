@@ -18,6 +18,33 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 
+[tool.coverage.run]
+# Day 20: measure the shipped code — the five projects and the shared core
+# modules — and nothing else. Counting the test files would flatter the number,
+# because every line of a test that runs is a covered line.
+branch = true
+source = ["."]
+omit = [
+    "tests/*",
+    "tools/*",
+    "conftest.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+# The floor. Keep in sync with `DEFAULT_MINIMUM` in tools/coverage_gate.py and
+# the `--minimum 90` argument in .github/workflows/ci.yml; the tests assert the
+# three agree.
+fail_under = 90
+precision = 1
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
 [tool.flake8]
 max-line-length = 100
 extend-ignore = ["E203", "W503"]

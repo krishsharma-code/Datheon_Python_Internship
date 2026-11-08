@@ -53,5 +53,7 @@ jobs:
       - name: Fuzz smoke test (deterministic corpus)
         run: python tools/fuzz.py --cases 3 --seed 18
 
-      - name: Run test suite
-        run: pytest -q --cov=projects --cov-report=term-missing
+      - name: Run test suite under the coverage gate
+        # Day 20: the floor is enforced, not merely printed. A drop below 90%
+        # line coverage exits 1 and fails the build.
+        run: python tools/coverage_gate.py --minimum 90
