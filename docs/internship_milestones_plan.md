@@ -37,7 +37,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 17 | 2026-11-05 | Property-based testing | `feat/datheon-day-17-property-tests` | Hypothesis strategies for validators, parsers, loaders | done | #18 |
 | 18 | 2026-11-06 | Fuzz testing | `feat/datheon-day-18-fuzzing` | Random/malformed input to CLIs, loaders, chatbot — crash-free (16 targets, 400-case default corpus, `tools/fuzz.py`, `docs/fuzzing.md`; 2 intent-loader defects found & fixed) | done | #19 |
 | 19 | 2026-11-07 | Mutation testing | `feat/datheon-day-19-mutation` | `mutmut` run over `error_catalogue.py` — 182 mutants, 100% killed (39 survivors killed with 12 new tests); `tools/mutation.py` score gate + `docs/mutation_testing.md` | done | #20 |
-| 20 | 2026-11-08 | Coverage gate | `feat/datheon-day-20-coverage-gate` | CI fails below 90% line coverage | pending | — |
+| 20 | 2026-11-08 | Coverage gate | `feat/datheon-day-20-coverage-gate` | CI fails below 90% line coverage — `tools/coverage_gate.py` verdict gate (95.76% baseline over 3,292 statements / 766 branches; exit 1 below the floor, exit 2 when unmeasurable), branch-coverage scope + `fail_under = 90` in `pyproject.toml`, 43 tests, `docs/coverage_gate.md`; a deliberate drop to 86.01% proven to fail the build | done | #21 |
 | 21 | 2026-11-09 | Week 3 consolidation | `feat/datheon-day-21-test-strategy` | Test strategy document + QA report | pending | — |
 | 22 | 2026-11-10 | Packaging & entrypoints | `feat/datheon-day-22-packaging` | `pyproject.toml` console scripts for all 5 tools; `pip install -e .` works | pending | — |
 | 23 | 2026-11-11 | Build & distribution | `feat/datheon-day-23-distribution` | Wheel + sdist, clean-venv install test, `twine check` | pending | — |

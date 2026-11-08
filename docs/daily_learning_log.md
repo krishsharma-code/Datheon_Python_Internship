@@ -1879,3 +1879,98 @@ can enforce.
   `tests/test_edge_cases.py::test_run_cli_broken_pipe_end_to_end` spawns a real
   subprocess and fails inside `mutants/`, so it has to be made sandbox-relative
   before its module can be mutated.
+
+---
+
+## Day 20 — Coverage gate: turning a measurement into a verdict
+
+**Branch:** `feat/datheon-day-20-coverage-gate` · **PR:** #21
+**Scope:** Enforce a 90% coverage floor in CI instead of printing a number.
+
+### Milestones
+
+- Added `tools/coverage_gate.py`: runs pytest under coverage, parses the JSON
+  report, and returns `0` (floor met), `1` (floor breached) or `2` (no verdict
+  — pytest failed, or no readable report exists).
+- Scoped coverage in `pyproject.toml` to the shipped code — the five projects
+  and the shared core — with branch coverage on and `tests/`, `tools/` and
+  `conftest.py` omitted.
+- Mirrored the floor in `[tool.coverage.report] fail_under = 90` so a bare
+  `pytest --cov` also fails, and replaced CI's advisory
+  `pytest --cov=projects --cov-report=term-missing` step with
+  `python tools/coverage_gate.py --minimum 90`.
+- Added `tests/test_coverage_gate.py` (43 tests) and `docs/coverage_gate.md`.
+
+### Architectural decisions
+
+1. **A gate needs three answers, not two.** `0` and `1` are obvious; `2` is the
+   one that matters. A gate that cannot measure — a red suite, a missing
+   report, a report it cannot parse — must never report success, because a
+   broken build that silently passes its quality gate is worse than no gate.
+2. **Measure the code that ships, not the code that checks it.** Measuring the
+   whole repository reports 98%, but most of that is the test files: every line
+   of a test that runs is a covered line. The gate watches 3,292 statements and
+   766 branches of shipped code, which lands at 95.76% — lower, and honest.
+3. **Branch coverage, because a line is not a decision.** `if item % 2:` being
+   executed says nothing about the `else` it guards. Counting both edges is
+   what makes the file table in the report actionable.
+4. **One floor, three copies, one assertion.** `DEFAULT_MINIMUM` in the tool,
+   `fail_under` in `pyproject.toml`, and `--minimum 90` in CI. Three copies is
+   two too many in principle, so the tests assert they agree — a floor edited
+   in one place and forgotten in another fails the suite instead of quietly
+   weakening the build.
+5. **The gate silences pytest-cov's own floor when it runs the suite.** Passing
+   `--cov-fail-under=0` means pytest's exit code says only "tests passed or
+   failed". Without it, `fail_under` would make pytest-cov exit `1` on a
+   breach, and the gate would report the generic `2` ("cannot measure") instead
+   of naming the floor and the laggards. The bare `pytest --cov` run keeps the
+   configured floor for anyone not going through the tool.
+
+### Verification: the gate actually bites
+
+The definition of done is "CI fails on a deliberate coverage drop", so the drop
+was manufactured and measured against the unchanged suite:
+
+| Run | Statements | Missing | Coverage | Exit |
+| --- | --- | --- | --- | --- |
+| Baseline | 3,292 | 115 | 95.76% | 0 |
+| + 104-statement uncovered module | 3,396 | 219 | 91.61% | 0 |
+| + 260-statement uncovered module | 3,552 | 375 | 86.01% | 1 |
+
+The failing run printed `total coverage 86.01% is below the 90% floor (375 of
+3552 statements unexecuted)` and the five worst-covered files, then exited `1`.
+The scratch module was deleted afterwards, leaving the tree as committed.
+
+The middle row is the informative one: a single badly-covered module is
+*absorbed* by 5.8 points of headroom. That headroom is deliberate — a floor
+that trips on one uncovered helper is a floor people disable — which is why the
+failure output leads with the total but lists the files. The number is the
+tripwire; the file table is what makes it fixable.
+
+### Edge cases covered by tests
+
+- An empty module (`0` statements) is 100%, not a division-by-zero failure.
+- A report with no `totals`, a `totals` block missing `num_statements`, or a
+  boolean where a number belongs raises `ValueError` instead of silently
+  scoring `0`.
+- Malformed per-file entries (a bare string, a file with no `summary`) are
+  skipped, so one odd row cannot take down the whole verdict.
+- Windows separators in file paths are normalised, so the file table matches
+  the POSIX paths used in docs.
+- A file at exactly the floor passes; a file with nothing to execute is exempt
+  from `--per-file-minimum`.
+- The overall breach is reported before per-file breaches, because it is the
+  one the build log should shout about first.
+- `--report-only` with no report, and a pytest run that exits non-zero, both
+  return `2` rather than `0`.
+- A green suite with a red report returns `1`, not `2` — the distinction the
+  `--cov-fail-under=0` decision above exists to preserve.
+
+### Next up
+
+- Day 21 consolidates Week 3: a test-strategy document and QA report covering
+  the six layers now in place — assertion census, I/O isolation audit, property
+  tests, fuzz corpus, mutation score, and this coverage floor.
+- `--per-file-minimum` is implemented and tested but not switched on in CI: at
+  today's numbers it would fail on five modules, and the honest fix for those
+  is tests, not a threshold.
