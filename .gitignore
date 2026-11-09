@@ -20,6 +20,10 @@ ENV/
 .coverage
 .coverage.*
 coverage.xml
+# Day 21: the JSON report the coverage gate writes, and the evidence file the
+# QA dashboard can save. Build output, not source.
+coverage.json
+qa_evidence.json
 htmlcov/
 .tox/
 .mypy_cache/

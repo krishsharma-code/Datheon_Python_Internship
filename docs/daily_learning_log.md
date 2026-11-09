@@ -1974,3 +1974,111 @@ tripwire; the file table is what makes it fixable.
 - `--per-file-minimum` is implemented and tested but not switched on in CI: at
   today's numbers it would fail on five modules, and the honest fix for those
   is tests, not a threshold.
+
+---
+
+## Day 21 — Week 3 consolidation: test strategy & QA report
+
+**Branch:** `feat/datheon-day-21-test-strategy` · **PR:** #22
+**Scope:** Join the six Week 3 gates into one dashboard, write down the strategy
+they add up to, and report on the week honestly.
+
+### Milestones
+
+- Added `tools/qa_report.py`: collects one measurement per layer — static,
+  assertions, isolation, properties, fuzz, mutation, coverage — compares each
+  against the floor that layer's own module owns, and prints one table with one
+  verdict. Exit `0` pass, `1` breach, `2` incomplete.
+- Added `tests/test_qa_report.py` (38 test functions / 55 cases, 89
+  assertions): every layer's breach, every layer's absence, the inclusive-floor
+  boundary, non-numeric measurements, JSON round-trips, unreadable evidence,
+  and the three exit codes.
+- Added `docs/test_strategy.md` — risk model, layer costs, floor rationale, the
+  isolation contract, what is deliberately not tested, the add-a-test
+  checklist, and the triage order for a red build.
+- Added `docs/week3_qa_report.md` — the week's verdict, the seven findings
+  (two fuzz defects, 39 mutation survivors, five under-covered shells, two
+  process gaps), and six open items carried into Week 4.
+- Ignored `coverage.json` and `qa_evidence.json`: build output that a
+  `git add -A` could otherwise commit as source.
+
+### Architectural decisions
+
+1. **Judgement is separated from collection.** `build_report(evidence)` is a
+   pure function from a mapping to a report; `collect_*` does the subprocess
+   work. That split is what lets the suite test every boundary — exactly at the
+   floor, one unit under it, a missing layer — without running a six-minute
+   campaign, and it is why the dashboard's own tests cost 89 assertions rather
+   than a second CI job.
+2. **Floors are imported, not retyped.** `ASSERTION_FLOOR`,
+   `MUTATION_FLOOR` and `COVERAGE_FLOOR` are read from `assertion_census`,
+   `mutation` and `coverage_gate`; a test asserts the copies agree. A dashboard
+   that disagrees with the gates it reports on is worse than no dashboard.
+3. **An unmeasured layer is not a passing layer.** Same rule as Day 20's exit
+   `2`, applied per layer: a missing linter, an absent mutmut cache, or an
+   unparseable coverage report leaves that layer `unmeasured` and the report
+   exits `2`. `--allow-unmeasured` is the explicit opt-out for `--skip-slow`.
+   The alternative — treating silence as health — is the failure mode the whole
+   week exists to prevent.
+4. **Two comparators, one code path.** A floor points in one of two directions:
+   *at least* (200 assertions, 90% coverage, 95% mutation) or *at most* (zero
+   violations, zero crashes). Carrying the direction on the gate instead of
+   inverting the numbers means the table can print `>=` and `<=` and the reader
+   never has to work out which way a number is good.
+5. **The fuzz layer is a smoke layer.** The dashboard runs 3 cases per campaign
+   so it stays usable per-PR; the 400-case corpus stays the weekly run. A
+   dashboard nobody runs because it takes ten minutes has a coverage of zero.
+
+### Verification: the dashboard bites
+
+The definition of done is that the report fails when it should, so all four
+paths were driven against the real evidence file:
+
+| Evidence | Verdict line | Exit |
+| --- | --- | --- |
+| Today's `main` | `PASS — every layer was measured and every floor was met.` | 0 |
+| Assertions forced to 42 | `FAIL — 1 layer(s) breached their floor.` | 1 |
+| Mutation layer removed | `INCOMPLETE — 1 layer(s) could not be measured; …` | 2 |
+| Same, with `--allow-unmeasured` | `INCOMPLETE — …` | 0 |
+
+The third row was not manufactured: the first run of the day, before
+`python tools/mutation.py` had populated the gitignored cache, reported exactly
+that — a fresh clone has no mutation evidence and the dashboard says so instead
+of scoring an absent cache as 100%.
+
+### What the week measured
+
+| Layer | Measurement | Floor |
+| --- | --- | --- |
+| Static | 0 violations over 69 files | 0 |
+| Assertions | 1,659 assertions / 868 test functions / 26 modules | 200 |
+| Isolation | 0 violations | 0 |
+| Properties | 31 tests, 0 failures | 0 |
+| Fuzz | 48 cases, 0 crashes (400-case corpus weekly) | 0 |
+| Mutation | 182/182 killed, 100.0% | 95% |
+| Coverage | 3,292 statements, 766 branches, 95.76% | 90% |
+
+### Edge cases covered by tests
+
+- A measurement exactly on its floor passes; one hundredth under it fails.
+- A boolean, a string, `None`, a list or an empty mapping is *not* a
+  measurement — the layer goes unmeasured rather than being coerced to `0`.
+- A layer carrying only half its fields (flake8 without black) is unmeasured:
+  a partial run is not a clean run.
+- A mutmut cache with zero mutants scores unmeasured, never 100%.
+- A command that cannot start (`FileNotFoundError`) or hangs
+  (`TimeoutExpired`) yields no evidence instead of an exception.
+- A fuzz driver that prints HTML, or a JSON list where a mapping belongs, is
+  unmeasured rather than "zero crashes".
+- An evidence file that is not JSON exits `2` with a message, not a traceback.
+- A real breach outranks a missing measurement when both are present: the
+  verdict is `fail`, not `incomplete`.
+
+### Next up
+
+- Day 22 makes the repository installable: PEP 621 `pyproject.toml` with a
+  `console_scripts` entry point per tool. The five `main.py` shells are the
+  modules that need to survive being imported rather than executed, which is
+  also the honest fix for the per-file coverage gap (O1).
+- O6 — wiring this dashboard into CI as a non-blocking report job — belongs
+  with Day 22's packaging work, since both touch the same workflow file.
