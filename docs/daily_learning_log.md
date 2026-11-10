@@ -2082,3 +2082,112 @@ of scoring an absent cache as 100%.
   also the honest fix for the per-file coverage gap (O1).
 - O6 — wiring this dashboard into CI as a non-blocking report job — belongs
   with Day 22's packaging work, since both touch the same workflow file.
+
+---
+
+## Day 22 — Packaging & entry points: five commands instead of five paths
+
+**Branch:** `feat/datheon-day-22-packaging` · **PR:** #23
+**Scope:** Make the repository installable — PEP 621 metadata plus one
+`console_scripts` entry per tool — without moving a single file under
+`projects/`.
+
+### Milestones
+
+- Added `pyproject.toml` metadata: `[build-system]` (setuptools ≥ 77, PEP 517),
+  `[project]` (name, version, `requires-python >= 3.10`, MIT licence via the
+  PEP 639 expression, classifiers, empty `dependencies`), a `dev` extra
+  mirroring `requirements.txt`, and project URLs.
+- Added `[project.scripts]`: `hangman`, `portfolio`, `organizer`, `assistant`
+  and `inventory`, each pointing at a shim's `main`.
+- Added the `datheon/` package — `datheon/cli/_registry.py` (the `ToolSpec`
+  table, the `sys.path` repair, `load_entrypoint()` and `run()`) and five
+  one-line shims in `datheon/cli/`.
+- Declared `py-modules` for the thirteen shared core modules at the root,
+  `packages.find` for `datheon*`/`projects*`, and `package-data` for
+  `data/*.txt` and `data/*.csv` so the bundled datasets travel with a wheel.
+- Added `tests/test_packaging.py` — 28 test functions / 55 cases / 64
+  assertions — covering the declaration, the wiring, the layout and the two
+  documented exit codes end to end.
+- Added `docs/packaging.md` (the problem, the design, what ships, how to
+  verify, what is deliberately deferred) and a README section for
+  `pip install -e .`.
+- CI now installs the package and runs `--version` through all five console
+  scripts, which is the one thing unit tests cannot prove.
+- Excluded `*.egg-info` from `flake8` and `black`: build output that a local
+  editable install leaves in the working tree.
+
+### Architectural decisions
+
+1. **The numbered layout stayed.** `01_hangman_game` … `05_inventory_oop` are
+   not valid Python identifiers, and all five entry points are called `main`,
+   so neither can be imported flat. Renaming would have touched every import,
+   every README path, the CI workflow and the whole test suite for a cosmetic
+   gain, and would have broken the task-pack ordering the repository is graded
+   on. Instead, `_registry.load_entrypoint()` puts the distribution root and
+   the tool's project directory on `sys.path` and imports
+   `projects.<package>.main` through `importlib` — which, unlike the `import`
+   statement, accepts a segment that starts with a digit.
+2. **The shims hold no logic.** Each is `return run("<name>", argv)`; the
+   dispatch, the path repair and the error mapping exist exactly once, in
+   `_registry`. That is what lets `tests/test_cli_entrypoints.py` — 1,200 lines
+   of argument-parsing coverage written on Day 15 — keep testing the code a
+   console-script user actually runs. A second copy of the CLI logic would have
+   made that suite a test of the wrong thing.
+3. **The exit-code contract was reused, not restated.** `run()` wraps the tool
+   in `cli_contract.run_cli`, the same shim the `if __name__ == "__main__"`
+   block uses, so `0`/`1`/`2`, the `DatheonError` rendering, `Ctrl-C`,
+   broken-pipe handling and the structured-log shutdown all survive the move to
+   an installed command without being re-implemented — and a test asserts a
+   bare `ValueError` still exits `1` rather than raising a traceback.
+4. **Version has one source.** `datheon.__version__` mirrors
+   `cli_contract.PROGRAM_VERSION`, and three assertions (package attribute vs.
+   banner vs. `pyproject.toml`) fail if the three ever drift. A distribution
+   that reports a different version than its own `--version` banner is a bug
+   report waiting to happen.
+5. **The declaration is tested against reality, in both directions.** The
+   `py-modules` list must equal the `*.py` files at the root (minus
+   `conftest.py`), the registry must equal the directories under `projects/`,
+   and `[project.scripts]` must equal the registry's names. Each is a pair that
+   silently rots if only one side is updated; comparing both directions makes
+   forgetting impossible.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, conftest, datheon) | clean |
+| `flake8 .` | 0 findings over 78 files |
+| `black --check .` | 78 files unchanged |
+| `pytest` | 1,143 passed, 2 skipped, 0 failed |
+| Assertion census | 896 test functions / 1,723 assertions (floor 200) |
+| Coverage gate | 95.80% over 3,368 statements (floor 90%) |
+| `tools/io_audit.py --strict` | no real I/O in the test suite |
+| `pip install -e .` in a clean venv | 5 scripts installed |
+| `<tool> --version` × 5, from `/tmp` | `hangman 1.0.0` … `inventory 1.0.0`, exit `0` |
+| `<tool> --bad-flag` × 5 | exit `2` |
+
+### Edge cases covered by tests
+
+- A shim forwards its `argv` unchanged; `None` (a shell launch) reaches the
+  tool as `None`, so the tool parses `sys.argv` itself.
+- A tuple argument sequence is normalised to a list the tool can mutate.
+- An unknown tool name raises `KeyError` whose message lists the five valid
+  names — a programming error, not user input.
+- `_ensure_importable` is idempotent: re-adding a path already on `sys.path`
+  does not duplicate it.
+- Loading the same tool twice returns the identical module object
+  (`importlib` caching), not a re-executed copy.
+- `--help` reaches the tool's own parser and still prints the exit-code epilog.
+- The installed-metadata assertion skips itself when the distribution is not
+  installed, so a bare checkout run stays green.
+
+### Next up
+
+- Day 23 builds the artefacts: wheel + sdist, install into a clean virtualenv,
+  run each entry point from it, and gate on `twine check`. `package-data` was
+  declared today precisely so that wheel contains the datasets; the wheel is
+  also where the "editable install masks a missing `py-modules` entry" risk
+  finally gets tested for real.
+- Still open from Week 3: O1 (the five `main.py` shells sit at 76–89% coverage)
+  and O6 (wire `tools/qa_report.py` into CI as a non-blocking report job).
