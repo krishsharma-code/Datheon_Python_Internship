@@ -33,6 +33,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install the package and smoke-test the console scripts
+        # Day 22: the deliverable is that `pip install -e .` exposes all five
+        # commands, so CI proves it instead of trusting the unit tests alone.
+        run: |
+          pip install -e .
+          for tool in hangman portfolio organizer assistant inventory; do
+            "$tool" --version
+          done
+
       - name: Syntax check (py_compile)
         run: python -m compileall -q projects tests conftest.py
 

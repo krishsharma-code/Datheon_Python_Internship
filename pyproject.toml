@@ -1,3 +1,98 @@
+# ---------------------------------------------------------------------------
+# Day 22 — packaging & entry points
+#
+# PEP 621 metadata plus one `console_scripts` entry per tool. The five tools
+# keep living in `projects/` under their task-pack directories; `datheon/`
+# is the importable shim layer that turns them into commands on the user's
+# PATH. Nothing here changes how a tool behaves — `hangman --version` and
+# `python projects/01_hangman_game/main.py --version` print the same line and
+# exit with the same code.
+#
+#   pip install -e .     ->  hangman, portfolio, organizer, assistant, inventory
+# ---------------------------------------------------------------------------
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datheon-python-internship"
+version = "1.0.0"
+description = "Five standard-library Python tools built for the Datheon Python Internship (Batch 01, 2026)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Krish Sharma" }]
+keywords = ["datheon", "internship", "python", "cli", "education"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Education",
+    "Typing :: Typed",
+]
+# The tools themselves are standard-library only. Anything a developer needs
+# lives in the `dev` extra below (and in requirements.txt, which CI uses).
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "flake8>=6.1",
+    "black>=24.1",
+    "hypothesis>=6.98",
+]
+
+[project.urls]
+Homepage = "https://github.com/krishsharma-code/Datheon_Python_Internship"
+Issues = "https://github.com/krishsharma-code/Datheon_Python_Internship/issues"
+
+#: The five commands. Targets are the shims in `datheon/cli/`, which delegate to
+#: `projects/<dir>/main.py` — see `datheon/cli/_registry.py`.
+[project.scripts]
+hangman = "datheon.cli.hangman:main"
+portfolio = "datheon.cli.portfolio:main"
+organizer = "datheon.cli.organizer:main"
+assistant = "datheon.cli.assistant:main"
+inventory = "datheon.cli.inventory:main"
+
+[tool.setuptools]
+# The shared core modules sit at the repository root and are imported by name
+# from the tools and the tests, so they ship as top-level modules rather than
+# being moved into a package (that move would touch every import in the repo).
+py-modules = [
+    "caching",
+    "cli_contract",
+    "dataset_loader",
+    "edge_cases",
+    "error_catalogue",
+    "errors",
+    "fuzzing",
+    "logging_config",
+    "observability",
+    "persistence",
+    "profiling",
+    "structured_logging",
+    "validators",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["datheon*", "projects*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+# The bundled datasets live beside the code that reads them; without this the
+# word list and the sample CSVs would be missing from a wheel.
+"*" = ["data/*.txt", "data/*.csv"]
+
 [tool.black]
 line-length = 100
 target-version = ["py310"]
@@ -9,6 +104,7 @@ extend-exclude = '''
   | build
   | dist
   | mutants
+  | .*\.egg-info
 )/
 '''
 

@@ -70,6 +70,7 @@ Datheon_Python_Internship/
 │   ├── mocking.md                  # external-I/O isolation policy for tests
 │   ├── property_testing.md         # Hypothesis strategies & profiles (Day 17)
 │   ├── fuzzing.md                  # hostile-input campaign & crash verdicts (Day 18)
+│   ├── packaging.md                # install layout & console entry points (Day 22)
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -78,6 +79,8 @@ Datheon_Python_Internship/
 │   ├── 03_file_organizer_automation/  # Task 3 — file organizer & cleanup
 │   ├── 04_terminal_assistant/      # Task 4 — rule-based terminal chatbot
 │   └── 05_inventory_oop/           # Task 5 — OOP inventory & asset system
+├── datheon/                        # importable shim layer (Day 22)
+│   └── cli/                        # one console-script shim per tool
 ├── tests/                          # pytest suite for all five projects
 ├── cli_contract.py                 # shared argparse / --version / exit codes
 ├── errors.py                       # exception taxonomy (DatheonError root)
@@ -91,7 +94,7 @@ Datheon_Python_Internship/
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
-├── pyproject.toml                  # black + flake8 configuration
+├── pyproject.toml                  # PEP 621 metadata, console scripts, black + flake8
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
@@ -125,10 +128,28 @@ flake8 .
 black --check .
 ```
 
+### Install the commands
+
+```bash
+pip install -e .            # or: pip install -e ".[dev]" for the test tooling
+```
+
+That puts five commands on your `PATH`, each equivalent to the matching
+`python projects/…/main.py` invocation — same parser, same exit codes, same
+logging. The wiring lives in [`datheon/cli/`](datheon/cli/); how and why is
+documented in [`docs/packaging.md`](docs/packaging.md).
+
+```console
+$ hangman --version
+hangman 1.0.0
+$ organizer ~/Downloads --dry-run
+$ inventory
+```
+
 ### Running a project
 
-Every project runs standalone with no third-party runtime dependencies
-(standard library only):
+Every project also runs standalone from a checkout, with no third-party runtime
+dependencies (standard library only):
 
 ```bash
 python projects/01_hangman_game/main.py
