@@ -29,7 +29,6 @@ installed, which is the case in a plain ``pytest`` run from a checkout.
 from __future__ import annotations
 
 import importlib
-import tomllib
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Dict, List, Optional
@@ -39,7 +38,13 @@ import pytest
 from cli_contract import PROGRAM_VERSION
 from datheon import __version__ as package_version
 from datheon.cli import _registry
-from datheon.cli._registry import (
+
+try:  # Python 3.11+ has tomllib in the standard library; 3.10 needs tomli.
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised by the 3.10 CI cell
+    import tomli as tomllib  # type: ignore[no-redef]
+
+from datheon.cli._registry import (  # noqa: E402  (path set up by conftest)
     TOOL_NAMES,
     TOOLS,
     TOOLS_BY_NAME,
