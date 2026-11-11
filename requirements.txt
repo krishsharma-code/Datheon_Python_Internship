@@ -2,6 +2,11 @@
 # The five projects themselves are standard-library only and need nothing here
 # to run.
 
+# Day 23: `tomllib` is standard from Python 3.11; the 3.10 CI cell needs the
+# backport, because both `tests/test_packaging.py` and `tools/distribution.py`
+# parse `pyproject.toml` with it.
+tomli>=2.0; python_version < "3.11"
+
 pytest>=7.4
 pytest-cov>=4.1
 flake8>=6.1
