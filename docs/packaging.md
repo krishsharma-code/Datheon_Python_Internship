@@ -175,9 +175,12 @@ CI adds the only thing the unit tests cannot prove:
 
 ## Deliberately not done here
 
-* **No wheel or sdist.** Day 23 builds the artefacts, installs them into a
-  clean virtualenv and runs `twine check`. `package-data` is declared now
-  precisely so that wheel contains the datasets.
+* ~~**No wheel or sdist.**~~ **Done on Day 23** — `tools/distribution.py`
+  builds the wheel and the sdist, verifies their contents against this
+  declaration, runs `twine check` and installs the wheel into a clean
+  virtualenv; see [`distribution.md`](distribution.md). `package-data` was
+  declared on Day 22 precisely so that wheel contains the datasets, and the
+  Day 23 gate is what finally tests that for real.
 * **No version bump or tag.** Day 26 owns SemVer, `CHANGELOG.md` and the
   GitHub Release.
 * **No `src/` layout.** It is the tidier convention, but it would move the
