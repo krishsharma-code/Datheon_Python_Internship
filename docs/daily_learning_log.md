@@ -2191,3 +2191,116 @@ of scoring an absent cache as 100%.
   finally gets tested for real.
 - Still open from Week 3: O1 (the five `main.py` shells sit at 76–89% coverage)
   and O6 (wire `tools/qa_report.py` into CI as a non-blocking report job).
+
+---
+
+## Day 23 — Build & distribution: proving the artefacts, not the checkout
+
+**Branch:** `feat/datheon-day-23-distribution` · **PR:** #24
+**Scope:** Build the wheel and the sdist, verify what is actually inside them,
+check their metadata with `twine check`, and install the wheel into a clean
+virtualenv to run all five commands.
+
+### Milestones
+
+- Added `tools/distribution.py`, a five-step gate: build → inspect → verify →
+  `twine check` → clean-venv install. Exit `0` pass, `1` artefact/install
+  failure, `2` no verdict (build failed, tooling missing). Flags:
+  `--report-only`, `--no-isolation`, `--skip-twine`, `--skip-install`,
+  `--json`, `--dist-dir`.
+- Added `tests/test_distribution.py` — 74 tests over synthetic archives built
+  from the repository's own declaration.
+- Shipped `datheon/py.typed` (the first defect the gate found) and listed it in
+  `package-data`.
+- Added a `distribution` CI job after `lint-and-test` that runs the gate and
+  uploads `dist/`.
+- Documented the pipeline, the check list and both defects in
+  `docs/distribution.md`; updated `docs/packaging.md` to close its "no wheel or
+  sdist" note.
+
+### Architectural decisions
+
+1. **The declaration is read, never restated.** `load_declaration()` parses
+   `pyproject.toml` (`tomllib`) for the name, version, `Requires-Python`,
+   `py-modules`, `console_scripts` and `package-data` globs. The gate keeps no
+   private copy of "the five tools", so a rename cannot pass by being applied
+   consistently in two places — there is only one place.
+2. **The expected payload comes from disk, not from the declaration.**
+   `load_declaration()` also walks `projects/*/data/` and every directory with
+   an `__init__.py`, and the wheel must contain *each* of those files.
+   Comparing the declaration with itself would be a tautology; comparing it with
+   the tree is the check that catches an omission.
+3. **Static checks are pure; only the install shells out.** `inspect_wheel`,
+   `inspect_sdist`, `verify_wheel`, `verify_sdist` and `verify_pair` take
+   archives and return `CheckResult`s, so the test suite hands them synthetic
+   wheels and asserts a *named* failure per defect. `build_artifacts` and
+   `twine_check` are tested by patching `subprocess.run`; the suite builds
+   nothing and starts no process.
+4. **The install is the only honest end-to-end test.** Installing the wheel with
+   `--no-index --no-deps` into a throwaway venv and running each command from an
+   unrelated working directory exercises the generated stubs, the loader's
+   `sys.path` repair and the bundled datasets in the layout a user gets. Nothing
+   static can prove that.
+5. **A stale artefact is deleted before the build.** `build_artifacts()` empties
+   `dist/` first and `collect_artifacts()` refuses a directory with two wheels,
+   because "yesterday's wheel passed the checks" is the most expensive possible
+   false positive in a distribution gate.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, conftest, datheon, tools) | clean |
+| `flake8 .` | 0 findings over 80 files |
+| `black --check .` | 80 files unchanged |
+| `pytest` | 1,218 passed, 1 skipped, 0 failed |
+| Assertion census | 967 test functions / 1,844 assertions (floor 200) |
+| Coverage gate | 95.80% over 3,368 statements (floor 90%) |
+| `tools/io_audit.py --strict` | no real I/O in the test suite |
+| `python tools/distribution.py` | 34/34 checks passed |
+| wheel + sdist | 200,752 B / 271,006 B, `twine check` clean |
+| clean-venv install | 5 console scripts registered; `hangman … inventory --version` exit `0` |
+
+### Defects the first run found
+
+- **No `py.typed` in the wheel.** `Typing :: Typed` was declared and every
+  public callable is annotated, but without the PEP 561 marker a type checker
+  treats the installed package as untyped and ignores all of it. Added
+  `datheon/py.typed` plus the `package-data` entry; the gate now fails if it
+  disappears.
+- **`PIP_USER=1` poisoned the install check.** The first version of
+  `install_and_smoke()` inherited `os.environ`, and pip inside the fresh venv
+  refused with *"Can not perform a `--user` install"* — the check was measuring
+  the developer's shell, not the wheel. `install_environment()` now strips
+  `PIP_USER`, `PIP_TARGET`, `PIP_PREFIX` and `PIP_ROOT` and sets
+  `PYTHONNOUSERSITE=1`, so a developer machine and a runner agree.
+
+Neither was a code bug; both were distribution bugs — precisely the class an
+editable install cannot see.
+
+### Edge cases covered by tests
+
+- A zip that is not a wheel (no `.dist-info/METADATA`) and a wheel with metadata
+  but no importable content are both rejected rather than reported empty.
+- An sdist with two top-level directories, or none, or no `PKG-INFO`, is
+  rejected; `tarfile`'s `KeyError` for a missing member is translated into a
+  clear `ValueError`.
+- A `console_scripts` entry pointing at `hangman:run` instead of `hangman:main`
+  is reported per script, so the log names the command that would raise
+  `ImportError` on a user's `PATH`.
+- An undeclared extra command, a `package-data` glob matching nothing, and a
+  version skew between the wheel and the sdist each fail on their own check.
+- A build that exits `0` without writing a file, a build that hangs, and a build
+  that fails are three distinct outcomes, none of them a pass.
+- `install_environment()` strips the pip location overrides but leaves `PATH`
+  and everything else untouched.
+
+### Next up
+
+- Day 24: the CI matrix — ubuntu / macos / windows × Python 3.10–3.13. The
+  `distribution` job runs on `ubuntu-latest` only today, and `tests/` already
+  imports `tomllib`, which does not exist on 3.10 — that gap is the first thing
+  the matrix will expose.
+- Day 25: MkDocs site with the API reference, deployed to GitHub Pages.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).
