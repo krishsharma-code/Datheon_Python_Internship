@@ -48,6 +48,10 @@ dev = [
     "flake8>=6.1",
     "black>=24.1",
     "hypothesis>=6.98",
+    # Day 23: building and validating the artefacts. `tools/distribution.py`
+    # drives both, and fails loudly (exit 2) when either is missing.
+    "build>=1.2",
+    "twine>=5.1",
 ]
 
 [project.urls]
@@ -91,7 +95,11 @@ namespaces = false
 [tool.setuptools.package-data]
 # The bundled datasets live beside the code that reads them; without this the
 # word list and the sample CSVs would be missing from a wheel.
-"*" = ["data/*.txt", "data/*.csv"]
+#
+# `py.typed` (Day 23) is what makes the `Typing :: Typed` classifier below
+# true: without the marker a type checker ignores the annotations in the
+# installed package, however complete they are.
+"*" = ["data/*.txt", "data/*.csv", "py.typed"]
 
 [tool.black]
 line-length = 100
