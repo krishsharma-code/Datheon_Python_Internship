@@ -1,0 +1,7 @@
+# PEP 561 marker (Day 23).
+#
+# Its presence — not its content — is what tells a type checker that this
+# package ships inline annotations and may be analysed directly. Without it,
+# the "Typing :: Typed" classifier in pyproject.toml is a promise that tools
+# ignore. `tools/distribution.py` fails the build if this file is missing from
+# the wheel.
