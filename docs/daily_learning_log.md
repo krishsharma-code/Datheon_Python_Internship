@@ -2253,7 +2253,7 @@ virtualenv to run all five commands.
 | `python -m compileall` (projects, tests, conftest, datheon, tools) | clean |
 | `flake8 .` | 0 findings over 80 files |
 | `black --check .` | 80 files unchanged |
-| `pytest` | 1,218 passed, 1 skipped, 0 failed |
+| `pytest` | 1,217 passed, 2 skipped, 0 failed |
 | Assertion census | 967 test functions / 1,844 assertions (floor 200) |
 | Coverage gate | 95.80% over 3,368 statements (floor 90%) |
 | `tools/io_audit.py --strict` | no real I/O in the test suite |
@@ -2298,9 +2298,14 @@ editable install cannot see.
 ### Next up
 
 - Day 24: the CI matrix — ubuntu / macos / windows × Python 3.10–3.13. The
-  `distribution` job runs on `ubuntu-latest` only today, and `tests/` already
-  imports `tomllib`, which does not exist on 3.10 — that gap is the first thing
-  the matrix will expose.
+  `distribution` job runs on `ubuntu-latest` only today.
+- **Fixed in this PR:** the 3.10 CI cell was already red before Day 23 —
+  `tests/test_packaging.py` imported `tomllib`, which is standard only from
+  3.11, so pytest could not even collect the module. The PR's first run
+  reproduced it (`ModuleNotFoundError: No module named 'tomllib'`), so the
+  import now falls back to `tomli` and `requirements.txt` pins
+  `tomli>=2.0; python_version < "3.11"`. Day 24's matrix will start from a
+  green 3.10 cell instead of inheriting a red one.
 - Day 25: MkDocs site with the API reference, deployed to GitHub Pages.
 - Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
   O6 (`tools/qa_report.py` as a non-blocking CI report job).
