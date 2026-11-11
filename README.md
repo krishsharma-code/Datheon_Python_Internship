@@ -71,6 +71,7 @@ Datheon_Python_Internship/
 │   ├── property_testing.md         # Hypothesis strategies & profiles (Day 17)
 │   ├── fuzzing.md                  # hostile-input campaign & crash verdicts (Day 18)
 │   ├── packaging.md                # install layout & console entry points (Day 22)
+│   ├── distribution.md             # wheel/sdist build, verify & clean-install gate (Day 23)
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -90,7 +91,8 @@ Datheon_Python_Internship/
 ├── persistence.py                  # atomic writes + schema_version stamping
 ├── caching.py                      # bounded dataset cache with signature invalidation
 ├── fuzzing.py                      # deterministic fuzz corpus + crash verdicts
-├── tools/                          # repository tooling (census, IO audit, fuzz driver)
+├── tools/                          # repository tooling (census, IO audit, fuzz driver,
+│                                   #   coverage gate, mutation score, distribution gate)
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
@@ -145,6 +147,19 @@ hangman 1.0.0
 $ organizer ~/Downloads --dry-run
 $ inventory
 ```
+
+### Build the distributable artefacts
+
+```bash
+python tools/distribution.py     # wheel + sdist, verified, twine-checked, clean-install tested
+```
+
+The gate builds both artefacts, compares their contents with `pyproject.toml`
+*and* the source tree (every console script, core module and bundled dataset),
+validates the metadata with `twine check`, then installs the wheel into a
+throwaway virtualenv and runs all five commands from an unrelated directory.
+It exits `1` on a mismatch and `2` when it cannot reach a verdict. See
+[`docs/distribution.md`](docs/distribution.md).
 
 ### Running a project
 
