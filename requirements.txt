@@ -11,6 +11,12 @@ black>=24.1
 # automatically when hypothesis is absent, so the suite still runs without it.
 hypothesis>=6.98
 
+# Day 23: building and validating the wheel/sdist. `tools/distribution.py`
+# needs both; `python -m build` produces the artefacts and `twine check`
+# validates their metadata the way PyPI will.
+build>=1.2
+twine>=5.1
+
 # Day 19: mutation testing. `tools/mutation.py` drives it and gates the score;
 # the run takes about two minutes for the configured target, so it lives in its
 # own workflow rather than in the per-commit CI job.
