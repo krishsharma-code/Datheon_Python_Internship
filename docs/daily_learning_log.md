@@ -2401,19 +2401,27 @@ Six defects came out of it.
 
 **Found by the run itself — four, and all four were real:**
 
-1. **The Proactor event loop needs a socket, and the Day 16 guard forbids
-   sockets.** Windows defaults to `ProactorEventLoop`, whose internal self-pipe
-   is built from a real loopback socket pair (Python falls back to
-   `socket.socketpair()` over TCP when the platform has no native one). The
-   network guard from Day 16 patches every socket entry point, so *every*
-   `asyncio.run()` in the suite raised `RealIOAttempted` before the first line
-   of the test executed. That single cause accounted for most of the 50
-   failures — the whole of `test_async_organizer.py`, the async organizer
-   targets inside `test_fuzzing.py`, and the cascade of
-   `RuntimeError: no running event loop` behind them. `conftest.py` now selects
-   `WindowsSelectorEventLoopPolicy` on Windows: the selector loop needs no
-   socket at all, and it is also the only policy there that supports
-   `add_reader`.
+1. **An event loop's self-pipe is a socket pair on Windows, and the Day 16
+   guard forbids sockets.** POSIX gives a loop its wake-up plumbing from
+   `os.pipe`; Windows has no such call, so both the Proactor *and* the selector
+   loop fall back to `socket.socketpair()`, which CPython implements by
+   connecting two loopback sockets to each other. The network guard patches
+   `socket.socket.connect`, so *every* `asyncio.run()` in the suite raised
+   `RealIOAttempted` before the first line of the test executed. That single
+   cause accounted for the whole organizer half of the suite — all of
+   `test_async_organizer.py`, the organizer targets inside `test_fuzzing.py`,
+   the organizer CLI cases in `test_cli_entrypoints.py`, and the
+   `RuntimeError: no running event loop` cascade behind them.
+
+   The first attempt was to select `WindowsSelectorEventLoopPolicy` in
+   `conftest.py`. It changed nothing, which is the useful part: the selector
+   loop builds the same socket pair, so the policy was never the variable. The
+   fix belongs in the guard — `NetworkGuard` now suspends the `connect` patch
+   for the duration of `socket.socketpair()` and nothing else. A pair of sockets
+   talking to each other inside one process is plumbing, not network access;
+   every other connect still raises, and two new tests in `test_mocking.py`
+   hold both halves of that line (`probe_socketpair()` succeeds,
+   `probe_network()` still raises).
 2. **`FakeFileSystem` keyed its virtual files by `str(path)`.** The tests
    register `"/virtual/words.txt"`; the loader hands over a `Path`, whose
    `str()` is `"\\virtual\\words.txt"` on Windows, so the fake reported
@@ -2431,6 +2439,8 @@ Six defects came out of it.
    They now compare against `str(Path(...))`, which is the same string on POSIX
    and the correct one on Windows.
 
+It took two CI runs to get there: 50 failures, then 45 after the three
+fixture fixes, then zero once the guard stopped blocking the loop's own pipe.
 Only the first was a defect in the *code*; the other five were claims the
 repository made about itself that only one operating system could check. That
 distinction is the whole argument for the matrix, and it took a red Windows

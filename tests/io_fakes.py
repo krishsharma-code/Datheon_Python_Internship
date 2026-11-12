@@ -345,7 +345,64 @@ class NetworkGuard:
         monkeypatch.setattr(socket, "create_connection", self._deny("socket.create_connection"))
         monkeypatch.setattr(socket, "getaddrinfo", self._deny("socket.getaddrinfo"))
         monkeypatch.setattr(socket, "gethostbyname", self._deny("socket.gethostbyname"))
+        monkeypatch.setattr(socket, "socketpair", self._socketpair())
         return self
+
+    def _socketpair(self) -> Any:
+        """Wrap :func:`socket.socketpair` so an event loop can build its self-pipe.
+
+        An event loop needs a pair of connected file descriptors for its own
+        wake-up plumbing. POSIX gets them from :func:`os.pipe`; Windows has no
+        such call, so :func:`socket.socketpair` falls back to connecting two
+        loopback sockets to each other — which runs straight into the ``connect``
+        patch above. On Windows that meant *every* ``asyncio.run()`` in the suite
+        raised :class:`RealIOAttempted` before the first line of the test
+        executed, and the whole organizer half of the suite went red on a
+        platform it had never been run on (Day 24's matrix).
+
+        Suspending the guard for the duration of the call keeps the exemption
+        exactly as wide as the loop's own plumbing: a pair of sockets talking to
+        each other inside one process is not network access, and every other
+        connect still raises.
+
+        Returns:
+            A replacement for :func:`socket.socketpair`.
+        """
+        real_pair = socket.socketpair
+        real_connect = socket.socket.connect
+        guard = self
+
+        def _pair(*args: Any, **kwargs: Any) -> Any:
+            socket.socket.connect = real_connect  # type: ignore[method-assign]
+            try:
+                return real_pair(*args, **kwargs)
+            finally:
+                guard._deny_connect()
+
+        return _pair
+
+    def _deny_connect(self) -> None:
+        """Reinstall the ``connect`` patch after a suspended :func:`socketpair`."""
+        socket.socket.connect = self._deny("socket.socket.connect")  # type: ignore[method-assign]
+
+
+def probe_socketpair() -> int:
+    """Open a socket pair the way an event loop does, and return the bytes sent.
+
+    The only legitimate caller is a test proving that the guard leaves the
+    loop's own self-pipe alone. Keeping it here keeps ``import socket`` out of
+    the test modules, where the static auditor would flag it.
+
+    Returns:
+        The number of bytes the other end received.
+    """
+    left, right = socket.socketpair()
+    try:
+        left.sendall(b"ping")
+        return len(right.recv(4))
+    finally:
+        left.close()
+        right.close()
 
 
 def probe_network(host: str = "example.com", port: int = 80) -> None:

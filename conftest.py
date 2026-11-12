@@ -27,26 +27,12 @@ the wall clock directly, which is what keeps that opt-in honest.
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from datetime import date
 from pathlib import Path
 from typing import Iterator, List
 
 import pytest
-
-# Day 24: Windows defaults to the Proactor event loop, which builds its internal
-# self-pipe from a real loopback socket pair — Python falls back to
-# `socket.socketpair()` over TCP when the platform has no native one. The Day 16
-# network guard forbids every socket call, so on Windows each `asyncio.run()` in
-# the suite raised `RealIOAttempted` before a single line of the test ran, and
-# all four Windows cells went red for a reason that had nothing to do with the
-# code under test. The selector loop needs no socket at all; it is also the only
-# policy on Windows that supports `add_reader`.
-if sys.platform == "win32":  # pragma: no cover - exercised by the Windows CI cells
-    _selector_policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
-    if _selector_policy is not None:
-        asyncio.set_event_loop_policy(_selector_policy())
 
 ROOT = Path(__file__).resolve().parent
 PROJECTS_DIR = ROOT / "projects"

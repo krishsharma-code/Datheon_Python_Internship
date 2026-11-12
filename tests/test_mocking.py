@@ -44,6 +44,7 @@ from tests.io_fakes import (
     install_fake_clock,
     install_fake_date,
     probe_network,
+    probe_socketpair,
 )
 
 
@@ -178,6 +179,25 @@ def test_network_guard_records_blocked_attempts(forbid_network: NetworkGuard):
     with pytest.raises(RealIOAttempted):
         probe_network("pypi.org", 443)
     assert forbid_network.attempts == ["socket.create_connection"]
+
+
+def test_network_guard_leaves_the_event_loop_self_pipe_alone():
+    """A loop's own wake-up pipe is not network access.
+
+    On Windows an event loop builds that pipe from a loopback socket pair, so a
+    guard that blocked every ``connect`` blocked ``asyncio.run()`` itself — the
+    defect that turned the organizer half of the suite red on all four Windows
+    cells (Day 24).
+    """
+    assert probe_socketpair() == 4
+
+
+def test_the_self_pipe_exemption_does_not_open_the_network():
+    """The socket pair is allowed; an outbound connection still is not."""
+    assert probe_socketpair() == 4
+    with pytest.raises(RealIOAttempted) as excinfo:
+        probe_network()
+    assert excinfo.value.resource == "socket.create_connection"
 
 
 def test_network_guard_blocks_higher_level_clients_too():
