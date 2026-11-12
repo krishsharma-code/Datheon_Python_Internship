@@ -50,6 +50,8 @@ dev = [
     "flake8>=6.1",
     "black>=24.1",
     "hypothesis>=6.98",
+    # Day 24: `tools/ci_matrix.py` parses the CI workflow to audit the matrix.
+    "pyyaml>=6.0",
     # Day 23: building and validating the artefacts. `tools/distribution.py`
     # drives both, and fails loudly (exit 2) when either is missing.
     "build>=1.2",

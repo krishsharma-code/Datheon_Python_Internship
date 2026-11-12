@@ -21,6 +21,7 @@ import csv
 import json
 import os
 import stat
+import sys
 
 import pytest
 
@@ -40,6 +41,15 @@ from persistence import (
     check_schema_version,
     read_json_document,
     stamp_schema,
+)
+
+#: Windows has no POSIX permission bits: `os.chmod` there only toggles the
+#: read-only flag, so `stat.S_IMODE()` never reports the mode that was asked for.
+#: The preservation test is real on POSIX and meaningless here — Day 24's matrix
+#: is what surfaced it.
+requires_posix_modes = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX permission bits are not representable on Windows",
 )
 
 
@@ -80,6 +90,7 @@ def test_atomic_write_text_leaves_no_temporary_file(tmp_path):
     assert _temp_leftovers(tmp_path) == []
 
 
+@requires_posix_modes
 def test_atomic_write_text_preserves_the_existing_file_mode(tmp_path):
     target = tmp_path / "secret.txt"
     target.write_text("old", encoding="utf-8")

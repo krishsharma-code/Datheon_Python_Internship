@@ -2309,3 +2309,129 @@ editable install cannot see.
 - Day 25: MkDocs site with the API reference, deployed to GitHub Pages.
 - Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
   O6 (`tools/qa_report.py` as a non-blocking CI report job).
+
+---
+
+## Day 24 — CI multi-OS matrix: testing where the users actually are
+
+**Branch:** `feat/datheon-day-24-ci-matrix` · **PR:** #25
+**Scope:** Replace the single-runner pipeline with a twelve-cell matrix
+(`ubuntu-latest` / `macos-latest` / `windows-latest` × Python 3.10–3.13), make
+the declaration auditable, and fix what the matrix proved was broken.
+
+### Milestones
+
+- Rewrote `.github/workflows/ci.yml`: three runners × four interpreters,
+  `fail-fast: false`, `cache: pip` on `actions/setup-python`, one `bash` shell
+  for all three operating systems, and an aggregate `CI status` job so twelve
+  check runs can be one required status on a protected branch.
+- Split the gates by what they can prove: lint, format, `compileall` and the
+  full `pytest` run in **every** cell; the I/O audit, the Hypothesis profile,
+  the fuzz corpus and the 90% coverage floor on one designated cell
+  (`ubuntu-latest` × 3.12), because they produce the same verdict everywhere.
+- Added `tools/ci_matrix.py` — parses the workflow with `yaml.safe_load` and
+  audits the matrix structurally: 15 finding codes, exit `0` pass, `1` findings,
+  `2` no verdict. Flags: `--list-cells`, `--json`, `--strict`, `--require-os`,
+  `--require-python`, `--workflow`, `--pyproject`, `--no-pyproject`.
+- Added `tests/test_ci_matrix.py` — 69 tests, one named failure per defect.
+- Added `.gitattributes` (`* text=auto eol=lf`) so the Windows cell checks out a
+  tree that is byte-identical to the Linux one.
+- Fixed two portability defects the matrix would have reported as unrelated
+  failures (see below).
+- Documented the grid, the finding codes and both defects in
+  `docs/ci_matrix.md`; README now links the audit.
+
+### Architectural decisions
+
+1. **A matrix is a declaration, so it gets a test.** YAML does not validate
+   itself, and every way this matrix can go wrong is silent: an unquoted `3.10`
+   is the float `3.1` and the cell disappears; `fail-fast` defaults to `true`,
+   so one red Windows cell cancels eleven green ones; a missing `cache: pip`
+   costs minutes and still passes. `tools/ci_matrix.py` turns the declaration
+   into a measurement, and the pytest suite asserts *named* finding codes, so a
+   check cannot be deleted without a test going red.
+2. **The audit cross-checks the packaging metadata, not just itself.** The
+   matrix's Python versions are compared against `classifiers` and
+   `requires-python` in `pyproject.toml` in both directions: a version claimed
+   but never run is a lie, and a version run but never claimed is untracked.
+   This is the same "compare the declaration with the tree" rule Day 23 used for
+   the wheel — comparing a document with itself is a tautology.
+3. **`expand_matrix()` is pure and implements real GitHub semantics.** Cartesian
+   product, minus `exclude`, plus `include` entries naming both axes; an
+   `include` naming one axis attaches variables and creates no runner, which is
+   the detail people get wrong. Pure functions mean the tests hand it mappings
+   and assert cells, with no YAML and no runner involved.
+4. **`exit 2` is a verdict too.** A workflow that does not parse, a missing
+   PyYAML, or a matrix that expands to zero cells returns `2`, never `0`. An
+   empty grid means the audit measured nothing, and silence is not evidence.
+5. **One shell everywhere, because the alternative is two workflows.** Windows
+   runners default to PowerShell, where `for tool in …; do …; done` is a syntax
+   error. `defaults: run: shell: bash` plus the Git Bash the Windows image
+   already ships makes one file true on three systems; the console-script smoke
+   test resolves each command through `shutil.which`, so `hangman` on POSIX and
+   `hangman.exe` on Windows are the same line of code.
+6. **Platform-dependent tests declare their platform.** The suite already had a
+   `requires_permissions` marker from Day 5; Day 24 added the matching
+   `requires_posix_modes`. A test that cannot mean anything on a platform should
+   say so, rather than fail there and teach everyone to ignore Windows.
+
+### Defects the matrix found
+
+- **No `.gitattributes`, so the Windows cell would see CRLF.** The
+  `windows-latest` image checks out with `core.autocrlf=true`; every file
+  arrives with CRLF in the working tree, `black --check .` then reports all 82
+  files as unformatted and flake8 raises `W291` on lines that are clean on
+  Linux. The fix is one line of `.gitattributes` (`* text=auto eol=lf`), but
+  without it the first Windows run would have looked like a formatting
+  catastrophe and been "fixed" by reformatting the repository.
+- **`test_atomic_write_text_preserves_the_existing_file_mode` asserted POSIX
+  permission bits.** It chmods the target to `0o600` and asserts
+  `stat.S_IMODE()` reports it back. Windows has no permission bits — `os.chmod`
+  there only toggles the read-only flag — so the test is meaningless on the one
+  platform it would have failed on. It now carries `requires_posix_modes`.
+
+Neither was a product bug; both were *claims the repository made about itself*
+that only one operating system could check. That is the whole argument for the
+matrix, stated as two diffs.
+
+### Edge cases covered by tests
+
+- An unquoted `3.10` (a float by the time YAML is done with it) is reported as
+  `matrix.unquoted-version` rather than silently expanding to `3.1`.
+- An `include` naming both axes adds a cell; naming one axis adds nothing; an
+  `include` repeating an existing cell does not duplicate it.
+- An `exclude` entry matching nothing changes nothing; an `exclude` carrying an
+  extra variable key still narrows the grid.
+- `python` and `platform` are accepted as aliases for `python-version` and `os`,
+  and job detection matches a matrix with only one axis so the failure is
+  reported as `matrix.malformed` instead of a vague "no matrix".
+- A job-level `defaults.run.shell: bash` and a single step-level `shell: bash`
+  both satisfy the shell check; `pwsh` does not.
+- An extra cell (`3.14`) is a *warning*: it fails `--strict` and passes
+  otherwise, because running more than the contract is not a defect.
+- A summary job without `if: always()`, or one that does not `needs` the matrix,
+  does not count as the aggregate gate.
+- A workflow that is not a mapping, is not valid YAML, or does not exist each
+  return exit `2` with a distinct message.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
+| `flake8 .` | 0 findings over 82 files |
+| `black --check .` | 82 files unchanged |
+| `pytest` | 1,286 passed, 2 skipped, 0 failed |
+| Assertion census | 1,036 test functions / 1,964 assertions (floor 200) |
+| Coverage gate | 95.8% over 3,368 statements (floor 90%) |
+| `tools/io_audit.py --strict` | no real I/O in the test suite |
+| `tools/ci_matrix.py` | PASS — 12 cells, 0 warnings |
+
+### Next up
+
+- Day 25: MkDocs (Material) site with an API reference generated from the
+  docstrings, deployed to GitHub Pages and linked from the README.
+- Day 26: SemVer bump, `CHANGELOG.md`, annotated tag and a GitHub Release with
+  the wheel and sdist attached.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).

@@ -22,6 +22,12 @@ hypothesis>=6.98
 build>=1.2
 twine>=5.1
 
+# Day 24: parsing the CI workflow. `tools/ci_matrix.py` reads
+# `.github/workflows/ci.yml` with `yaml.safe_load` so the matrix contract is
+# checked structurally instead of by string matching; the tests import the same
+# module, so the suite needs it too.
+pyyaml>=6.0
+
 # Day 19: mutation testing. `tools/mutation.py` drives it and gates the score;
 # the run takes about two minutes for the configured target, so it lives in its
 # own workflow rather than in the per-commit CI job.
