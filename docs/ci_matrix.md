@@ -137,7 +137,7 @@ tests each, the same 50.
 
 | Cause | Symptom | Fix |
 | --- | --- | --- |
-| an event loop's self-pipe is a loopback socket pair on Windows (both Proactor and selector), and the Day 16 guard forbids every socket call | every `asyncio.run()` in the suite raised `RealIOAttempted` before the first test line — the whole organizer half of the suite | `NetworkGuard` suspends the `connect` patch for the duration of `socket.socketpair()` only; two tests hold the line from both sides |
+| an event loop's self-pipe is a loopback socket pair on Windows (both Proactor and selector), and the Day 16 guard forbids every socket call | every `asyncio.run()` in the suite raised `RealIOAttempted` before the first test line — the whole organizer half of the suite | `NetworkGuard.allow_local_plumbing()` suspends the `connect` patch for the duration of `socket.socketpair()` only; `probe_loopback_connect()` reproduces the Windows fallback, so four tests hold the line on every platform |
 | `FakeFileSystem` keyed virtual files by `str(path)` | `MissingFileError` for a file the fake was holding in memory (`\virtual\words.txt` vs `/virtual/words.txt`) | keys normalise through `Path(path).as_posix()` |
 | a fixture wrote `"hello\nworld\n"` with `write_text`, which translates to CRLF on Windows | the byte-faithful loader returned `"hello\r\nworld\r\n"` | the fixture writes bytes |
 | two assertions hard-coded POSIX formatting (`docs/error_catalogue.md`, `/tmp/x`) | the CLI and the log formatter printed the correct Windows path | compare against `str(Path(...))` |

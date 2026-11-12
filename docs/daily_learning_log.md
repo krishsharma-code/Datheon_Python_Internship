@@ -2416,12 +2416,23 @@ Six defects came out of it.
    The first attempt was to select `WindowsSelectorEventLoopPolicy` in
    `conftest.py`. It changed nothing, which is the useful part: the selector
    loop builds the same socket pair, so the policy was never the variable. The
-   fix belongs in the guard — `NetworkGuard` now suspends the `connect` patch
-   for the duration of `socket.socketpair()` and nothing else. A pair of sockets
-   talking to each other inside one process is plumbing, not network access;
-   every other connect still raises, and two new tests in `test_mocking.py`
-   hold both halves of that line (`probe_socketpair()` succeeds,
-   `probe_network()` still raises).
+   fix belongs in the guard — `NetworkGuard` now exposes
+   `allow_local_plumbing()`, a context manager that suspends the `connect`
+   patch, and `socket.socketpair()` is wrapped to use it and nothing else. A
+   pair of sockets talking to each other inside one process is plumbing, not
+   network access; every other connect still raises.
+
+   The second attempt captured `socket.socket.connect` *inside* `install()`,
+   which by then was already the guard — the exemption restored the thing it
+   was meant to suspend, and the Windows cells stayed red. The reference is now
+   taken at import time, before any patch exists.
+
+   And the fix is tested on Linux, not only where it was needed: the C
+   `socketpair` refuses `AF_INET` on POSIX, so `probe_loopback_connect()` in
+   `tests/io_fakes.py` reproduces Windows' fallback — a listener on 127.0.0.1
+   and a second socket connecting to it. Four tests in `test_mocking.py` hold
+   the line from both sides: blocked by default, permitted inside the block,
+   reinstated on exit, and reinstated when the body raises.
 2. **`FakeFileSystem` keyed its virtual files by `str(path)`.** The tests
    register `"/virtual/words.txt"`; the loader hands over a `Path`, whose
    `str()` is `"\\virtual\\words.txt"` on Windows, so the fake reported

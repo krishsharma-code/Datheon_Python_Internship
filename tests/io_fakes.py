@@ -33,12 +33,19 @@ nobody uses; a guard that *fails the test* is what keeps the suite honest.
 from __future__ import annotations
 
 import builtins
+import contextlib
 import socket
 import time as _time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
+
+#: The genuine ``socket.socket.connect``, captured at import time. The network
+#: guard replaces the class attribute, so anything that needs to *suspend* the
+#: guard has to hold a reference taken before the first patch — capturing it
+#: inside ``install()`` would capture the guard itself.
+_REAL_SOCKET_CONNECT = socket.socket.connect
 
 __all__ = [
     "FakeClock",
@@ -49,6 +56,7 @@ __all__ = [
     "fake_datetime_class",
     "install_fake_clock",
     "install_fake_date",
+    "probe_loopback_connect",
     "probe_network",
 ]
 
@@ -369,21 +377,33 @@ class NetworkGuard:
             A replacement for :func:`socket.socketpair`.
         """
         real_pair = socket.socketpair
-        real_connect = socket.socket.connect
         guard = self
 
         def _pair(*args: Any, **kwargs: Any) -> Any:
-            socket.socket.connect = real_connect  # type: ignore[method-assign]
-            try:
+            with guard.allow_local_plumbing():
                 return real_pair(*args, **kwargs)
-            finally:
-                guard._deny_connect()
 
         return _pair
 
-    def _deny_connect(self) -> None:
-        """Reinstall the ``connect`` patch after a suspended :func:`socketpair`."""
-        socket.socket.connect = self._deny("socket.socket.connect")  # type: ignore[method-assign]
+    @contextlib.contextmanager
+    def allow_local_plumbing(self) -> Iterator[None]:
+        """Suspend the ``connect`` patch for one in-process socket operation.
+
+        This is the exemption an event loop needs on Windows, and it is exactly
+        as wide as the loop's own plumbing: a pair of sockets talking to each
+        other inside one process is not network access. Everything else still
+        raises, and the patch is reinstated on the way out — including when the
+        body raises.
+
+        Yields:
+            ``None``, so the caller can use it as a plain ``with`` block.
+        """
+        socket.socket.connect = _REAL_SOCKET_CONNECT  # type: ignore[method-assign]
+        try:
+            yield
+        finally:
+            denied = self._deny("socket.socket.connect")
+            socket.socket.connect = denied  # type: ignore[method-assign]
 
 
 def probe_socketpair() -> int:
@@ -403,6 +423,37 @@ def probe_socketpair() -> int:
     finally:
         left.close()
         right.close()
+
+
+def probe_loopback_connect() -> int:
+    """Connect two sockets over 127.0.0.1, the way Windows' socket pair does.
+
+    Python's ``socket.socketpair`` on Windows is a fallback that binds a
+    listener on ``127.0.0.1`` and connects a second socket to it. That path
+    cannot be requested on POSIX — the C implementation refuses ``AF_INET`` —
+    so this probe reproduces it instead: same two sockets, same ``connect``
+    call, the call the network guard patches.
+
+    Returns:
+        The number of bytes the accepting socket received.
+    """
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            client.connect(listener.getsockname())
+            client.sendall(b"ping")
+            connection, _ = listener.accept()
+            try:
+                return len(connection.recv(4))
+            finally:
+                connection.close()
+        finally:
+            client.close()
+    finally:
+        listener.close()
 
 
 def probe_network(host: str = "example.com", port: int = 80) -> None:
