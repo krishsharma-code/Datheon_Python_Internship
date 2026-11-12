@@ -2335,7 +2335,8 @@ the declaration auditable, and fix what the matrix proved was broken.
   audits the matrix structurally: 15 finding codes, exit `0` pass, `1` findings,
   `2` no verdict. Flags: `--list-cells`, `--json`, `--strict`, `--require-os`,
   `--require-python`, `--workflow`, `--pyproject`, `--no-pyproject`.
-- Added `tests/test_ci_matrix.py` — 69 tests, one named failure per defect.
+- Added `tests/test_ci_matrix.py` — 69 tests, one named failure per defect —
+  plus five in `test_mocking.py` for the network guard's self-pipe exemption.
 - Added `.gitattributes` (`* text=auto eol=lf`) so the Windows cell checks out a
   tree that is byte-identical to the Linux one.
 - Fixed two portability defects the matrix would have reported as unrelated
@@ -2450,8 +2451,9 @@ Six defects came out of it.
    They now compare against `str(Path(...))`, which is the same string on POSIX
    and the correct one on Windows.
 
-It took two CI runs to get there: 50 failures, then 45 after the three
-fixture fixes, then zero once the guard stopped blocking the loop's own pipe.
+It took four CI runs to get there: 50 failures, then 45 after the three
+fixture fixes, then 47 when the first version of the guard exemption turned out
+to restore the very patch it meant to suspend, then zero.
 Only the first was a defect in the *code*; the other five were claims the
 repository made about itself that only one operating system could check. That
 distinction is the whole argument for the matrix, and it took a red Windows
@@ -2485,11 +2487,12 @@ for "it works".
 | `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
 | `flake8 .` | 0 findings over 82 files |
 | `black --check .` | 82 files unchanged |
-| `pytest` | 1,286 passed, 2 skipped, 0 failed (and 12/12 green on GitHub) |
-| Assertion census | 1,036 test functions / 1,964 assertions (floor 200) |
+| `pytest` | 1,292 passed, 2 skipped, 0 failed |
+| Assertion census | 1,042 test functions / 1,970 assertions (floor 200) |
 | Coverage gate | 95.8% over 3,368 statements (floor 90%) |
 | `tools/io_audit.py --strict` | no real I/O in the test suite |
 | `tools/ci_matrix.py` | PASS — 12 cells, 0 warnings |
+| GitHub Actions, all cells | 12/12 green (ubuntu, macos, windows × 3.10–3.13) + distribution + `CI status` |
 
 ### Next up
 
