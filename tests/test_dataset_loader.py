@@ -77,7 +77,9 @@ def test_detect_newline(text, expected):
 # --- read_text_robust --------------------------------------------------
 def test_read_plain_utf8(tmp_path):
     path = tmp_path / "plain.txt"
-    path.write_text("hello\nworld\n", encoding="utf-8")
+    # Bytes, not `write_text`: on Windows that helper translates "\n" to "\r\n",
+    # so the fixture would assert a newline the loader never sees on POSIX.
+    path.write_bytes(b"hello\nworld\n")
     source = read_text_robust(path)
     assert source.text == "hello\nworld\n"
     assert source.encoding in DEFAULT_ENCODINGS

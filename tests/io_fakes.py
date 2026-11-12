@@ -387,6 +387,26 @@ class FakeFileSystem:
     files: Dict[str, bytes] = field(default_factory=dict)
     reads: List[str] = field(default_factory=list)
 
+    @staticmethod
+    def key(path: PathLike) -> str:
+        """Return the platform-neutral key for ``path``.
+
+        The fake is addressed with POSIX-style virtual paths such as
+        ``"/virtual/words.txt"``, but the code under test passes a
+        :class:`pathlib.Path`, whose ``str()`` is ``"\\virtual\\words.txt"`` on
+        Windows. Normalising both sides through ``as_posix()`` means a test can
+        name a path one way and the loader can resolve it another, on any
+        platform — Day 24's Windows cells found this, and it is why two
+        ``test_mocking`` cases failed there.
+
+        Args:
+            path: A string or path-like object.
+
+        Returns:
+            The normalised POSIX-style key.
+        """
+        return Path(path).as_posix()
+
     def add(self, path: PathLike, content: Union[str, bytes], encoding: str = "utf-8") -> str:
         """Register a file in the fake filesystem.
 
@@ -398,13 +418,13 @@ class FakeFileSystem:
         Returns:
             The normalised key the file was stored under.
         """
-        key = str(path)
+        key = self.key(path)
         self.files[key] = content.encode(encoding) if isinstance(content, str) else content
         return key
 
     def _lookup(self, path: PathLike, action: str) -> bytes:
         """Return the bytes registered for ``path``, recording the read."""
-        key = str(path)
+        key = self.key(path)
         self.reads.append(key)
         if key not in self.files:
             raise FileNotFoundError(f"{action}: no such file in the fake filesystem: {key}")
@@ -420,7 +440,7 @@ class FakeFileSystem:
 
     def is_file(self, path: PathLike) -> bool:
         """Report whether ``path`` is registered as a file."""
-        return str(path) in self.files
+        return self.key(path) in self.files
 
     def open(self, path: PathLike, mode: str = "r", *args: Any, **kwargs: Any) -> Any:
         """Serve :func:`open` for read modes and refuse everything else.

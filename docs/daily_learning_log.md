@@ -2309,6 +2309,8 @@ editable install cannot see.
 - Day 25: MkDocs site with the API reference, deployed to GitHub Pages.
 - Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
   O6 (`tools/qa_report.py` as a non-blocking CI report job).
+- This log is now ~134 KB in one file. Before it gets much larger it should be
+  split by week, with this file kept as the index.
 
 ---
 
@@ -2375,13 +2377,20 @@ the declaration auditable, and fix what the matrix proved was broken.
    `requires_posix_modes`. A test that cannot mean anything on a platform should
    say so, rather than fail there and teach everyone to ignore Windows.
 
-### Defects the matrix found
+### The first run: 8 green cells, 4 red, and six defects
+
+The pull request's first CI run is the interesting artefact of the day. Ubuntu
+and macOS passed in all four versions. Windows failed in all four — 50 tests
+each, the same 50, which is the matrix doing precisely what it was built for.
+Six defects came out of it.
+
+**Found before the run, by reading the workflow as a Windows runner would:**
 
 - **No `.gitattributes`, so the Windows cell would see CRLF.** The
   `windows-latest` image checks out with `core.autocrlf=true`; every file
   arrives with CRLF in the working tree, `black --check .` then reports all 82
   files as unformatted and flake8 raises `W291` on lines that are clean on
-  Linux. The fix is one line of `.gitattributes` (`* text=auto eol=lf`), but
+  Linux. One line of `.gitattributes` (`* text=auto eol=lf`) fixes it — but
   without it the first Windows run would have looked like a formatting
   catastrophe and been "fixed" by reformatting the repository.
 - **`test_atomic_write_text_preserves_the_existing_file_mode` asserted POSIX
@@ -2390,9 +2399,43 @@ the declaration auditable, and fix what the matrix proved was broken.
   there only toggles the read-only flag — so the test is meaningless on the one
   platform it would have failed on. It now carries `requires_posix_modes`.
 
-Neither was a product bug; both were *claims the repository made about itself*
-that only one operating system could check. That is the whole argument for the
-matrix, stated as two diffs.
+**Found by the run itself — four, and all four were real:**
+
+1. **The Proactor event loop needs a socket, and the Day 16 guard forbids
+   sockets.** Windows defaults to `ProactorEventLoop`, whose internal self-pipe
+   is built from a real loopback socket pair (Python falls back to
+   `socket.socketpair()` over TCP when the platform has no native one). The
+   network guard from Day 16 patches every socket entry point, so *every*
+   `asyncio.run()` in the suite raised `RealIOAttempted` before the first line
+   of the test executed. That single cause accounted for most of the 50
+   failures — the whole of `test_async_organizer.py`, the async organizer
+   targets inside `test_fuzzing.py`, and the cascade of
+   `RuntimeError: no running event loop` behind them. `conftest.py` now selects
+   `WindowsSelectorEventLoopPolicy` on Windows: the selector loop needs no
+   socket at all, and it is also the only policy there that supports
+   `add_reader`.
+2. **`FakeFileSystem` keyed its virtual files by `str(path)`.** The tests
+   register `"/virtual/words.txt"`; the loader hands over a `Path`, whose
+   `str()` is `"\\virtual\\words.txt"` on Windows, so the fake reported
+   `MissingFileError` for a file it was holding in memory. Keys now go through
+   `Path(path).as_posix()`, so a test may name a path one way and the loader
+   resolve it another, on any platform.
+3. **A text fixture wrote platform-translated newlines.** `test_read_plain_utf8`
+   created its file with `write_text("hello\nworld\n")`, which writes CRLF on
+   Windows, then asserted the loader returned `"hello\nworld\n"`. The loader is
+   deliberately byte-faithful — it reports the newline it *found* — so the
+   fixture was the thing that was wrong. It writes `b"hello\nworld\n"` now.
+4. **Two assertions hard-coded POSIX path formatting.** The catalogue CLI prints
+   the path it wrote, and the structured-log formatter renders a `Path` field as
+   text; both were asserted against `"docs/error_catalogue.md"` and `"/tmp/x"`.
+   They now compare against `str(Path(...))`, which is the same string on POSIX
+   and the correct one on Windows.
+
+Only the first was a defect in the *code*; the other five were claims the
+repository made about itself that only one operating system could check. That
+distinction is the whole argument for the matrix, and it took a red Windows
+column to make it concrete: 1,286 passing tests on Linux had been standing in
+for "it works".
 
 ### Edge cases covered by tests
 
@@ -2421,7 +2464,7 @@ matrix, stated as two diffs.
 | `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
 | `flake8 .` | 0 findings over 82 files |
 | `black --check .` | 82 files unchanged |
-| `pytest` | 1,286 passed, 2 skipped, 0 failed |
+| `pytest` | 1,286 passed, 2 skipped, 0 failed (and 12/12 green on GitHub) |
 | Assertion census | 1,036 test functions / 1,964 assertions (floor 200) |
 | Coverage gate | 95.8% over 3,368 statements (floor 90%) |
 | `tools/io_audit.py --strict` | no real I/O in the test suite |

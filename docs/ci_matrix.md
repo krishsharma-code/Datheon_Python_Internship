@@ -129,7 +129,24 @@ the read-only flag — so the test would have failed on the one platform it says
 nothing meaningful about. It now carries a `requires_posix_modes` skip marker,
 matching the marker `tests/test_edge_cases.py` has used since Day 5.
 
-## 5. How the contract is enforced
+## 5. What the first run found
+
+The pull request's first CI run is the most useful thing this day produced.
+Ubuntu and macOS passed in all four versions; Windows failed in all four — 50
+tests each, the same 50.
+
+| Cause | Symptom | Fix |
+| --- | --- | --- |
+| `ProactorEventLoop` builds its self-pipe from a loopback socket pair; the Day 16 network guard forbids every socket call | every `asyncio.run()` in the suite raised `RealIOAttempted` before the first test line | `conftest.py` selects `WindowsSelectorEventLoopPolicy` on Windows |
+| `FakeFileSystem` keyed virtual files by `str(path)` | `MissingFileError` for a file the fake was holding in memory (`\virtual\words.txt` vs `/virtual/words.txt`) | keys normalise through `Path(path).as_posix()` |
+| a fixture wrote `"hello\nworld\n"` with `write_text`, which translates to CRLF on Windows | the byte-faithful loader returned `"hello\r\nworld\r\n"` | the fixture writes bytes |
+| two assertions hard-coded POSIX formatting (`docs/error_catalogue.md`, `/tmp/x`) | the CLI and the log formatter printed the correct Windows path | compare against `str(Path(...))` |
+
+Only the first was a defect in the code. The rest were claims the repository
+made about itself that one operating system could not check — which is the
+argument for the matrix, stated as five diffs.
+
+## 6. How the contract is enforced
 
 `tests/test_ci_matrix.py` (69 tests) builds synthetic workflows, breaks one
 thing at a time, and asserts the *named* finding that results. A code that can
