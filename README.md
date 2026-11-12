@@ -50,7 +50,8 @@ Every project is built to the same engineering standard:
 - **Google-style docstrings** on every public module, class, and function.
 - **Unit tests** with `pytest`, covering the happy path *and* edge cases
   (invalid input, missing files, duplicate operations, collisions).
-- **CI automation** — linting and the full test suite run on every pull request.
+- **CI automation** — linting and the full test suite run on every pull request,
+  across **ubuntu / macOS / Windows × Python 3.10–3.13** (twelve cells, pip-cached).
 
 ---
 
@@ -60,7 +61,8 @@ Every project is built to the same engineering standard:
 Datheon_Python_Internship/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                  # flake8 + black + pytest on every PR
+│       ├── ci.yml                  # 3 OS × 4 Python matrix: lint, format, tests, gates
+│       └── mutation.yml            # weekly mutation-score audit
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
 │   ├── cli_contract.md             # shared command-line & exit-code contract
@@ -72,6 +74,7 @@ Datheon_Python_Internship/
 │   ├── fuzzing.md                  # hostile-input campaign & crash verdicts (Day 18)
 │   ├── packaging.md                # install layout & console entry points (Day 22)
 │   ├── distribution.md             # wheel/sdist build, verify & clean-install gate (Day 23)
+│   ├── ci_matrix.md                # OS × Python CI matrix contract & audit (Day 24)
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -160,6 +163,22 @@ validates the metadata with `twine check`, then installs the wheel into a
 throwaway virtualenv and runs all five commands from an unrelated directory.
 It exits `1` on a mismatch and `2` when it cannot reach a verdict. See
 [`docs/distribution.md`](docs/distribution.md).
+
+### Audit the CI matrix
+
+```bash
+python tools/ci_matrix.py              # the twelve cells, and everything wrong with them
+python tools/ci_matrix.py --list-cells # just the grid
+python tools/ci_matrix.py --strict     # warnings count as failures
+```
+
+The workflow runs the suite on `ubuntu-latest`, `macos-latest` and
+`windows-latest` × Python 3.10–3.13, with `fail-fast: false` and a shared pip
+cache. The audit checks that grid structurally — quoted versions, pip caching,
+a bash shell on every runner, least-privilege permissions, an aggregate status
+job, and agreement with the `classifiers` and `requires-python` in
+`pyproject.toml` — and exits `2` rather than `0` when it cannot measure. See
+[`docs/ci_matrix.md`](docs/ci_matrix.md).
 
 ### Running a project
 

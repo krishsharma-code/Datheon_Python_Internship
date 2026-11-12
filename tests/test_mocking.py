@@ -43,7 +43,9 @@ from tests.io_fakes import (
     fake_datetime_class,
     install_fake_clock,
     install_fake_date,
+    probe_loopback_connect,
     probe_network,
+    probe_socketpair,
 )
 
 
@@ -178,6 +180,55 @@ def test_network_guard_records_blocked_attempts(forbid_network: NetworkGuard):
     with pytest.raises(RealIOAttempted):
         probe_network("pypi.org", 443)
     assert forbid_network.attempts == ["socket.create_connection"]
+
+
+def test_network_guard_leaves_the_event_loop_self_pipe_alone():
+    """A loop's own wake-up pipe is not network access.
+
+    On Windows an event loop builds that pipe from a loopback socket pair, so a
+    guard that blocked every ``connect`` blocked ``asyncio.run()`` itself — the
+    defect that turned the organizer half of the suite red on all four Windows
+    cells (Day 24).
+    """
+    assert probe_socketpair() == 4
+
+
+def test_the_loopback_connect_is_blocked_by_default():
+    """The exemption is narrow: without it, 127.0.0.1 is blocked like anywhere else."""
+    with pytest.raises(RealIOAttempted) as excinfo:
+        probe_loopback_connect()
+    assert excinfo.value.resource == "socket.socket.connect"
+
+
+def test_the_self_pipe_exemption_permits_the_loopback_connect(forbid_network: NetworkGuard):
+    """Inside the exemption, the pair of sockets an event loop needs may connect."""
+    with forbid_network.allow_local_plumbing():
+        assert probe_loopback_connect() == 4
+
+
+def test_the_self_pipe_exemption_ends_with_the_block(forbid_network: NetworkGuard):
+    """Leaving the block reinstates the guard, even though the body succeeded."""
+    with forbid_network.allow_local_plumbing():
+        assert probe_loopback_connect() == 4
+    with pytest.raises(RealIOAttempted):
+        probe_loopback_connect()
+
+
+def test_the_self_pipe_exemption_survives_an_exception(forbid_network: NetworkGuard):
+    """A failing body must not leave the network open."""
+    with pytest.raises(RuntimeError):
+        with forbid_network.allow_local_plumbing():
+            raise RuntimeError("boom")
+    with pytest.raises(RealIOAttempted):
+        probe_loopback_connect()
+
+
+def test_the_self_pipe_exemption_does_not_open_the_network():
+    """The socket pair is allowed; an outbound connection still is not."""
+    assert probe_socketpair() == 4
+    with pytest.raises(RealIOAttempted) as excinfo:
+        probe_network()
+    assert excinfo.value.resource == "socket.create_connection"
 
 
 def test_network_guard_blocks_higher_level_clients_too():

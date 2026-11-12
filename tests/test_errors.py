@@ -525,7 +525,8 @@ def test_catalogue_main_writes_the_default_path_and_reports_it(tmp_path, monkeyp
 
     written = tmp_path / "docs" / "error_catalogue.md"
     assert written.read_text(encoding="utf-8") == render_catalogue_markdown()
-    assert capsys.readouterr().out.strip() == "wrote docs/error_catalogue.md"
+    expected = f"wrote {pathlib.Path('docs') / 'error_catalogue.md'}"
+    assert capsys.readouterr().out.strip() == expected
 
 
 def test_catalogue_main_writes_to_an_explicit_destination(tmp_path, capsys):

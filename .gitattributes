@@ -1,0 +1,20 @@
+# Day 24 — line endings are a CI matrix problem, not a style preference.
+#
+# The windows-latest runner checks out with `core.autocrlf=true`, so without
+# this file every source file arrives in the working tree with CRLF endings.
+# `black --check .` then reports the whole repository as unformatted and flake8
+# raises W291 on lines that are clean on Linux — a red Windows cell that says
+# nothing about the code. Normalising to LF on checkout makes the tree
+# identical on all three runners; Git still stores the blobs canonically.
+* text=auto eol=lf
+
+# Byte-for-byte assets must never be normalised or diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.whl binary

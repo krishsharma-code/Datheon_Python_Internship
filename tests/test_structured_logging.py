@@ -270,7 +270,7 @@ def test_caller_fields_are_nested_and_cannot_shadow_reserved_keys():
 def test_unserialisable_field_values_are_rendered_as_text():
     record = _record("payload", **structured_extra(path=Path("/tmp/x"), size={1, 2}))
     payload = json.loads(JsonFormatter().format(record))
-    assert payload["fields"]["path"] == "/tmp/x"
+    assert payload["fields"]["path"] == str(Path("/tmp/x"))
     assert "size" in payload["fields"]
 
 

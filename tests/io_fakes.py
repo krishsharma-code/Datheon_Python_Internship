@@ -33,12 +33,19 @@ nobody uses; a guard that *fails the test* is what keeps the suite honest.
 from __future__ import annotations
 
 import builtins
+import contextlib
 import socket
 import time as _time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
+
+#: The genuine ``socket.socket.connect``, captured at import time. The network
+#: guard replaces the class attribute, so anything that needs to *suspend* the
+#: guard has to hold a reference taken before the first patch — capturing it
+#: inside ``install()`` would capture the guard itself.
+_REAL_SOCKET_CONNECT = socket.socket.connect
 
 __all__ = [
     "FakeClock",
@@ -49,6 +56,7 @@ __all__ = [
     "fake_datetime_class",
     "install_fake_clock",
     "install_fake_date",
+    "probe_loopback_connect",
     "probe_network",
 ]
 
@@ -345,7 +353,107 @@ class NetworkGuard:
         monkeypatch.setattr(socket, "create_connection", self._deny("socket.create_connection"))
         monkeypatch.setattr(socket, "getaddrinfo", self._deny("socket.getaddrinfo"))
         monkeypatch.setattr(socket, "gethostbyname", self._deny("socket.gethostbyname"))
+        monkeypatch.setattr(socket, "socketpair", self._socketpair())
         return self
+
+    def _socketpair(self) -> Any:
+        """Wrap :func:`socket.socketpair` so an event loop can build its self-pipe.
+
+        An event loop needs a pair of connected file descriptors for its own
+        wake-up plumbing. POSIX gets them from :func:`os.pipe`; Windows has no
+        such call, so :func:`socket.socketpair` falls back to connecting two
+        loopback sockets to each other — which runs straight into the ``connect``
+        patch above. On Windows that meant *every* ``asyncio.run()`` in the suite
+        raised :class:`RealIOAttempted` before the first line of the test
+        executed, and the whole organizer half of the suite went red on a
+        platform it had never been run on (Day 24's matrix).
+
+        Suspending the guard for the duration of the call keeps the exemption
+        exactly as wide as the loop's own plumbing: a pair of sockets talking to
+        each other inside one process is not network access, and every other
+        connect still raises.
+
+        Returns:
+            A replacement for :func:`socket.socketpair`.
+        """
+        real_pair = socket.socketpair
+        guard = self
+
+        def _pair(*args: Any, **kwargs: Any) -> Any:
+            with guard.allow_local_plumbing():
+                return real_pair(*args, **kwargs)
+
+        return _pair
+
+    @contextlib.contextmanager
+    def allow_local_plumbing(self) -> Iterator[None]:
+        """Suspend the ``connect`` patch for one in-process socket operation.
+
+        This is the exemption an event loop needs on Windows, and it is exactly
+        as wide as the loop's own plumbing: a pair of sockets talking to each
+        other inside one process is not network access. Everything else still
+        raises, and the patch is reinstated on the way out — including when the
+        body raises.
+
+        Yields:
+            ``None``, so the caller can use it as a plain ``with`` block.
+        """
+        socket.socket.connect = _REAL_SOCKET_CONNECT  # type: ignore[method-assign]
+        try:
+            yield
+        finally:
+            denied = self._deny("socket.socket.connect")
+            socket.socket.connect = denied  # type: ignore[method-assign]
+
+
+def probe_socketpair() -> int:
+    """Open a socket pair the way an event loop does, and return the bytes sent.
+
+    The only legitimate caller is a test proving that the guard leaves the
+    loop's own self-pipe alone. Keeping it here keeps ``import socket`` out of
+    the test modules, where the static auditor would flag it.
+
+    Returns:
+        The number of bytes the other end received.
+    """
+    left, right = socket.socketpair()
+    try:
+        left.sendall(b"ping")
+        return len(right.recv(4))
+    finally:
+        left.close()
+        right.close()
+
+
+def probe_loopback_connect() -> int:
+    """Connect two sockets over 127.0.0.1, the way Windows' socket pair does.
+
+    Python's ``socket.socketpair`` on Windows is a fallback that binds a
+    listener on ``127.0.0.1`` and connects a second socket to it. That path
+    cannot be requested on POSIX — the C implementation refuses ``AF_INET`` —
+    so this probe reproduces it instead: same two sockets, same ``connect``
+    call, the call the network guard patches.
+
+    Returns:
+        The number of bytes the accepting socket received.
+    """
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            client.connect(listener.getsockname())
+            client.sendall(b"ping")
+            connection, _ = listener.accept()
+            try:
+                return len(connection.recv(4))
+            finally:
+                connection.close()
+        finally:
+            client.close()
+    finally:
+        listener.close()
 
 
 def probe_network(host: str = "example.com", port: int = 80) -> None:
@@ -387,6 +495,26 @@ class FakeFileSystem:
     files: Dict[str, bytes] = field(default_factory=dict)
     reads: List[str] = field(default_factory=list)
 
+    @staticmethod
+    def key(path: PathLike) -> str:
+        """Return the platform-neutral key for ``path``.
+
+        The fake is addressed with POSIX-style virtual paths such as
+        ``"/virtual/words.txt"``, but the code under test passes a
+        :class:`pathlib.Path`, whose ``str()`` is ``"\\virtual\\words.txt"`` on
+        Windows. Normalising both sides through ``as_posix()`` means a test can
+        name a path one way and the loader can resolve it another, on any
+        platform — Day 24's Windows cells found this, and it is why two
+        ``test_mocking`` cases failed there.
+
+        Args:
+            path: A string or path-like object.
+
+        Returns:
+            The normalised POSIX-style key.
+        """
+        return Path(path).as_posix()
+
     def add(self, path: PathLike, content: Union[str, bytes], encoding: str = "utf-8") -> str:
         """Register a file in the fake filesystem.
 
@@ -398,13 +526,13 @@ class FakeFileSystem:
         Returns:
             The normalised key the file was stored under.
         """
-        key = str(path)
+        key = self.key(path)
         self.files[key] = content.encode(encoding) if isinstance(content, str) else content
         return key
 
     def _lookup(self, path: PathLike, action: str) -> bytes:
         """Return the bytes registered for ``path``, recording the read."""
-        key = str(path)
+        key = self.key(path)
         self.reads.append(key)
         if key not in self.files:
             raise FileNotFoundError(f"{action}: no such file in the fake filesystem: {key}")
@@ -420,7 +548,7 @@ class FakeFileSystem:
 
     def is_file(self, path: PathLike) -> bool:
         """Report whether ``path`` is registered as a file."""
-        return str(path) in self.files
+        return self.key(path) in self.files
 
     def open(self, path: PathLike, mode: str = "r", *args: Any, **kwargs: Any) -> Any:
         """Serve :func:`open` for read modes and refuse everything else.
