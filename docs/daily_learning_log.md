@@ -2502,3 +2502,147 @@ for "it works".
   the wheel and sdist attached.
 - Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
   O6 (`tools/qa_report.py` as a non-blocking CI report job).
+
+---
+
+## Day 25 — Documentation site: publishing what the docstrings already knew
+
+**Branch:** `feat/datheon-day-25-docs-site` · **PR:** #26
+**Scope:** Turn `docs/` into a published site — MkDocs with the Material theme,
+an API reference generated from the docstrings, a GitHub Pages deployment, and a
+gate that keeps the site and the repository from disagreeing.
+
+### Milestones
+
+- Added `mkdocs.yml`: Material theme (light/dark palettes, instant navigation,
+  search suggestions), `strict: true`, a nav that orders all 39 pages, and
+  `mkdocstrings` configured with the Google docstring style and the repository
+  root on its import path.
+- Added `docs/index.md` — the site's home page: the five tools, the quickstart,
+  the quality-gate table and a map of the guides.
+- Added `docs/api/` — 16 pages, one per shipped module (13 root-level modules
+  plus the `datheon` and `projects` packages), each a heading, a sentence of
+  context and a `::: module` directive. Nothing is copied: `mkdocstrings` renders
+  the signatures and docstrings out of the source tree.
+- Added `.github/workflows/docs.yml` — a `build` job (`tools/docs_site.py
+  --strict`, then `mkdocs build --strict`, then upload the Pages artefact) and a
+  `deploy` job (`actions/deploy-pages` from a `github-pages` environment, gated on
+  a push to `main` and `needs: build`). Least-privilege permissions:
+  `contents: read`, `pages: write`, `id-token: write`.
+- Added `tools/docs_site.py` — audits the declaration against the repository: 38 finding codes across configuration, nav, API coverage, deployment, the README
+  link and the `docs` extra. Flags: `--list-pages`, `--list-modules`, `--json`,
+  `--strict`, `--config`, `--pyproject`, `--workflow`, `--readme`, `--site-url`.
+- Added `tests/test_docs_site.py` — 92 tests, one named finding per defect, plus
+  a block that audits this repository's real `mkdocs.yml`, `pyproject.toml`,
+  `README.md` and workflow.
+- Added the `docs` extra to `pyproject.toml` (`mkdocs`, `mkdocs-material`,
+  `mkdocstrings[python]`) so `pip install -e ".[docs]"` is the whole toolchain.
+- Linked the live site from the README — badge, a Documentation section, and the
+  structure tree updated.
+- Documented the site, the finding codes, the deployment and both defects in
+  `docs/docs_site.md`.
+
+### Architectural decisions
+
+1. **The reference is generated, never written twice.** Every page under
+   `docs/api/` is a directive, not prose about an API. A second hand-written
+   reference would be a copy of the docstrings that drifts the first time a
+   signature changes; `mkdocstrings` reads the module, so the site cannot
+   disagree with the code. This only works because of two earlier rules — full
+   type hints and Google-style docstrings on every public callable — which is
+   the first day those rules paid a dividend rather than a cost.
+2. **`strict: true` is necessary and not sufficient, so the declaration is
+   audited.** Strict mode fails on a broken link and an unknown nav page. It
+   does not fail when a page exists but is unreachable, when a shipped module has
+   no page at all, when the README stops linking the site, when the deploy job
+   uploads an artefact nobody deploys, or when someone flips `strict` back to
+   `false`. `tools/docs_site.py` checks the site against the repository — the
+   same "compare the declaration with the tree" rule Day 23 applied to the wheel
+   and Day 24 to the CI matrix.
+3. **The audit reads `pyproject.toml` for the list of modules that must be
+   documented.** Not a directory glob and not a hand-kept list: `py-modules` plus
+   the `packages.find` include patterns are what actually ships, so a module
+   added to the distribution without a reference page fails the build, and a
+   `:::` target for something that no longer ships fails it too.
+4. **`exit 2` for an unmeasurable site.** A missing or unparsable `mkdocs.yml`
+   returns `2`, and a nav that expands to zero pages is never `ok` — an empty
+   site is not a documentation site, and a gate that cannot measure must not
+   report success. Same three-valued contract as every other tool here.
+5. **A fenced code block is text, not a directive.** The guide that documents
+   the `::: module` syntax shows it inside a fence. The first version of the
+   directive scanner counted that example as a second rendering of the module
+   and reported `api.duplicate-target` against the repository's own docs — so
+   the scanner now strips fenced blocks (both ``` and ~~~) before scanning.
+6. **A pull request builds the site; only `main` publishes it.** The `build` job
+   runs on `pull_request`, so a broken nav fails the PR rather than the
+   deployment, and the `deploy` job is gated on `github.ref ==
+   'refs/heads/main'`. `concurrency: pages` queues deployments instead of
+   cancelling one halfway through.
+
+### Defects found by the first strict build
+
+1. **Twenty cross-links pointed outside the site.** `docs/cli_contract.md`,
+   `docs/caching.md`, `docs/logging.md` and six other pages linked
+   `../validators.py`, `../tests/test_validation.py`, `../tools/qa_report.py` and
+   so on. Those links are valid on GitHub and meaningless to MkDocs, which
+   reported each as *"the target is not found among documentation files"* —
+   twenty warnings, and `--strict` refused to build. They are absolute
+   `blob/main` URLs now: correct in both places, and proven by the build.
+2. **One intra-page anchor had gone stale.** `docs/performance_profiling.md`
+   linked `#reproducing-the-measurements`, but the heading is
+   `## 6. Reproducing the measurements`, whose slug is
+   `#6-reproducing-the-measurements`. A warning locally and a dead jump on the
+   published page — exactly the class of defect that only a link checker finds.
+
+Neither would have failed a test. Both failed the first strict build, which is
+the whole argument for building strictly in CI rather than assuming the pages
+look right.
+
+### Edge cases covered by tests
+
+- A `nav` written as a bare path, a `title: path` mapping, or a nested
+  `title: [children]` section flattens to the same reading order.
+- A nav entry that is absolute (`/etc/passwd.md`) or Windows-style is
+  `nav.path-invalid` rather than a silent "not found".
+- A page listed twice is a warning; a home page that is not first is a warning;
+  a page on disk that is in no nav is an *error*.
+- `api/index.md` is an overview and needs no directive; any other API page
+  without one is `api.directive-missing`.
+- A `:::` line inside a ``` or ~~~ fence is text, not a directive.
+- `needs: build` and `needs: [build]` are both accepted; a deploy job that needs
+  only the lint job is `deploy.needs`.
+- A workflow read with PyYAML's YAML-1.1 boolean `on:` key still yields its
+  triggers.
+- `mkdocs build` without `--strict` is a finding even when the audit step in the
+  same job does pass `--strict` — the guarantee is per-line, not per-job.
+- A `site_url` differing only by a trailing slash is not a mismatch; one that
+  points at another project is.
+- A `docs` extra present but missing either `mkdocs-material` or `mkdocstrings`
+  is reported once per missing package.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
+| `flake8 .` | 0 findings over 84 files |
+| `black --check .` | 84 files unchanged |
+| `pytest` | 1,385 passed, 1 skipped, 0 failed |
+| `mkdocs build --strict` | clean — 39 pages, 15 documented modules |
+| `python tools/docs_site.py --strict` | PASS — 39 pages, 15 modules, 0 warnings |
+| Assertion census | 1,134 test functions / 2,098 assertions (floor 200) |
+| Coverage gate | 95.8% over 3,368 statements (floor 90%) |
+| `tools/io_audit.py --strict` | no real I/O in the test suite |
+| `tools/ci_matrix.py` | PASS — 12 cells, 0 warnings |
+
+The suite grew by 92 tests and 126 assertions; the site grew from twenty
+markdown files in a directory to 39 pages with a generated reference.
+
+### Next up
+
+- Day 26: SemVer bump, `CHANGELOG.md`, an annotated tag and a GitHub Release
+  with the wheel and sdist attached — and, now that a site exists, the release
+  notes can link the versioned documentation.
+- Day 27: README final pass, architecture diagram and demo assets.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).
