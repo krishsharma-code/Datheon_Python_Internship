@@ -1,0 +1,174 @@
+# ---------------------------------------------------------------------------
+# Day 25 — the documentation site.
+#
+# Everything in `docs/` was written to be read in a pull request: it is accurate,
+# but it is only reachable by someone who already knows the file names. This
+# configuration turns that directory into a site — navigable, searchable, and
+# with an API reference generated from the docstrings that already exist, so the
+# reference cannot drift away from the code it describes.
+#
+#   pip install -e ".[docs]"
+#   mkdocs serve          -> http://127.0.0.1:8000
+#   mkdocs build --strict -> site/
+#
+# `tools/docs_site.py` audits this file (nav completeness, API coverage of every
+# shipped module, strict mode, the Pages deployment workflow, the README link)
+# and the pytest suite runs that audit, so the declaration is checked rather
+# than trusted.
+# ---------------------------------------------------------------------------
+site_name: Datheon Python Internship
+site_description: >-
+  Five production-grade Python tools — engineering portfolio for the Datheon
+  Python Programming Internship (Batch 01 · 2026 Cohort).
+site_author: Krish Sharma
+site_url: https://krishsharma-code.github.io/Datheon_Python_Internship/
+copyright: Copyright &copy; 2026 Krish Sharma · MIT Licence · Credential DT-2026-O6Q0X
+
+repo_url: https://github.com/krishsharma-code/Datheon_Python_Internship
+repo_name: krishsharma-code/Datheon_Python_Internship
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+# A warning is a defect: an unknown page, a broken link or an unresolvable
+# `:::` target fails the build instead of shipping a site with a hole in it.
+strict: true
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/language-python
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search
+  # The API reference is generated from the docstrings in the source tree, not
+  # from a second copy of them. `paths: [.]` is what lets the handler import the
+  # root-level modules (`errors`, `validators`, …) and the `datheon` package.
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            members_order: source
+            inherited_members: false
+            filters: ["!^_"]
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  # `docs/` also holds files that are not pages of this site in spirit —
+  # generated reports, the ledger, the daily log. They are all in the nav below,
+  # so an omission is a finding rather than something to ignore.
+  omitted_files: warn
+  absolute_links: info
+  unrecognized_links: warn
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - CLI contract & exit codes: cli_contract.md
+      - Packaging & entry points: packaging.md
+      - Distribution: distribution.md
+  - Engineering guides:
+      - Logging: logging.md
+      - Persistence: persistence.md
+      - Async I/O: async_io.md
+      - Caching & memoisation: caching.md
+      - Performance profiling: performance_profiling.md
+      - Error catalogue: error_catalogue.md
+      - Week 2 report: week2_performance_observability_report.md
+  - Quality gates:
+      - Test expansion: test_expansion.md
+      - Mocking external I/O: mocking.md
+      - Property-based testing: property_testing.md
+      - Fuzz testing: fuzzing.md
+      - Mutation testing: mutation_testing.md
+      - Coverage gate: coverage_gate.md
+      - Test strategy: test_strategy.md
+      - Week 3 QA report: week3_qa_report.md
+  - Continuous integration:
+      - CI multi-OS matrix: ci_matrix.md
+      - Documentation site: docs_site.md
+  - API reference:
+      - Overview: api/index.md
+      - errors: api/errors.md
+      - error_catalogue: api/error_catalogue.md
+      - cli_contract: api/cli_contract.md
+      - validators: api/validators.md
+      - edge_cases: api/edge_cases.md
+      - dataset_loader: api/dataset_loader.md
+      - persistence: api/persistence.md
+      - caching: api/caching.md
+      - logging_config: api/logging_config.md
+      - structured_logging: api/structured_logging.md
+      - observability: api/observability.md
+      - profiling: api/profiling.md
+      - fuzzing: api/fuzzing.md
+      - datheon (distribution package): api/datheon.md
+      - projects (the five tools): api/projects.md
+  - Project log:
+      - Daily learning log: daily_learning_log.md
+      - Milestones plan: internship_milestones_plan.md
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/krishsharma-code/Datheon_Python_Internship
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/

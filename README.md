@@ -7,6 +7,7 @@
 [![Datheon Verified](https://img.shields.io/badge/Datheon-Verified%20Credential-1f6feb?style=flat-square)](https://datheon.in/verify?id=DT-2026-O6Q0X)
 [![Offer ID](https://img.shields.io/badge/Offer%20ID-DT--2026--O6Q0X-6f42c1?style=flat-square)](https://datheon.in/verify?id=DT-2026-O6Q0X)
 [![CI](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml/badge.svg)](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml)
+[![Docs](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/docs.yml/badge.svg)](https://krishsharma-code.github.io/Datheon_Python_Internship/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-3da639?style=flat-square)](LICENSE)
@@ -55,6 +56,36 @@ Every project is built to the same engineering standard:
 
 ---
 
+## 📚 Documentation
+
+**→ The full documentation site is live at
+<https://krishsharma-code.github.io/Datheon_Python_Internship/>**
+
+It is built with MkDocs (Material) and published to GitHub Pages by
+[`.github/workflows/docs.yml`](.github/workflows/docs.yml) on every push to
+`main`. Two things make it worth reading rather than skimming:
+
+- **Every engineering guide in `docs/` is a page**, in reading order — the CLI
+  contract, logging, persistence, caching, the quality gates, the CI matrix.
+- **The API reference is generated from the docstrings**, not written twice. The
+  `errors`, `validators`, `persistence`, `caching`, `observability` and other
+  core modules are rendered by `mkdocstrings` straight out of the source tree,
+  so a signature on the site is the signature in the file.
+
+`tools/docs_site.py` is the gate behind it: it fails the build when a page is
+missing from the nav, when a module that `pyproject.toml` ships has no reference
+page, when `strict` is off, when the Pages workflow is misconfigured, or when
+this README stops linking the site.
+
+```bash
+pip install -e ".[docs]"     # the docs toolchain, from the `docs` extra
+mkdocs serve                 # http://127.0.0.1:8000
+mkdocs build --strict        # what CI runs before publishing
+python tools/docs_site.py    # the audit alone (exit 1 on any finding)
+```
+
+---
+
 ## 🗂️ Repository Structure
 
 ```text
@@ -62,6 +93,7 @@ Datheon_Python_Internship/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                  # 3 OS × 4 Python matrix: lint, format, tests, gates
+│       ├── docs.yml                # builds the MkDocs site and publishes it to Pages (Day 25)
 │       └── mutation.yml            # weekly mutation-score audit
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
@@ -75,6 +107,8 @@ Datheon_Python_Internship/
 │   ├── packaging.md                # install layout & console entry points (Day 22)
 │   ├── distribution.md             # wheel/sdist build, verify & clean-install gate (Day 23)
 │   ├── ci_matrix.md                # OS × Python CI matrix contract & audit (Day 24)
+│   ├── index.md                    # documentation site home page (Day 25)
+│   ├── api/                        # generated API reference, one page per core module
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
 ├── projects/
@@ -95,10 +129,12 @@ Datheon_Python_Internship/
 ├── caching.py                      # bounded dataset cache with signature invalidation
 ├── fuzzing.py                      # deterministic fuzz corpus + crash verdicts
 ├── tools/                          # repository tooling (census, IO audit, fuzz driver,
-│                                   #   coverage gate, mutation score, distribution gate)
+│                                   #   coverage gate, mutation score, distribution gate,
+│                                   #   CI matrix audit, docs-site audit)
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
+├── mkdocs.yml                      # documentation site configuration (Day 25)
 ├── pyproject.toml                  # PEP 621 metadata, console scripts, black + flake8
 ├── CONTRIBUTING.md
 ├── LICENSE
@@ -459,6 +495,9 @@ milestones — are recorded in
 The full 4-week engineering progression plan (Day 3 → Day 28) — including the
 Progress Ledger that the daily scheduled run executes against — lives in
 [`docs/internship_milestones_plan.md`](docs/internship_milestones_plan.md).
+
+Both are pages of the documentation site as well:
+<https://krishsharma-code.github.io/Datheon_Python_Internship/>.
 
 ---
 

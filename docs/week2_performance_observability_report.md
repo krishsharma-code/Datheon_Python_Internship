@@ -3,8 +3,8 @@
 **Date:** 2026-11-02 · **Milestone:** Day 14 — *Consolidate Week 2*
 **Scope:** Days 8–13 — logging, structured records, atomic persistence, async I/O,
 profiling, caching
-**New module:** [`observability.py`](../observability.py) · **Tests:**
-[`tests/test_observability.py`](../tests/test_observability.py) (49 tests)
+**New module:** [`observability.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/observability.py) · **Tests:**
+[`tests/test_observability.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_observability.py) (49 tests)
 **Suite:** 745 tests green · `flake8 .` clean · `black --check .` clean
 
 Week 2 was six days of separate changes, each documented on its own page. This

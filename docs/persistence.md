@@ -1,7 +1,7 @@
 # Persistence contract — atomic, versioned writes
 
 Every file the Datheon tools produce goes through
-[`persistence.py`](../persistence.py). This document is the contract: what is
+[`persistence.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/persistence.py). This document is the contract: what is
 guaranteed, what is not, and how a stored document is versioned.
 
 Before Day 9 every write was a plain `open(path, "w")`. That has two failure

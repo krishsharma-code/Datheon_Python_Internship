@@ -57,6 +57,16 @@ dev = [
     "build>=1.2",
     "twine>=5.1",
 ]
+docs = [
+    # Day 25: the documentation site. `pip install -e ".[docs]"` is the whole
+    # toolchain — the same one `.github/workflows/docs.yml` installs, so the site
+    # a contributor builds locally is the site CI publishes.
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5",
+    # `[python]` pulls the handler that reads the annotations and docstrings out
+    # of the source tree; without it the `:::` directives render nothing.
+    "mkdocstrings[python]>=0.26",
+]
 
 [project.urls]
 Homepage = "https://github.com/krishsharma-code/Datheon_Python_Internship"

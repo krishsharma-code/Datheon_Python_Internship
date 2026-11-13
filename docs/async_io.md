@@ -5,7 +5,7 @@ Day 11 ported the file organizer's moves from a `ThreadPoolExecutor` to an
 guarantees, how the concurrency bound is enforced, what the blocking API still
 promises, and the measured numbers behind the default.
 
-Implementation: [`async_organizer.py`](../projects/03_file_organizer_automation/async_organizer.py).
+Implementation: [`async_organizer.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/projects/03_file_organizer_automation/async_organizer.py).
 The public surface is `AsyncFileOrganizer`, `run_coroutine_sync`,
 `DEFAULT_CONCURRENCY` and `MAX_CONCURRENCY`; the synchronous
 `organizer.FileOrganizer` is unchanged and now delegates to it.

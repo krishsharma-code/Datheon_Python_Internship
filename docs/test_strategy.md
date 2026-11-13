@@ -2,7 +2,7 @@
 
 **Milestone:** Day 21 — *Consolidate Week 3* · **Date:** 2026-11-09
 **Companion:** [Week 3 QA report](week3_qa_report.md) · **Dashboard:**
-[`tools/qa_report.py`](../tools/qa_report.py)
+[`tools/qa_report.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tools/qa_report.py)
 
 Week 3 built six quality gates, one per day, each on its own page: the
 assertion census (Day 15), the isolation audit (Day 16), property tests

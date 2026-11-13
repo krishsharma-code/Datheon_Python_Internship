@@ -1,0 +1,120 @@
+name: Docs
+
+# Day 25 — build the documentation site and publish it to GitHub Pages.
+#
+# Two jobs, deliberately separate:
+#
+#   build   — installs the `docs` extra, runs `tools/docs_site.py` (nav
+#             completeness, API coverage of every shipped module, strict mode,
+#             the README link) and then `mkdocs build --strict`, and uploads the
+#             result as a Pages artefact.
+#   deploy  — publishes that artefact. It runs only for a push to `main`, because
+#             a pull request must be able to *build* the site without being able
+#             to *replace* the live one.
+#
+# The build runs on pull requests too: a broken nav, a module nobody documented
+# or an unresolvable `:::` target then fails the PR instead of the deployment.
+#
+# Repository setting this depends on: Settings → Pages → Build and deployment →
+# Source: **GitHub Actions**.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "tools/docs_site.py"
+      - "**/*.py"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "tools/docs_site.py"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+# Least privilege, at the workflow level: `contents: read` to check the code
+# out, `pages: write` to publish the artefact, `id-token: write` for the OIDC
+# token `actions/deploy-pages` authenticates with.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. `cancel-in-progress: false` because a half-finished
+# Pages deployment is worse than a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  # Silences the Material-for-MkDocs end-of-life notice so the build log is the
+  # audit's output and nothing else.
+  NO_MKDOCS_2_WARNING: "1"
+
+jobs:
+  build:
+    name: Build the docs site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install the docs toolchain
+        # The `docs` extra is the single source of truth for what the site needs;
+        # the package itself is installed too, so `py.typed` and the bundled
+        # datasets are present when mkdocstrings imports the modules.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[docs]"
+
+      - name: Audit the site declaration
+        # Fails when a page is missing from the nav, a shipped module has no
+        # reference page, `strict` is off, or the README does not link the site.
+        run: python tools/docs_site.py --strict
+
+      - name: Build the site (strict)
+        run: mkdocs build --strict
+
+      - name: Upload the Pages artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # A pull request builds; only a push to `main` publishes.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
