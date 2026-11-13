@@ -1,8 +1,8 @@
 # Dataset caching & memoisation — Day 13
 
 **Date:** 2026-11-01 · **Milestone:** Day 13 — *Stop reloading static data*
-**Module:** [`caching.py`](../caching.py) (standard library only)
-**Tests:** [`tests/test_caching.py`](../tests/test_caching.py) (54 tests)
+**Module:** [`caching.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/caching.py) (standard library only)
+**Tests:** [`tests/test_caching.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_caching.py) (54 tests)
 
 Day 12 profiled every loader and found nothing worth rewriting inside them: their
 cost is one file read, one decode, one pass of row validation. The only way to

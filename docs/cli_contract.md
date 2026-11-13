@@ -1,7 +1,7 @@
 # Command-Line Contract
 
 All five tools in this repository share one consistent command-line surface.
-The contract is implemented once in [`cli_contract.py`](../cli_contract.py) and
+The contract is implemented once in [`cli_contract.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/cli_contract.py) and
 reused by every entry point, so the tools behave identically from a shell or a
 CI script.
 
@@ -46,7 +46,7 @@ matter how the script is launched:
 ## Strict input validation (`--strict`)
 
 Every tool also accepts a shared `--strict` switch, wired through
-[`validators.py`](../validators.py). In the default **lenient** mode the tools
+[`validators.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/validators.py). In the default **lenient** mode the tools
 coerce whatever can be coerced (trim whitespace, upper-case tickers, parse
 `str` numbers). In **strict** mode they additionally enforce the documented
 shape of each value and refuse anything ambiguous, always with one actionable
@@ -66,12 +66,12 @@ message and exit code `1`:
 
 Failures raise `ValidationError`, a `ValueError` subclass, so `run_cli` maps
 them onto exit code `1` automatically. The layer is covered by
-[`tests/test_validation.py`](../tests/test_validation.py).
+[`tests/test_validation.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_validation.py).
 
 ## Edge-case handling
 
 Beyond validating *values*, every tool survives the failure modes a shell user
-actually hits. These are handled once in [`edge_cases.py`](../edge_cases.py) and
+actually hits. These are handled once in [`edge_cases.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/edge_cases.py) and
 reused across the projects, so no case ends in a raw traceback:
 
 | Failure mode | Behaviour |
@@ -86,13 +86,13 @@ reused across the projects, so no case ends in a raw traceback:
 | Broken output pipe (`… \| head`) | `run_cli` catches `BrokenPipeError` and exits `0` quietly. |
 
 The behaviour is pinned by
-[`tests/test_edge_cases.py`](../tests/test_edge_cases.py).
+[`tests/test_edge_cases.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_edge_cases.py).
 
 ## Dataset loading & `--validate`
 
 The three dataset loaders — the Hangman word list, the portfolio price and
 constituents CSVs, and the assistant intent and FAQ JSON — share one hardening
-layer in [`dataset_loader.py`](../dataset_loader.py). Every file is read through
+layer in [`dataset_loader.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/dataset_loader.py). Every file is read through
 `read_text_robust`, which tolerates the messy realities of real data:
 
 | Hazard | Handling |
@@ -123,7 +123,7 @@ OK: price file …/sample_prices.csv is valid (12 rows).
 ```
 
 The layer is covered by
-[`tests/test_dataset_loader.py`](../tests/test_dataset_loader.py).
+[`tests/test_dataset_loader.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_dataset_loader.py).
 
 ## How it is wired
 
@@ -148,5 +148,5 @@ if __name__ == "__main__":
     sys.exit(run_cli(lambda: main()))
 ```
 
-The contract is covered by [`tests/test_cli_contract.py`](../tests/test_cli_contract.py),
+The contract is covered by [`tests/test_cli_contract.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_cli_contract.py),
 which runs every CLI in a subprocess and asserts each of the three exit codes.

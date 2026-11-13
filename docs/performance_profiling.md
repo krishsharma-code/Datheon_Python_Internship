@@ -1,11 +1,11 @@
 # Performance profiling — Day 12
 
 **Date:** 2026-10-31 · **Milestone:** Day 12 — *Find and fix the hot spots*
-**Harness:** [`profiling.py`](../profiling.py) (stdlib only: `cProfile` + `pstats` + `time.perf_counter`)
+**Harness:** [`profiling.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/profiling.py) (stdlib only: `cProfile` + `pstats` + `time.perf_counter`)
 
 This document records what the profiler found, what was changed in response, and
 the before/after numbers. Every figure below is reproducible with the commands in
-[Reproducing the measurements](#reproducing-the-measurements).
+[Reproducing the measurements](#6-reproducing-the-measurements).
 
 The rule for the day was **no behaviour change**: the optimisations only remove
 work, they never change a result, an error, a log line or an exit code. The

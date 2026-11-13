@@ -3,8 +3,8 @@
 **Date:** 2026-11-09 · **Milestone:** Day 21 — *Consolidate Week 3*
 **Scope:** Days 15–20 — assertion census, I/O isolation, property tests, fuzz
 corpus, mutation score, coverage floor
-**New module:** [`tools/qa_report.py`](../tools/qa_report.py) · **Tests:**
-[`tests/test_qa_report.py`](../tests/test_qa_report.py) (38 functions / 55 cases, 89 assertions)
+**New module:** [`tools/qa_report.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tools/qa_report.py) · **Tests:**
+[`tests/test_qa_report.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_qa_report.py) (38 functions / 55 cases, 89 assertions)
 **Companion:** [Test strategy](test_strategy.md) ·
 **Suite:** 1,089 tests green · `flake8 .` clean · `black --check .` clean
 
