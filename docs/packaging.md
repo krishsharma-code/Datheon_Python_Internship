@@ -129,7 +129,7 @@ Then, from any directory:
 
 ```console
 $ hangman --version
-hangman 1.0.0
+hangman 1.1.0
 $ organizer ~/Downloads --dry-run
 $ inventory
 ```
@@ -152,7 +152,7 @@ working directory, so `_registry.projects_root()` is correct in both cases.
 * **the wiring** — every target is imported and its `main` called; each shim is
   asserted to be a pure delegation; and `<tool> --version` / `<tool> --bad-flag`
   are driven end to end (shim → loader → project `main` → parser), asserting
-  `hangman 1.0.0` with exit `0` and `2` respectively.
+  `hangman 1.1.0` with exit `0` and `2` respectively.
 
 Nothing in the suite shells out or installs anything: the installed stub calls
 the same `main` the tests call, so calling `main` is the faithful check. One

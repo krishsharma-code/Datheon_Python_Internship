@@ -14,7 +14,7 @@ Example:
     .. code-block:: console
 
         $ organizer --version
-        organizer 1.0.0
+        organizer 1.1.0
         $ organizer --help
 """
 

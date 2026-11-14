@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from cli_contract import run_cli
+from cli_contract import PROGRAM_VERSION, run_cli
 from errors import ConfigurationError
 from logging_config import (
     DEFAULT_BACKUP_COUNT,
@@ -338,7 +338,9 @@ def test_log_level_debug_writes_a_log_file_in_every_project(name, script, tmp_pa
     log_file = log_dir / f"{name}.log"
     assert log_file.is_file()
     contents = log_file.read_text(encoding="utf-8")
-    assert f"{name} 1.0.0 starting" in contents
+    # Day 26: read the banner version instead of repeating a literal, so a
+    # release bump does not have to edit this assertion.
+    assert f"{name} {PROGRAM_VERSION} starting" in contents
     assert "DEBUG" in contents
     assert TIMESTAMP_RE.search(contents)
 

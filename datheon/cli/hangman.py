@@ -14,7 +14,7 @@ Example:
     .. code-block:: console
 
         $ hangman --version
-        hangman 1.0.0
+        hangman 1.1.0
         $ hangman --help
 """
 

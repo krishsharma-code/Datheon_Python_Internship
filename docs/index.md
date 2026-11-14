@@ -26,7 +26,7 @@ git clone https://github.com/krishsharma-code/Datheon_Python_Internship.git
 cd Datheon_Python_Internship
 
 python -m pip install -e .          # installs five console scripts
-hangman --version                   # 1.0.0
+hangman --version                   # 1.1.0
 portfolio --help
 ```
 

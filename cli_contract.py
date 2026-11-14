@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 #: Semantic version shared by every tool in the repository.
-PROGRAM_VERSION = "1.0.0"
+PROGRAM_VERSION = "1.1.0"
 
 #: Help epilog documenting the exit-code contract, appended to every parser.
 EXIT_CODE_EPILOG = (
@@ -75,7 +75,7 @@ def version_string(prog: str) -> str:
         prog: The program name as shown in help output.
 
     Returns:
-        A ``"<prog> <version>"`` string, for example ``"hangman 1.0.0"``.
+        A ``"<prog> <version>"`` string, for example ``"hangman 1.1.0"``.
     """
     return f"{prog} {PROGRAM_VERSION}"
 

@@ -33,7 +33,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:  # pragma: no cover - conftest already does this
     sys.path.insert(0, str(ROOT))
 
-from datheon.cli._registry import TOOL_NAMES  # noqa: E402  (path set up above)
+from cli_contract import PROGRAM_VERSION  # noqa: E402  (path set up above)
+from datheon.cli._registry import TOOL_NAMES  # noqa: E402
 from tools import distribution  # noqa: E402
 
 #: The declaration read from the repository's own ``pyproject.toml``. Fixtures
@@ -295,7 +296,10 @@ class TestLoadDeclaration:
     def test_identity_fields_come_from_the_project_table(self):
         """Name, version and the Python floor are read verbatim."""
         assert DECLARATION.name == "datheon-python-internship"
-        assert DECLARATION.version == "1.0.0"
+        # Day 26: the expected version is read from the banner constant rather
+        # than repeated here, so a release bump is a three-file change and not a
+        # test-suite edit.
+        assert DECLARATION.version == PROGRAM_VERSION
         assert DECLARATION.requires_python == ">=3.10"
         assert DECLARATION.normalised_name == "datheon-python-internship"
 
@@ -344,7 +348,7 @@ class TestInspectWheel:
         """Name, version and the Python floor come from ``METADATA``."""
         wheel = distribution.inspect_wheel(make_wheel(tmp_path))
         assert wheel.name == "datheon-python-internship"
-        assert wheel.version == "1.0.0"
+        assert wheel.version == PROGRAM_VERSION
         assert wheel.requires_python == ">=3.10"
 
     def test_the_console_scripts_are_read(self, tmp_path: Path):
@@ -509,9 +513,9 @@ class TestInspectSdist:
     def test_the_root_and_files_are_read(self, tmp_path: Path):
         """Members are reported relative to the single root directory."""
         sdist = distribution.inspect_sdist(make_sdist(tmp_path))
-        assert sdist.root == "datheon_python_internship-1.0.0"
+        assert sdist.root == f"datheon_python_internship-{PROGRAM_VERSION}"
         assert sdist.name == "datheon-python-internship"
-        assert sdist.version == "1.0.0"
+        assert sdist.version == PROGRAM_VERSION
         assert "pyproject.toml" in sdist.files
         assert "validators.py" in sdist.files
 
