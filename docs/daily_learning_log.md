@@ -2646,3 +2646,119 @@ markdown files in a directory to 39 pages with a generated reference.
 - Day 27: README final pass, architecture diagram and demo assets.
 - Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
   O6 (`tools/qa_report.py` as a non-blocking CI report job).
+
+---
+
+## Day 26 — Release automation: versioning, `CHANGELOG.md`, tag & GitHub Release
+
+**Branch:** `feat/datheon-day-26-release`
+**Scope:** Give the repository a released version instead of a declared one —
+a `CHANGELOG.md` in Keep a Changelog form, a SemVer bump to **1.1.0**, a
+tag-triggered publish workflow, and `tools/release.py`, the audit that keeps the
+four declarations of the version from drifting apart.
+
+### Milestones
+
+- Added `CHANGELOG.md`: an `[Unreleased]` section, a dated entry per release
+  (`1.1.0`, `1.0.0`), the six Keep a Changelog sections and a link definition
+  per version.
+- Bumped `1.0.0` → `1.1.0` in the three declarations — `pyproject.toml`,
+  `datheon.__version__` and `cli_contract.PROGRAM_VERSION` — together, with the
+  docs and docstrings that quote the banner.
+- Added `.github/workflows/release.yml`: tag trigger, `contents: write`, a tag
+  check *before* the build, `python -m build`, `twine check`, notes extracted
+  from the changelog, and both artefacts attached to the Release.
+- Added `tools/release.py` (~1,000 lines): the version, changelog, pipeline and
+  documentation audits, `--notes`/`--notes-file` extraction, `--tag`,
+  `--list-releases`, `--json`, and the `0`/`1`/`2` exit-code contract.
+- Added `docs/release.md`: the versioning policy, the changelog conventions, the
+  pipeline diagram, how to cut a release, how to verify one, and what to do when
+  a release is wrong.
+- 138 new tests in `tests/test_release.py`; the suite is now **1,522 passed**,
+  2 skipped, **2,267 assertions** over 1,242 test functions.
+
+### Architectural decisions
+
+1. **The tag check runs before the build, not after.** A tag that disagrees with
+   `pyproject.toml` is the one mistake this pipeline exists to catch, and by the
+   time an artefact exists it is already named after the wrong version. Failing
+   in the second step costs nothing; failing after `python -m build` means
+   throwing away a wheel and deleting a Release.
+2. **The Release notes are the changelog entry.** `gh release create` is fed by
+   `tools/release.py --notes --notes-file`, which prints the `CHANGELOG.md`
+   section verbatim. A second copy of the notes inside the workflow would be a
+   document that drifts from the one a contributor reads, and the drift would be
+   invisible — the Release page always looks correct.
+3. **The audit, not the parser, decides what is a defect.** `parse_changelog`
+   accepts an entry with no date, an unbracketed heading or an invented section,
+   because a parser that silently drops what it does not understand turns a
+   defect into an *unmeasured* release. Everything it accepts, `check_changelog`
+   then rules on with a named code.
+4. **A gate that cannot measure returns `2`.** No `pyproject.toml`, no version,
+   no changelog → exit `2`, never `0`. The same contract as
+   `tools/coverage_gate.py`, `tools/ci_matrix.py` and `tools/docs_site.py`.
+5. **The version is read, not repeated.** Two tests used to hard-code `"1.0.0"`;
+   they now read `PROGRAM_VERSION`, so the *next* bump is a three-file change
+   and not a test-suite edit. A version literal in a test is a second
+   declaration of the version with none of the first one's obligations.
+
+### Defects found and fixed
+
+1. **Release notes for the oldest version carried the link block.**
+   `parse_changelog` closes an entry at the next `##` heading, so the last
+   entry's body swallowed every `[label]: url` line at the foot of the file.
+   `--notes 1.0.0` printed the release *and* five link definitions, which would
+   have appeared on the Release page. The extraction now trims trailing link
+   definitions and horizontal rules. Found by asserting the notes' contents, not
+   just that they were non-empty.
+2. **Two tests declared the version a second time.** The bump to `1.1.0` broke
+   `test_distribution.py` and `test_logging.py`, which had `"1.0.0"` written into
+   their assertions. Both now read the banner constant. That is exactly the
+   failure mode `tools/release.py` audits for in *production* code — the test
+   suite had the same defect the day was written to catch.
+
+### Edge cases covered by tests
+
+- `1.1.0-rc.1`, `1.1.0+build.5` and `1.1.0-rc.1+build.5` are valid; `1.1`,
+  `v1.1.0`, `01.1.0` and `1.1.0-` are not.
+- `semver_key` orders `1.10.0` after `1.9.0`, where string comparison would not.
+- A `## [Unreleased]` section dated, a `### Planned` section inside a released
+  entry, an entry with no `###` section at all, and a link pointing at another
+  version's tag are four different findings.
+- `2026-02-30` matches `YYYY-MM-DD` and is not a calendar date.
+- A release dated today is not "in the future"; one dated tomorrow is.
+- PyYAML reads a bare `on:` as the boolean `True`; the trigger is found under
+  either key.
+- `ghp_`, `github_pat_`, `gho_`, `ghs_` and `xoxb-` anywhere in the workflow —
+  in a `run:` line or in an `env:` value — are `workflow.secret`.
+- A workflow whose publish step drops `dist/*` is `workflow.assets`, even though
+  it still calls `gh release create`.
+- `--notes v1.1.0` and `--notes 1.1.0` are the same request; `--notes 9.9.9` is
+  exit `2`, because there is nothing to publish.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
+| `flake8 .` | 0 findings over 86 files |
+| `black --check .` | 86 files unchanged |
+| `pytest` | 1,522 passed, 2 skipped, 0 failed |
+| `pytest --cov` | 95.80% over 3,368 statements (floor 90%) |
+| `python tools/release.py --strict --tag v1.1.0` | PASS — 2 releases, 0 warnings |
+| `mkdocs build --strict` | clean — 40 pages, 15 documented modules |
+| `python tools/docs_site.py --strict` | PASS — 40 pages, 0 warnings |
+| `python tools/ci_matrix.py` | PASS — 12 cells, 0 warnings |
+| `tools/io_audit.py --strict` | no real I/O in the test suite |
+| Assertion census | 1,242 test functions / 2,267 assertions (floor 200) |
+
+### Next up
+
+- Day 27: the README final pass, an architecture diagram and demo assets — and
+  the Release page now gives the diagram a versioned place to point at.
+- Day 28: full green run, repository freeze, certificate checklist.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).
+- Left deliberately undone today: no PyPI publish (needs an account and a free
+  name), no signed tags (needs a key on the runner), no automatic SemVer bump (a
+  tool that guesses MAJOR/MINOR/PATCH guesses wrong at the worst moment).
