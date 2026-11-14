@@ -14,7 +14,7 @@ Example:
     .. code-block:: console
 
         $ portfolio --version
-        portfolio 1.0.0
+        portfolio 1.1.0
         $ portfolio --help
 """
 

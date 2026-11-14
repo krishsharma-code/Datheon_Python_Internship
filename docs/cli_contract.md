@@ -10,10 +10,10 @@ CI script.
 | Flag | Behaviour |
 | --- | --- |
 | `-h`, `--help` | Print usage and the exit-code legend, then exit with code `0`. |
-| `--version` | Print `"<program> <version>"` (e.g. `hangman 1.0.0`) and exit with code `0`. |
+| `--version` | Print `"<program> <version>"` (e.g. `hangman 1.1.0`) and exit with code `0`. |
 
 `--version` reports the single shared version constant `PROGRAM_VERSION`
-(currently `1.0.0`) so a release bump is a one-line change.
+(currently `1.1.0`) so a release bump is a one-line change.
 
 ## Exit codes
 

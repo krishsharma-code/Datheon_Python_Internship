@@ -8,6 +8,7 @@
 [![Offer ID](https://img.shields.io/badge/Offer%20ID-DT--2026--O6Q0X-6f42c1?style=flat-square)](https://datheon.in/verify?id=DT-2026-O6Q0X)
 [![CI](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml/badge.svg)](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml)
 [![Docs](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/docs.yml/badge.svg)](https://krishsharma-code.github.io/Datheon_Python_Internship/)
+[![Release](https://img.shields.io/github/v/release/krishsharma-code/Datheon_Python_Internship?style=flat-square&label=release&color=2ea44f)](https://github.com/krishsharma-code/Datheon_Python_Internship/releases)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-3da639?style=flat-square)](LICENSE)
@@ -94,6 +95,7 @@ Datheon_Python_Internship/
 │   └── workflows/
 │       ├── ci.yml                  # 3 OS × 4 Python matrix: lint, format, tests, gates
 │       ├── docs.yml                # builds the MkDocs site and publishes it to Pages (Day 25)
+│       ├── release.yml             # tag -> wheel + sdist -> GitHub Release (Day 26)
 │       └── mutation.yml            # weekly mutation-score audit
 ├── docs/
 │   ├── daily_learning_log.md       # architectural decisions & complexity notes
@@ -107,6 +109,7 @@ Datheon_Python_Internship/
 │   ├── packaging.md                # install layout & console entry points (Day 22)
 │   ├── distribution.md             # wheel/sdist build, verify & clean-install gate (Day 23)
 │   ├── ci_matrix.md                # OS × Python CI matrix contract & audit (Day 24)
+│   ├── release.md                  # versioning, changelog & release pipeline (Day 26)
 │   ├── index.md                    # documentation site home page (Day 25)
 │   ├── api/                        # generated API reference, one page per core module
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
@@ -130,11 +133,12 @@ Datheon_Python_Internship/
 ├── fuzzing.py                      # deterministic fuzz corpus + crash verdicts
 ├── tools/                          # repository tooling (census, IO audit, fuzz driver,
 │                                   #   coverage gate, mutation score, distribution gate,
-│                                   #   CI matrix audit, docs-site audit)
+│                                   #   CI matrix audit, docs-site audit, release audit)
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
 ├── mkdocs.yml                      # documentation site configuration (Day 25)
+├── CHANGELOG.md                    # Keep a Changelog history; the Release notes (Day 26)
 ├── pyproject.toml                  # PEP 621 metadata, console scripts, black + flake8
 ├── CONTRIBUTING.md
 ├── LICENSE
@@ -182,7 +186,7 @@ documented in [`docs/packaging.md`](docs/packaging.md).
 
 ```console
 $ hangman --version
-hangman 1.0.0
+hangman 1.1.0
 $ organizer ~/Downloads --dry-run
 $ inventory
 ```
@@ -216,6 +220,30 @@ job, and agreement with the `classifiers` and `requires-python` in
 `pyproject.toml` — and exits `2` rather than `0` when it cannot measure. See
 [`docs/ci_matrix.md`](docs/ci_matrix.md).
 
+### Cut a release
+
+```bash
+python tools/release.py                  # audit: version, changelog, pipeline, policy
+python tools/release.py --list-releases  # 1.1.0, 1.0.0
+python tools/release.py --notes 1.1.0    # the changelog entry, as release notes
+python tools/release.py --tag v1.1.0     # audit *and* check the tag name
+```
+
+A release is one version declared in four places — `pyproject.toml`,
+`datheon.__version__`, `cli_contract.PROGRAM_VERSION` and
+[`CHANGELOG.md`](CHANGELOG.md) — and they are allowed to disagree in silence.
+The audit fails on any disagreement, on a changelog that breaks Keep a Changelog
+(no `[Unreleased]`, an entry out of order, a missing date, an invented section,
+a version with no link definition), on a publishing workflow that has lost a
+step, and on a policy page that is not in the site's navigation.
+
+Pushing an annotated tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml):
+it refuses to build if the tag disagrees with the declared version, builds the
+wheel and sdist, runs `twine check`, takes the release notes from the changelog
+via `--notes-file`, and attaches both artefacts to the
+[GitHub Release](https://github.com/krishsharma-code/Datheon_Python_Internship/releases).
+See [`docs/release.md`](docs/release.md).
+
 ### Running a project
 
 Every project also runs standalone from a checkout, with no third-party runtime
@@ -237,7 +265,7 @@ Every tool shares one consistent command-line surface, implemented once in
 ```bash
 # Identical across all five tools
 python projects/01_hangman_game/main.py --help
-python projects/01_hangman_game/main.py --version      # hangman 1.0.0
+python projects/01_hangman_game/main.py --version      # hangman 1.1.0
 ```
 
 | Exit code | Meaning |

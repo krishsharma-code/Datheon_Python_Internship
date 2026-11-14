@@ -14,7 +14,7 @@ Example:
     .. code-block:: console
 
         $ inventory --version
-        inventory 1.0.0
+        inventory 1.1.0
         $ inventory --help
 """
 

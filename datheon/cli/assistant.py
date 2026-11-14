@@ -14,7 +14,7 @@ Example:
     .. code-block:: console
 
         $ assistant --version
-        assistant 1.0.0
+        assistant 1.1.0
         $ assistant --help
 """
 
