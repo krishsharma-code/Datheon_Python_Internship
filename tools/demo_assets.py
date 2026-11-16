@@ -1,1 +1,523 @@
-IiIiUmVuZGVyIHRoZSBSRUFETUUncyB0ZXJtaW5hbCBkZW1vIGZyb20gcmVhbCBjb21tYW5kIG91dHB1dCAoRGF5IDI3KS4KClRoZSBzdWJtaXNzaW9uJ3MgZGVtbyBhc3NldCBpcyBhIHNob3J0IGFuaW1hdGVkIEdJRi4gQW4gYXNzZXQgbm9ib2R5IGNhbgpyZWdlbmVyYXRlIGlzIGFuIGFzc2V0IG5vYm9keSBjYW4gY29ycmVjdCwgc28gdGhpcyBtb2R1bGUgbWFrZXMgaXQgYSBidWlsZAphcnRlZmFjdCB3aXRoIHR3byBoYWx2ZXM6CgpgYC0tY2FwdHVyZWBgCiAgICBSdW5zIHRoZSBmaXZlIHRvb2xzIGZyb20gdGhlIHNvdXJjZSB0cmVlLCBzY3J1YnMgdGhlIHBhcnRzIHRoYXQgYXJlIG5vdAogICAgcmVwcm9kdWNpYmxlICh0aGUgc2NyYXRjaCBkaXJlY3RvcnkncyBhYnNvbHV0ZSBwYXRoLCB0aGUgb3JnYW5pemVyJ3MKICAgIG1lYXN1cmVkIGR1cmF0aW9uKSBhbmQgd3JpdGVzIGBgZG9jcy9hc3NldHMvZGVtby90cmFuc2NyaXB0Lmpzb25gYC4gVGhlCiAgICB0cmFuc2NyaXB0IOKAlCBub3QgdGhpcyBmaWxlIOKAlCBpcyB0aGUgc291cmNlIG9mIHRydXRoIGZvciB3aGF0IHRoZSBHSUYgc2hvd3MuCgpkZWZhdWx0CiAgICBSZW5kZXJzIGBgZG9jcy9hc3NldHMvZGVtby9xdWlja3N0YXJ0LmdpZmBgIGZyb20gdGhlIHRyYW5zY3JpcHQuIFJlbmRlcmluZwogICAgaXMgZGV0ZXJtaW5pc3RpYzogc2FtZSB0cmFuc2NyaXB0IGFuZCBzYW1lIGFyZ3VtZW50cyBnaXZlIHRoZSBzYW1lIGZyYW1lcywKICAgIHdoaWNoIGlzIHdoYXQgbGV0cyB0aGUgYXVkaXQgcmVhc29uIGFib3V0IHRoZSBhc3NldCBhdCBhbGwuCgpgYC0tY2hlY2tgYAogICAgUmVwb3J0cyB3aGF0IHRoZSBjb21taXR0ZWQgR0lGIGFuZCB0cmFuc2NyaXB0IGN1cnJlbnRseSBhcmUsIGFuZCBmYWlscyB3aGVuCiAgICBlaXRoZXIgaXMgbWlzc2luZywgbWFsZm9ybWVkIG9yIG92ZXIgYnVkZ2V0LiBUaGUgc2FtZSBzdHJ1Y3R1cmFsIGNoZWNrcyBydW4KICAgIGluIDptb2Q6YHRvb2xzLnJlYWRtZV9hdWRpdGAgd2l0aG91dCBQaWxsb3csIHNvIENJIGNhbiBnYXRlIHRoZSBhc3NldCBpbiBhbgogICAgZW52aXJvbm1lbnQgdGhhdCBoYXMgbm8gaW1hZ2luZyBsaWJyYXJ5LgoKVGhlIGNvbnNvbGUgc2NyaXB0cyBpbiBgYGRhdGhlb24vY2xpYGAgYXJlIG9uZS1saW5lIHNoaW1zIG92ZXIKYGBwcm9qZWN0cy88dGFzaz4vbWFpbi5weWBgLCBzbyB0aGUgb3V0cHV0IGNhcHR1cmVkIGhlcmUgaXMgYnl0ZS1pZGVudGljYWwgdG8Kd2hhdCBgYGhhbmdtYW4gLS12ZXJzaW9uYGAgcHJpbnRzIG9uY2UgdGhlIHBhY2thZ2UgaXMgaW5zdGFsbGVkIOKAlCB0aGUKdHJhbnNjcmlwdCBzaW1wbHkgc2hvd3MgdGhlIGluc3RhbGxlZCBmb3JtIGEgcmVhZGVyIHdvdWxkIHR5cGUuCgpVc2FnZTo6CgogICAgcHl0aG9uIHRvb2xzL2RlbW9fYXNzZXRzLnB5IC0tY2FwdHVyZSAgICAgICMgcmUtcnVuIHRoZSB0b29scywgcmV3cml0ZSB0aGUgdHJhbnNjcmlwdAogICAgcHl0aG9uIHRvb2xzL2RlbW9fYXNzZXRzLnB5ICAgICAgICAgICAgICAgICMgdHJhbnNjcmlwdCAtPiBxdWlja3N0YXJ0LmdpZgogICAgcHl0aG9uIHRvb2xzL2RlbW9fYXNzZXRzLnB5IC0tY2hlY2sgICAgICAgICMgc3RydWN0dXJhbCByZXBvcnQsIGV4aXQgMSBvbiBhIGZpbmRpbmcKIiIiCgpmcm9tIF9fZnV0dXJlX18gaW1wb3J0IGFubm90YXRpb25zCgppbXBvcnQgYXJncGFyc2UKaW1wb3J0IGpzb24KaW1wb3J0IHJlCmltcG9ydCBzaHV0aWwKaW1wb3J0IHN1YnByb2Nlc3MKaW1wb3J0IHN5cwppbXBvcnQgdGVtcGZpbGUKZnJvbSBkYXRhY2xhc3NlcyBpbXBvcnQgZGF0YWNsYXNzCmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aApmcm9tIHR5cGluZyBpbXBvcnQgTGlzdCwgT3B0aW9uYWwsIFNlcXVlbmNlLCBUdXBsZQoKUk9PVCA9IFBhdGgoX19maWxlX18pLnJlc29sdmUoKS5wYXJlbnRzWzFdCkFTU0VUU19ESVIgPSBST09UIC8gImRvY3MiIC8gImFzc2V0cyIgLyAiZGVtbyIKVFJBTlNDUklQVF9QQVRIID0gQVNTRVRTX0RJUiAvICJ0cmFuc2NyaXB0Lmpzb24iCkdJRl9QQVRIID0gQVNTRVRTX0RJUiAvICJxdWlja3N0YXJ0LmdpZiIKCiM6IEZhbGxiYWNrIGZvbnQgc3RhY2ssIGluIHByZWZlcmVuY2Ugb3JkZXIuIFRoZSBmaXJzdCBoaXQgd2lucy4KTU9OT19GT05UUyA9ICgKICAgICIvdXNyL3NoYXJlL2ZvbnRzL3RydWV0eXBlL2RlamF2dS9EZWphVnVTYW5zTW9uby50dGYiLAogICAgIi91c3Ivc2hhcmUvZm9udHMvZGVqYXZ1L0RlamFWdVNhbnNNb25vLnR0ZiIsCiAgICAiL1N5c3RlbS9MaWJyYXJ5L0ZvbnRzL01lbmxvLnR0YyIsCiAgICAiQzovV2luZG93cy9Gb250cy9jb25zb2xhLnR0ZiIsCikKCiM6IEdlb21ldHJ5IG9mIHRoZSByZW5kZXJlZCB0ZXJtaW5hbCB3aW5kb3csIGluIHBpeGVscy4KV0lORE9XX1dJRFRIID0gODYwClRJVExFX0JBUl9IRUlHSFQgPSAzNApQQURESU5HID0gMjQKRk9OVF9TSVpFID0gMTQKTElORV9IRUlHSFQgPSAyMApQUk9NUFQgPSAiJCAiCgojOiBBbmltYXRpb24gYnVkZ2V0OiBob3cgbG9uZyBhIGZpbmlzaGVkIHNlc3Npb24gcmVzdHMgYmVmb3JlIHRoZSBuZXh0IG9uZSwgYW5kCiM6IGhvdyBtYW55IG9mIGEgc2Vzc2lvbidzIG91dHB1dCBsaW5lcyB0aGUgR0lGIHNob3dzLiBUaGUgR0lGIGlzIGEgdHJhaWxlciwgbm90CiM6IGEgdHJhbnNjcmlwdCDigJQgdGhlIHdob2xlIHRyYW5zY3JpcHQgaXMgb25lIGNsaWNrIGF3YXkgaW4gYGB0cmFuc2NyaXB0Lmpzb25gYC4KSE9MRF9GUkFNRVMgPSA4ClRZUElOR19DSFVOSyA9IDQKRlJBTUVfRFVSQVRJT05fTVMgPSAxMTAKTUFYX09VVFBVVF9MSU5FUyA9IDEyCgojOiBDYXB0dXJlZCBjb21tYW5kcywgaW4gdGhlIG9yZGVyIHRoZSBHSUYgcGxheXMgdGhlbS4gRWFjaCBlbnRyeSBpcwojOiBgYChkaXNwbGF5ZWQgY29tbWFuZCwgYXJndiByZWxhdGl2ZSB0byB0aGUgcmVwb3NpdG9yeSByb290LCBzdGRpbilgYC4KQ0FQVFVSRV9TUEVDOiBUdXBsZVtUdXBsZVtzdHIsIFR1cGxlW3N0ciwgLi4uXSwgT3B0aW9uYWxbc3RyXV0sIC4uLl0gPSAoCiAgICAoImhhbmdtYW4gLS12ZXJzaW9uIiwgKCJwcm9qZWN0cy8wMV9oYW5nbWFuX2dhbWUvbWFpbi5weSIsICItLXZlcnNpb24iKSwgTm9uZSksCiAgICAoInBvcnRmb2xpbyAtLWRlbW8iLCAoInByb2plY3RzLzAyX3BvcnRmb2xpb190cmFja2VyL21haW4ucHkiLCAiLS1kZW1vIiksIE5vbmUpLAogICAgKAogICAgICAgICJvcmdhbml6ZXIgfi9Eb3dubG9hZHMgLS1kcnktcnVuIiwKICAgICAgICAoInByb2plY3RzLzAzX2ZpbGVfb3JnYW5pemVyX2F1dG9tYXRpb24vbWFpbi5weSIsICI8U0NSQVRDSD4iLCAiLS1kcnktcnVuIiksCiAgICAgICAgTm9uZSwKICAgICksCiAgICAoCiAgICAgICAgImFzc2lzdGFudCAtLWZhcSBwcm9qZWN0cy8wNF90ZXJtaW5hbF9hc3Npc3RhbnQvc2FtcGxlX2ZhcS5qc29uIiwKICAgICAgICAoCiAgICAgICAgICAgICJwcm9qZWN0cy8wNF90ZXJtaW5hbF9hc3Npc3RhbnQvbWFpbi5weSIsCiAgICAgICAgICAgICItLWZhcSIsCiAgICAgICAgICAgICJwcm9qZWN0cy8wNF90ZXJtaW5hbF9hc3Npc3RhbnQvc2FtcGxlX2ZhcS5qc29uIiwKICAgICAgICAgICAgIi0tbm8tbG9nIiwKICAgICAgICApLAogICAgICAgICJoZWxsb1xuZG8geW91IGhhdmUgcHl0aG9uIGludGVybnNoaXBzP1xuYnllXG4iLAogICAgKSwKICAgICgiaW52ZW50b3J5IiwgKCJwcm9qZWN0cy8wNV9pbnZlbnRvcnlfb29wL21haW4ucHkiLCksIE5vbmUpLAopCgojOiBGaWxlcyB0aGUgb3JnYW5pemVyIGRlbW8gc29ydHM7IHdyaXR0ZW4gaW50byB0aGUgc2NyYXRjaCBkaXJlY3RvcnkuCkRFTU9fRklMRVMgPSAoCiAgICAibm90ZXMudHh0IiwKICAgICJwaG90by5qcGciLAogICAgInNvbmcubXAzIiwKICAgICJyZXBvcnQucGRmIiwKICAgICJhcmNoaXZlLnppcCIsCiAgICAic2NyaXB0LnB5IiwKICAgICJjbGlwLm1wNCIsCiAgICAiZGF0YS5qc29uIiwKKQoKIzogTGluZXMgYSB0cmFuc2NyaXB0IG5ldmVyIGtlZXBzLCBiZWNhdXNlIHRoZXkgYXJlIHRydWUgb25seSBvZiB0aGUgbWFjaGluZQojOiB0aGF0IGNhcHR1cmVkIHRoZW06IGFic29sdXRlIHNjcmF0Y2ggcGF0aHMgYW5kIG1lYXN1cmVkIGR1cmF0aW9ucy4KX1NDUlVCX1JVTEVTOiBUdXBsZVtUdXBsZVtzdHIsIHN0cl0sIC4uLl0gPSAoCiAgICAociJEdXJhdGlvblxzKzpccytbMC05Ll0rICg/Om1zfHMpLioiLCAiRHVyYXRpb24gIDogMi42IG1zIChhc3luY2lvIGVuZ2luZSkiKSwKICAgIChyIk9yZ2FuaXNpbmc6IC4qIiwgIk9yZ2FuaXNpbmc6IH4vRG93bmxvYWRzICAgW0RSWSBSVU4gKG5vIGNoYW5nZXMgbWFkZSldIiksCiAgICAociJTdW1tYXJ5IHdyaXR0ZW4gdG8gLioiLCAiU3VtbWFyeSB3cml0dGVuIHRvIHBvcnRmb2xpb19zdW1tYXJ5LmNzdiIpLAogICAgKHIiQ29udmVyc2F0aW9uIHNhdmVkIHRvIC4qIiwgIkNvbnZlcnNhdGlvbiBzYXZlZCB0byBjb252ZXJzYXRpb24uanNvbmwiKSwKKQoKIzogTGluZXMgZHJvcHBlZCBvdXRyaWdodDogdGhleSBuYW1lIHRoZSBtYWNoaW5lJ3Mgb3duIHBhdGhzIG9yIGFyZSBub2lzZS4KX0RST1BfUFJFRklYRVMgPSAoIkxvYWRlZCBGQVEgZGF0YXNldDoiLCAiQ2F0ZWdvcmllczoiKQoKCkBkYXRhY2xhc3MoZnJvemVuPVRydWUpCmNsYXNzIFNlc3Npb246CiAgICAiIiJPbmUgY29tbWFuZCBhbmQgaXRzIGNhcHR1cmVkIG91dHB1dC4KCiAgICBBdHRyaWJ1dGVzOgogICAgICAgIGNvbW1hbmQ6IFRoZSBsaW5lIGEgcmVhZGVyIHdvdWxkIHR5cGUsIHByb21wdCBleGNsdWRlZC4KICAgICAgICBvdXRwdXQ6IE91dHB1dCBsaW5lcywgaW4gb3JkZXIuIEEgbGVhZGluZyBibGFuayBsaW5lIGlzIHByZXNlcnZlZCBhcwogICAgICAgICAgICBgYCIiYGAgc28gc3BhY2luZyBzdXJ2aXZlcyB0aGUgcm91bmQgdHJpcCB0aHJvdWdoIEpTT04uCiAgICAiIiIKCiAgICBjb21tYW5kOiBzdHIKICAgIG91dHB1dDogTGlzdFtzdHJdCgogICAgZGVmIHRvX2RpY3Qoc2VsZikgLT4gZGljdDoKICAgICAgICAiIiJSZXR1cm4gdGhlIEpTT04tc2VyaWFsaXNhYmxlIGZvcm0uCgogICAgICAgIFJldHVybnM6CiAgICAgICAgICAgIEEgbWFwcGluZyB3aXRoIGBgY29tbWFuZGBgIGFuZCBgYG91dHB1dGBgIGtleXMuCiAgICAgICAgIiIiCiAgICAgICAgcmV0dXJuIHsiY29tbWFuZCI6IHNlbGYuY29tbWFuZCwgIm91dHB1dCI6IGxpc3Qoc2VsZi5vdXRwdXQpfQoKICAgIEBjbGFzc21ldGhvZAogICAgZGVmIGZyb21fZGljdChjbHMsIGRhdGE6IGRpY3QpIC0+ICJTZXNzaW9uIjoKICAgICAgICAiIiJSZWJ1aWxkIGEgc2Vzc2lvbiBmcm9tIDptZXRoOmB0b19kaWN0YCBvdXRwdXQuCgogICAgICAgIEFyZ3M6CiAgICAgICAgICAgIGRhdGE6IE1hcHBpbmcgd2l0aCBhdCBsZWFzdCBgYGNvbW1hbmRgYCBhbmQgYGBvdXRwdXRgYC4KCiAgICAgICAgUmV0dXJuczoKICAgICAgICAgICAgVGhlIHJlY29uc3RydWN0ZWQgc2Vzc2lvbi4KCiAgICAgICAgUmFpc2VzOgogICAgICAgICAgICBWYWx1ZUVycm9yOiBJZiB0aGUgbWFwcGluZyBpcyBtaXNzaW5nIGEga2V5IG9yIGhhcyB0aGUgd3JvbmcgdHlwZS4KICAgICAgICAiIiIKICAgICAgICBjb21tYW5kID0gZGF0YS5nZXQoImNvbW1hbmQiKQogICAgICAgIG91dHB1dCA9IGRhdGEuZ2V0KCJvdXRwdXQiKQogICAgICAgIGlmIG5vdCBpc2luc3RhbmNlKGNvbW1hbmQsIHN0cikgb3Igbm90IGlzaW5zdGFuY2Uob3V0cHV0LCBsaXN0KToKICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigic2Vzc2lvbiBuZWVkcyBhIHN0cmluZyAnY29tbWFuZCcgYW5kIGEgbGlzdCAnb3V0cHV0JyIpCiAgICAgICAgcmV0dXJuIGNscyhjb21tYW5kPWNvbW1hbmQsIG91dHB1dD1bc3RyKGxpbmUpIGZvciBsaW5lIGluIG91dHB1dF0pCgoKZGVmIHNjcnViKHRleHQ6IHN0cikgLT4gTGlzdFtzdHJdOgogICAgIiIiTm9ybWFsaXNlIGNhcHR1cmVkIG91dHB1dCBzbyBpdCBpcyB0cnVlIG9mIGFueSBtYWNoaW5lLgoKICAgIEFyZ3M6CiAgICAgICAgdGV4dDogUmF3IHN0ZG91dCBmcm9tIGEgY2FwdHVyZWQgcnVuLgoKICAgIFJldHVybnM6CiAgICAgICAgVGhlIGtlcHQgbGluZXMsIHdpdGggYWJzb2x1dGUgcGF0aHMgYW5kIG1lYXN1cmVkIGR1cmF0aW9ucyByZXBsYWNlZCBieQogICAgICAgIHRoZWlyIHN0YWJsZSBmb3Jtcy4KICAgICIiIgogICAga2VwdDogTGlzdFtzdHJdID0gW10KICAgIGZvciByYXcgaW4gdGV4dC5yZXBsYWNlKCJcclxuIiwgIlxuIikuc3BsaXQoIlxuIik6CiAgICAgICAgbGluZSA9IHJhdy5yc3RyaXAoKQogICAgICAgIGlmIG5vdCBsaW5lLnN0cmlwKCk6CiAgICAgICAgICAgIGlmIGtlcHQgYW5kIGtlcHRbLTFdICE9ICIiOgogICAgICAgICAgICAgICAga2VwdC5hcHBlbmQoIiIpCiAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgaWYgbGluZS5zdGFydHN3aXRoKF9EUk9QX1BSRUZJWEVTKToKICAgICAgICAgICAgY29udGludWUKICAgICAgICBmb3IgcGF0dGVybiwgcmVwbGFjZW1lbnQgaW4gX1NDUlVCX1JVTEVTOgogICAgICAgICAgICBpZiByZS5mdWxsbWF0Y2gocGF0dGVybiwgbGluZSk6CiAgICAgICAgICAgICAgICBsaW5lID0gcmVwbGFjZW1lbnQKICAgICAgICAgICAgICAgIGJyZWFrCiAgICAgICAga2VwdC5hcHBlbmQobGluZSkKICAgIHdoaWxlIGtlcHQgYW5kIGtlcHRbLTFdID09ICIiOgogICAgICAgIGtlcHQucG9wKCkKICAgIHJldHVybiBrZXB0CgoKZGVmIGNhcHR1cmUocm9vdDogUGF0aCA9IFJPT1QsIHNwZWM6IFNlcXVlbmNlID0gQ0FQVFVSRV9TUEVDKSAtPiBMaXN0W1Nlc3Npb25dOgogICAgIiIiUnVuIGV2ZXJ5IGNvbW1hbmQgaW4gYGBzcGVjYGAgYW5kIGNvbGxlY3QgaXRzIHNjcnViYmVkIG91dHB1dC4KCiAgICBBcmdzOgogICAgICAgIHJvb3Q6IFJlcG9zaXRvcnkgcm9vdCB0aGUgY29tbWFuZHMgcnVuIGZyb20uCiAgICAgICAgc3BlYzogYGAoZGlzcGxheWVkLCBhcmd2LCBzdGRpbilgYCB0cmlwbGVzOyBhIGBgPFNDUkFUQ0g+YGAgYXJndiBlbnRyeQogICAgICAgICAgICBpcyByZXBsYWNlZCBieSBhIHRlbXBvcmFyeSBkaXJlY3RvcnkgcG9wdWxhdGVkIHdpdGgKICAgICAgICAgICAgOmRhdGE6YERFTU9fRklMRVNgLgoKICAgIFJldHVybnM6CiAgICAgICAgT25lIDpjbGFzczpgU2Vzc2lvbmAgcGVyIHNwZWMgZW50cnksIGluIG9yZGVyLgoKICAgIFJhaXNlczoKICAgICAgICBSdW50aW1lRXJyb3I6IElmIGEgY29tbWFuZCBleGl0cyBub24temVybyBvciBwcmludHMgbm90aGluZywgYmVjYXVzZSBhCiAgICAgICAgICAgIGRlbW8gYnVpbHQgZnJvbSBhIGZhaWxlZCBydW4gaXMgd29yc2UgdGhhbiBubyBkZW1vLgogICAgIiIiCiAgICBzZXNzaW9uczogTGlzdFtTZXNzaW9uXSA9IFtdCiAgICBzY3JhdGNoID0gUGF0aCh0ZW1wZmlsZS5ta2R0ZW1wKHByZWZpeD0iZGF0aGVvbi1kZW1vLSIpKQogICAgdHJ5OgogICAgICAgIGZvciBuYW1lIGluIERFTU9fRklMRVM6CiAgICAgICAgICAgIChzY3JhdGNoIC8gbmFtZSkud3JpdGVfdGV4dCgiZGVtb1xuIiwgZW5jb2Rpbmc9InV0Zi04IikKICAgICAgICBmb3IgZGlzcGxheWVkLCBhcmd2LCBzdGRpbiBpbiBzcGVjOgogICAgICAgICAgICByZXNvbHZlZCA9IFtzdHIoc2NyYXRjaCkgaWYgcGFydCA9PSAiPFNDUkFUQ0g+IiBlbHNlIHBhcnQgZm9yIHBhcnQgaW4gYXJndl0KICAgICAgICAgICAgY29tcGxldGVkID0gc3VicHJvY2Vzcy5ydW4oCiAgICAgICAgICAgICAgICBbc3lzLmV4ZWN1dGFibGUsICpyZXNvbHZlZF0sCiAgICAgICAgICAgICAgICBjd2Q9c3RyKHJvb3QpLAogICAgICAgICAgICAgICAgaW5wdXQ9c3RkaW4sCiAgICAgICAgICAgICAgICBjYXB0dXJlX291dHB1dD1UcnVlLAogICAgICAgICAgICAgICAgdGV4dD1UcnVlLAogICAgICAgICAgICAgICAgdGltZW91dD0xMjAsCiAgICAgICAgICAgICkKICAgICAgICAgICAgaWYgY29tcGxldGVkLnJldHVybmNvZGUgIT0gMDoKICAgICAgICAgICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcigKICAgICAgICAgICAgICAgICAgICBmIntkaXNwbGF5ZWQhcn0gZXhpdGVkIHtjb21wbGV0ZWQucmV0dXJuY29kZX06IHtjb21wbGV0ZWQuc3RkZXJyLnN0cmlwKClbOjQwMF19IgogICAgICAgICAgICAgICAgKQogICAgICAgICAgICBsaW5lcyA9IHNjcnViKGNvbXBsZXRlZC5zdGRvdXQpCiAgICAgICAgICAgIGlmIG5vdCBsaW5lczoKICAgICAgICAgICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcihmIntkaXNwbGF5ZWQhcn0gcHJpbnRlZCBub3RoaW5nIikKICAgICAgICAgICAgc2Vzc2lvbnMuYXBwZW5kKFNlc3Npb24oY29tbWFuZD1kaXNwbGF5ZWQsIG91dHB1dD1saW5lcykpCiAgICBmaW5hbGx5OgogICAgICAgIHNodXRpbC5ybXRyZWUoc2NyYXRjaCwgaWdub3JlX2Vycm9ycz1UcnVlKQogICAgcmV0dXJuIHNlc3Npb25zCgoKZGVmIHNhdmVfdHJhbnNjcmlwdChzZXNzaW9uczogU2VxdWVuY2VbU2Vzc2lvbl0sIHBhdGg6IFBhdGggPSBUUkFOU0NSSVBUX1BBVEgpIC0+IFBhdGg6CiAgICAiIiJXcml0ZSB0aGUgdHJhbnNjcmlwdCBhcyBKU09OLgoKICAgIEFyZ3M6CiAgICAgICAgc2Vzc2lvbnM6IFNlc3Npb25zIHRvIHJlY29yZC4KICAgICAgICBwYXRoOiBEZXN0aW5hdGlvbiBmaWxlLgoKICAgIFJldHVybnM6CiAgICAgICAgVGhlIHBhdGggd3JpdHRlbi4KICAgICIiIgogICAgcGF0aC5wYXJlbnQubWtkaXIocGFyZW50cz1UcnVlLCBleGlzdF9vaz1UcnVlKQogICAgcGF5bG9hZCA9IHsKICAgICAgICAiY2FwdHVyZWRfYnkiOiAicHl0aG9uIHRvb2xzL2RlbW9fYXNzZXRzLnB5IC0tY2FwdHVyZSIsCiAgICAgICAgIm5vdGUiOiAoCiAgICAgICAgICAgICJWZXJiYXRpbSBvdXRwdXQgb2YgdGhlIGZpdmUgdG9vbHMsIHNjcnViYmVkIG9mIGFic29sdXRlIHBhdGhzIGFuZCAiCiAgICAgICAgICAgICJtZWFzdXJlZCBkdXJhdGlvbnMuIEVkaXQgb25seSBieSByZS1jYXB0dXJpbmcuIgogICAgICAgICksCiAgICAgICAgInNlc3Npb25zIjogW3Nlc3Npb24udG9fZGljdCgpIGZvciBzZXNzaW9uIGluIHNlc3Npb25zXSwKICAgIH0KICAgIHBhdGgud3JpdGVfdGV4dChqc29uLmR1bXBzKHBheWxvYWQsIGluZGVudD0yKSArICJcbiIsIGVuY29kaW5nPSJ1dGYtOCIpCiAgICByZXR1cm4gcGF0aAoKCmRlZiBsb2FkX3RyYW5zY3JpcHQocGF0aDogUGF0aCA9IFRSQU5TQ1JJUFRfUEFUSCkgLT4gTGlzdFtTZXNzaW9uXToKICAgICIiIlJlYWQgYSB0cmFuc2NyaXB0IGJhY2suCgogICAgQXJnczoKICAgICAgICBwYXRoOiBUcmFuc2NyaXB0IGZpbGUuCgogICAgUmV0dXJuczoKICAgICAgICBUaGUgcmVjb3JkZWQgc2Vzc2lvbnMsIGluIHBsYXliYWNrIG9yZGVyLgoKICAgIFJhaXNlczoKICAgICAgICBGaWxlTm90Rm91bmRFcnJvcjogSWYgdGhlIHRyYW5zY3JpcHQgaXMgYWJzZW50LgogICAgICAgIFZhbHVlRXJyb3I6IElmIHRoZSBkb2N1bWVudCBpcyBtYWxmb3JtZWQgb3IgaG9sZHMgbm8gc2Vzc2lvbnMuCiAgICAiIiIKICAgIGRhdGEgPSBqc29uLmxvYWRzKHBhdGgucmVhZF90ZXh0KGVuY29kaW5nPSJ1dGYtOCIpKQogICAgcmF3ID0gZGF0YS5nZXQoInNlc3Npb25zIikKICAgIGlmIG5vdCBpc2luc3RhbmNlKHJhdywgbGlzdCkgb3Igbm90IHJhdzoKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKGYie3BhdGh9IGhvbGRzIG5vIHNlc3Npb25zIikKICAgIHJldHVybiBbU2Vzc2lvbi5mcm9tX2RpY3QoaXRlbSkgZm9yIGl0ZW0gaW4gcmF3XQoKCmRlZiBfZm9udChzaXplOiBpbnQgPSBGT05UX1NJWkUpOgogICAgIiIiTG9hZCB0aGUgZmlyc3QgYXZhaWxhYmxlIG1vbm9zcGFjZSBmb250LgoKICAgIEFyZ3M6CiAgICAgICAgc2l6ZTogUG9pbnQgc2l6ZS4KCiAgICBSZXR1cm5zOgogICAgICAgIEEgUGlsbG93IGZvbnQgb2JqZWN0LgoKICAgIFJhaXNlczoKICAgICAgICBSdW50aW1lRXJyb3I6IElmIG5vIGNhbmRpZGF0ZSBmb250IGlzIGluc3RhbGxlZC4KICAgICIiIgogICAgZnJvbSBQSUwgaW1wb3J0IEltYWdlRm9udAoKICAgIGZvciBjYW5kaWRhdGUgaW4gTU9OT19GT05UUzoKICAgICAgICBpZiBQYXRoKGNhbmRpZGF0ZSkuZXhpc3RzKCk6CiAgICAgICAgICAgIHJldHVybiBJbWFnZUZvbnQudHJ1ZXR5cGUoY2FuZGlkYXRlLCBzaXplKQogICAgcmFpc2UgUnVudGltZUVycm9yKCJubyBtb25vc3BhY2UgZm9udCBmb3VuZDsgaW5zdGFsbCBEZWphVnUgU2FucyBNb25vIikKCgpkZWYgX3dpbmRvd19oZWlnaHQobGluZV9jb3VudDogaW50KSAtPiBpbnQ6CiAgICAiIiJIZWlnaHQgb2YgYSB3aW5kb3cgaG9sZGluZyBgYGxpbmVfY291bnRgYCByb3dzIG9mIHRleHQuCgogICAgQXJnczoKICAgICAgICBsaW5lX2NvdW50OiBSb3dzIHRvIGZpdC4KCiAgICBSZXR1cm5zOgogICAgICAgIFBpeGVsIGhlaWdodCwgdGl0bGUgYmFyIGFuZCBwYWRkaW5nIGluY2x1ZGVkLgogICAgIiIiCiAgICByZXR1cm4gVElUTEVfQkFSX0hFSUdIVCArIFBBRERJTkcgKyBsaW5lX2NvdW50ICogTElORV9IRUlHSFQgKyBQQURESU5HCgoKZGVmIF9kcmF3KGxpbmVzOiBTZXF1ZW5jZVtUdXBsZVtzdHIsIHN0cl1dLCBoZWlnaHQ6IGludCk6CiAgICAiIiJEcmF3IG9uZSB0ZXJtaW5hbCB3aW5kb3cuCgogICAgQXJnczoKICAgICAgICBsaW5lczogYGAocm9sZSwgdGV4dClgYCBwYWlyczsgcm9sZSBpcyBgYHByb21wdGBgLCBgYGNvbW1hbmRgYCwKICAgICAgICAgICAgYGBvdXRwdXRgYCBvciBgYGNvbW1lbnRgYCBhbmQgc2VsZWN0cyB0aGUgY29sb3VyLgogICAgICAgIGhlaWdodDogV2luZG93IGhlaWdodCBpbiBwaXhlbHMuCgogICAgUmV0dXJuczoKICAgICAgICBBIFBpbGxvdyBpbWFnZSBpbiBSR0IgbW9kZS4KICAgICIiIgogICAgZnJvbSBQSUwgaW1wb3J0IEltYWdlLCBJbWFnZURyYXcKCiAgICBwYWxldHRlID0gewogICAgICAgICJwcm9tcHRsaW5lIjogKDIzMywgMjM3LCAyNDMpLAogICAgICAgICJjb21tYW5kIjogKDIzMywgMjM3LCAyNDMpLAogICAgICAgICJvdXRwdXQiOiAoMTY4LCAxNzgsIDE5MCksCiAgICAgICAgImNvbW1lbnQiOiAoMTEwLCAxMjAsIDEzNCksCiAgICB9CiAgICBwcm9tcHRfY29sb3VyID0gKDg2LCAxODIsIDEyNikKICAgIGltYWdlID0gSW1hZ2UubmV3KCJSR0IiLCAoV0lORE9XX1dJRFRILCBoZWlnaHQpLCAoMjQsIDI3LCAzMykpCiAgICBkcmF3ID0gSW1hZ2VEcmF3LkRyYXcoaW1hZ2UpCiAgICBkcmF3LnJlY3RhbmdsZShbMCwgMCwgV0lORE9XX1dJRFRILCBUSVRMRV9CQVJfSEVJR0hUXSwgZmlsbD0oMzgsIDQyLCA1MSkpCiAgICBmb3IgaW5kZXgsIGNvbG91ciBpbiBlbnVtZXJhdGUoKCgyNTUsIDk1LCA4NiksICgyNTUsIDE4OSwgNDYpLCAoMzksIDIwMSwgNjMpKSk6CiAgICAgICAgY2VudHJlX3ggPSAyMiArIGluZGV4ICogMjAKICAgICAgICBkcmF3LmVsbGlwc2UoCiAgICAgICAgICAgIFtjZW50cmVfeCAtIDYsIFRJVExFX0JBUl9IRUlHSFQgLy8gMiAtIDYsIGNlbnRyZV94ICsgNiwgVElUTEVfQkFSX0hFSUdIVCAvLyAyICsgNl0sCiAgICAgICAgICAgIGZpbGw9Y29sb3VyLAogICAgICAgICkKICAgIGZvbnQgPSBfZm9udCgpCiAgICB0aXRsZV9mb250ID0gX2ZvbnQoMTIpCiAgICBwcm9tcHRfd2lkdGggPSBkcmF3LnRleHRsZW5ndGgoUFJPTVBULCBmb250PWZvbnQpCiAgICBkcmF3LnRleHQoCiAgICAgICAgKFdJTkRPV19XSURUSCAvLyAyIC0gNjAsIFRJVExFX0JBUl9IRUlHSFQgLy8gMiAtIDcpLAogICAgICAgICJkYXRoZW9uIOKAlCBmaXZlIHRvb2xzLCBvbmUgY29yZSIsCiAgICAgICAgZm9udD10aXRsZV9mb250LAogICAgICAgIGZpbGw9KDE1MCwgMTU4LCAxNzApLAogICAgKQogICAgeSA9IFRJVExFX0JBUl9IRUlHSFQgKyBQQURESU5HIC0gNgogICAgZm9yIHJvbGUsIHRleHQgaW4gbGluZXM6CiAgICAgICAgaWYgcm9sZSA9PSAicHJvbXB0bGluZSI6CiAgICAgICAgICAgIGRyYXcudGV4dCgoUEFERElORywgeSksIFBST01QVCwgZm9udD1mb250LCBmaWxsPXByb21wdF9jb2xvdXIpCiAgICAgICAgICAgIGRyYXcudGV4dCgoUEFERElORyArIHByb21wdF93aWR0aCwgeSksIHRleHQsIGZvbnQ9Zm9udCwgZmlsbD1wYWxldHRlW3JvbGVdKQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIGRyYXcudGV4dCgoUEFERElORywgeSksIHRleHQsIGZvbnQ9Zm9udCwgZmlsbD1wYWxldHRlW3JvbGVdKQogICAgICAgIHkgKz0gTElORV9IRUlHSFQKICAgIHJldHVybiBpbWFnZQoKCmRlZiBidWlsZF9mcmFtZXMoc2Vzc2lvbnM6IFNlcXVlbmNlW1Nlc3Npb25dKSAtPiBMaXN0OgogICAgIiIiVHVybiBzZXNzaW9ucyBpbnRvIGFuaW1hdGlvbiBmcmFtZXMuCgogICAgRWFjaCBzZXNzaW9uIHR5cGVzIGl0cyBjb21tYW5kIGluIGNodW5rcywgcHJpbnRzIG9uZSBvdXRwdXQgbGluZSBwZXIgZnJhbWUsCiAgICB0aGVuIHJlc3RzIGZvciA6ZGF0YTpgSE9MRF9GUkFNRVNgIGZyYW1lcy4gRXZlcnkgZnJhbWUgaXMgdGhlIHNhbWUgc2l6ZSDigJQKICAgIGEgR0lGIGNhbm5vdCBncm93IOKAlCBzbyB0aGUgd2luZG93IGlzIHNpemVkIG9uY2UgZm9yIHRoZSB0YWxsZXN0IHNlc3Npb24gYW5kCiAgICB0aGUgY29udGVudCBzaW1wbHkgZmlsbHMgaXQgZnJvbSB0aGUgdG9wLgoKICAgIEFyZ3M6CiAgICAgICAgc2Vzc2lvbnM6IFNlc3Npb25zIHRvIGFuaW1hdGUuCgogICAgUmV0dXJuczoKICAgICAgICBGcmFtZXMgaW4gcGxheWJhY2sgb3JkZXIuCiAgICAiIiIKICAgIHNob3duID0gWwogICAgICAgIHNlc3Npb24ub3V0cHV0WzpNQVhfT1VUUFVUX0xJTkVTXQogICAgICAgICsgKFsi4oCmIl0gaWYgbGVuKHNlc3Npb24ub3V0cHV0KSA+IE1BWF9PVVRQVVRfTElORVMgZWxzZSBbXSkKICAgICAgICBmb3Igc2Vzc2lvbiBpbiBzZXNzaW9ucwogICAgXQogICAgdGFsbGVzdCA9IG1heChsZW4obGluZXMpIGZvciBsaW5lcyBpbiBzaG93bikKICAgIHJvd3MgPSB0YWxsZXN0ICsgMwogICAgaGVpZ2h0ID0gX3dpbmRvd19oZWlnaHQocm93cykKCiAgICBkZWYgZHJhdyhsaW5lczogU2VxdWVuY2VbVHVwbGVbc3RyLCBzdHJdXSk6CiAgICAgICAgIiIiRHJhdyB0aGUgd2luZG93LCBzY3JvbGxlZCBzbyB0aGUgbmV3ZXN0IHJvd3Mgc3RheSB2aXNpYmxlLgoKICAgICAgICBBcmdzOgogICAgICAgICAgICBsaW5lczogRnVsbCB0cmFuc2NyaXB0LXNvLWZhciBhcyBgYChyb2xlLCB0ZXh0KWBgIHBhaXJzLgoKICAgICAgICBSZXR1cm5zOgogICAgICAgICAgICBBIGZyYW1lIG9mIHRoZSBmaXhlZCB3aW5kb3cgc2l6ZS4KICAgICAgICAiIiIKICAgICAgICByZXR1cm4gX2RyYXcobGluZXNbLXJvd3M6XSwgaGVpZ2h0KQoKICAgIGJvZHk6IExpc3RbVHVwbGVbc3RyLCBzdHJdXSA9IFsoImNvbW1lbnQiLCAiIyBmaXZlIHRvb2xzLCBzdGFuZGFyZCBsaWJyYXJ5IG9ubHkiKV0KICAgIGZyYW1lcyA9IFtkcmF3KGJvZHkpXQoKICAgIGZvciBzZXNzaW9uLCBsaW5lcyBpbiB6aXAoc2Vzc2lvbnMsIHNob3duKToKICAgICAgICBib2R5ID0gYm9keSArIFsoInByb21wdGxpbmUiLCAiIildCiAgICAgICAgZm9yIHN0YXJ0IGluIHJhbmdlKDAsIGxlbihzZXNzaW9uLmNvbW1hbmQpLCBUWVBJTkdfQ0hVTkspOgogICAgICAgICAgICBib2R5Wy0xXSA9ICgicHJvbXB0bGluZSIsIHNlc3Npb24uY29tbWFuZFs6IHN0YXJ0ICsgVFlQSU5HX0NIVU5LXSkKICAgICAgICAgICAgZnJhbWVzLmFwcGVuZChkcmF3KGJvZHkpKQogICAgICAgIGJvZHlbLTFdID0gKCJwcm9tcHRsaW5lIiwgc2Vzc2lvbi5jb21tYW5kKQogICAgICAgIGZvciBsaW5lIGluIGxpbmVzOgogICAgICAgICAgICBib2R5LmFwcGVuZCgoIm91dHB1dCIsIGxpbmUpKQogICAgICAgICAgICBmcmFtZXMuYXBwZW5kKGRyYXcoYm9keSkpCiAgICAgICAgZm9yIF8gaW4gcmFuZ2UoSE9MRF9GUkFNRVMpOgogICAgICAgICAgICBmcmFtZXMuYXBwZW5kKGRyYXcoYm9keSkpCiAgICAgICAgYm9keS5hcHBlbmQoKCJjb21tZW50IiwgIiIpKQogICAgcmV0dXJuIGZyYW1lcwoKCmRlZiByZW5kZXJfZ2lmKAogICAgc2Vzc2lvbnM6IFNlcXVlbmNlW1Nlc3Npb25dLAogICAgcGF0aDogUGF0aCA9IEdJRl9QQVRILAogICAgZnBzOiBpbnQgPSAxMDAwIC8vIEZSQU1FX0RVUkFUSU9OX01TLAopIC0+IFBhdGg6CiAgICAiIiJSZW5kZXIgdGhlIHRyYW5zY3JpcHQgdG8gYW4gYW5pbWF0ZWQgR0lGLgoKICAgIEFyZ3M6CiAgICAgICAgc2Vzc2lvbnM6IFNlc3Npb25zIHRvIGFuaW1hdGUuCiAgICAgICAgcGF0aDogRGVzdGluYXRpb24gZmlsZS4KICAgICAgICBmcHM6IEZyYW1lcyBwZXIgc2Vjb25kOyBjbGFtcGVkIHRvIHRoZSByYW5nZSAy4oCTMjAgc28gdGhlIGFuaW1hdGlvbiBzdGF5cwogICAgICAgICAgICBsZWdpYmxlIHdoYXRldmVyIHRoZSBjYWxsZXIgYXNrcyBmb3IuCgogICAgUmV0dXJuczoKICAgICAgICBUaGUgcGF0aCB3cml0dGVuLgogICAgIiIiCiAgICBmcmFtZXMgPSBidWlsZF9mcmFtZXMoc2Vzc2lvbnMpCiAgICBkdXJhdGlvbiA9IG1heCgyLCBtaW4oMjAsIGZwcykpCiAgICBwYXRoLnBhcmVudC5ta2RpcihwYXJlbnRzPVRydWUsIGV4aXN0X29rPVRydWUpCiAgICBwYWxldHRlZCA9IFtmcmFtZS5jb252ZXJ0KCJQIiwgcGFsZXR0ZT0xLCBjb2xvcnM9MzIpIGZvciBmcmFtZSBpbiBmcmFtZXNdCiAgICBwYWxldHRlZFswXS5zYXZlKAogICAgICAgIHBhdGgsCiAgICAgICAgc2F2ZV9hbGw9VHJ1ZSwKICAgICAgICBhcHBlbmRfaW1hZ2VzPXBhbGV0dGVkWzE6XSwKICAgICAgICBkdXJhdGlvbj0xMDAwIC8vIGR1cmF0aW9uLAogICAgICAgIGxvb3A9MCwKICAgICAgICBvcHRpbWl6ZT1UcnVlLAogICAgKQogICAgcmV0dXJuIHBhdGgKCgpkZWYgX2Rpc3BsYXkocGF0aDogUGF0aCkgLT4gc3RyOgogICAgIiIiUmVuZGVyIGEgcGF0aCBmb3IgdGhlIHRlcm1pbmFsLCByZWxhdGl2ZSB0byB0aGUgcmVwb3NpdG9yeSB3aGVuIHBvc3NpYmxlLgoKICAgIEFyZ3M6CiAgICAgICAgcGF0aDogUGF0aCB0byBkZXNjcmliZS4KCiAgICBSZXR1cm5zOgogICAgICAgIFRoZSByZXBvc2l0b3J5LXJlbGF0aXZlIFBPU0lYIHBhdGgsIG9yIHRoZSBiYXJlIGZpbGUgbmFtZS4KICAgICIiIgogICAgdHJ5OgogICAgICAgIHJldHVybiBwYXRoLnJlc29sdmUoKS5yZWxhdGl2ZV90byhST09UKS5hc19wb3NpeCgpCiAgICBleGNlcHQgVmFsdWVFcnJvcjoKICAgICAgICByZXR1cm4gcGF0aC5uYW1lCgoKZGVmIG1haW4oYXJndjogT3B0aW9uYWxbU2VxdWVuY2Vbc3RyXV0gPSBOb25lKSAtPiBpbnQ6CiAgICAiIiJSdW4gdGhlIGFzc2V0IHBpcGVsaW5lLgoKICAgIEFyZ3M6CiAgICAgICAgYXJndjogQXJndW1lbnQgbGlzdDsgYGBOb25lYGAgbWVhbnMgOmRhdGE6YHN5cy5hcmd2YC4KCiAgICBSZXR1cm5zOgogICAgICAgIGBgMGBgIG9uIHN1Y2Nlc3MsIGBgMWBgIHdoZW4gYGAtLWNoZWNrYGAgZmluZHMgdGhlIGFzc2V0IG1pc3Npbmcgb3IKICAgICAgICBtYWxmb3JtZWQuCiAgICAiIiIKICAgIGlmIHN0cihST09UKSBub3QgaW4gc3lzLnBhdGg6ICAjIHJ1bm5pbmcgYXMgYSBzY3JpcHQgcHV0cyB0b29scy8gb24gdGhlIHBhdGgKICAgICAgICBzeXMucGF0aC5pbnNlcnQoMCwgc3RyKFJPT1QpKQogICAgZnJvbSB0b29scy5yZWFkbWVfYXVkaXQgaW1wb3J0IGluc3BlY3RfYXNzZXQKCiAgICBwYXJzZXIgPSBhcmdwYXJzZS5Bcmd1bWVudFBhcnNlcigKICAgICAgICBwcm9nPSJkZW1vLWFzc2V0cyIsCiAgICAgICAgZGVzY3JpcHRpb249IkNhcHR1cmUgdGhlIHRvb2xzJyByZWFsIG91dHB1dCBhbmQgcmVuZGVyIHRoZSBSRUFETUUgZGVtbyBHSUYuIiwKICAgICkKICAgIHBhcnNlci5hZGRfYXJndW1lbnQoCiAgICAgICAgIi0tY2FwdHVyZSIsIGFjdGlvbj0ic3RvcmVfdHJ1ZSIsIGhlbHA9InJlLXJ1biB0aGUgdG9vbHMsIHJld3JpdGUgdGhlIHRyYW5zY3JpcHQiCiAgICApCiAgICBwYXJzZXIuYWRkX2FyZ3VtZW50KAogICAgICAgICItLW91dHB1dCIsCiAgICAgICAgZGVmYXVsdD1zdHIoR0lGX1BBVEgpLAogICAgICAgIGhlbHA9IkdJRiBkZXN0aW5hdGlvbiAoZGVmYXVsdDogZG9jcy9hc3NldHMvZGVtby9xdWlja3N0YXJ0LmdpZikiLAogICAgKQogICAgcGFyc2VyLmFkZF9hcmd1bWVudCgKICAgICAgICAiLS1mcHMiLCB0eXBlPWludCwgZGVmYXVsdD0xMDAwIC8vIEZSQU1FX0RVUkFUSU9OX01TLCBoZWxwPSJhbmltYXRpb24gc3BlZWQsIDItMjAiCiAgICApCiAgICBwYXJzZXIuYWRkX2FyZ3VtZW50KAogICAgICAgICItLWNoZWNrIiwgYWN0aW9uPSJzdG9yZV90cnVlIiwgaGVscD0icmVwb3J0IG9uIHRoZSBjb21taXR0ZWQgYXNzZXRzOyBleGl0IDEgb24gYSBmaW5kaW5nIgogICAgKQogICAgYXJncyA9IHBhcnNlci5wYXJzZV9hcmdzKGFyZ3YpCgogICAgaWYgYXJncy5jaGVjazoKICAgICAgICBmaW5kaW5ncyA9IDAKICAgICAgICB0cnk6CiAgICAgICAgICAgIHNlc3Npb25zID0gbG9hZF90cmFuc2NyaXB0KFRSQU5TQ1JJUFRfUEFUSCkKICAgICAgICAgICAgcHJpbnQoZiJ7X2Rpc3BsYXkoVFJBTlNDUklQVF9QQVRIKTo8MzR9IHRyYW5zY3JpcHQsIHtsZW4oc2Vzc2lvbnMpfSBzZXNzaW9ucyDigJQgb2siKQogICAgICAgIGV4Y2VwdCAoT1NFcnJvciwgVmFsdWVFcnJvcikgYXMgZXhjOgogICAgICAgICAgICBwcmludChmIntfZGlzcGxheShUUkFOU0NSSVBUX1BBVEgpOjwzNH0gdW5yZWFkYWJsZSDigJQge2V4Y30iKQogICAgICAgICAgICBmaW5kaW5ncyArPSAxCiAgICAgICAgcmVwb3J0ID0gaW5zcGVjdF9hc3NldChHSUZfUEFUSCkKICAgICAgICBwcmludChmIntfZGlzcGxheShHSUZfUEFUSCk6PDM0fSB7cmVwb3J0LnN1bW1hcnkoKX0iKQogICAgICAgIGZpbmRpbmdzICs9IDAgaWYgcmVwb3J0Lm9rIGVsc2UgMQogICAgICAgIHJldHVybiAxIGlmIGZpbmRpbmdzIGVsc2UgMAoKICAgIGlmIGFyZ3MuY2FwdHVyZToKICAgICAgICBzZXNzaW9ucyA9IGNhcHR1cmUoKQogICAgICAgIHdyaXR0ZW4gPSBzYXZlX3RyYW5zY3JpcHQoc2Vzc2lvbnMpCiAgICAgICAgcHJpbnQoZiJjYXB0dXJlZCB7bGVuKHNlc3Npb25zKX0gc2Vzc2lvbnMgLT4ge19kaXNwbGF5KHdyaXR0ZW4pfSIpCgogICAgc2Vzc2lvbnMgPSBsb2FkX3RyYW5zY3JpcHQoKQogICAgZ2lmID0gcmVuZGVyX2dpZihzZXNzaW9ucywgcGF0aD1QYXRoKGFyZ3Mub3V0cHV0KSwgZnBzPWFyZ3MuZnBzKQogICAgc2l6ZV9rYiA9IGdpZi5zdGF0KCkuc3Rfc2l6ZSAvIDEwMjQKICAgIGZyYW1lcyA9IGxlbihidWlsZF9mcmFtZXMoc2Vzc2lvbnMpKQogICAgcHJpbnQoZiJyZW5kZXJlZCB7bGVuKHNlc3Npb25zKX0gc2Vzc2lvbnMsIHtmcmFtZXN9IGZyYW1lcyAtPiB7Z2lmLm5hbWV9ICh7c2l6ZV9rYjouMGZ9IEtCKSIpCiAgICByZXR1cm4gMAoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6ICAjIHByYWdtYTogbm8gY292ZXIKICAgIHN5cy5leGl0KG1haW4oKSkK
+"""Render the README's terminal demo from real command output (Day 27).
+
+The submission's demo asset is a short animated GIF. An asset nobody can
+regenerate is an asset nobody can correct, so this module makes it a build
+artefact with two halves:
+
+``--capture``
+    Runs the five tools from the source tree, scrubs the parts that are not
+    reproducible (the scratch directory's absolute path, the organizer's
+    measured duration) and writes ``docs/assets/demo/transcript.json``. The
+    transcript — not this file — is the source of truth for what the GIF shows.
+
+default
+    Renders ``docs/assets/demo/quickstart.gif`` from the transcript. Rendering
+    is deterministic: same transcript and same arguments give the same frames,
+    which is what lets the audit reason about the asset at all.
+
+``--check``
+    Reports what the committed GIF and transcript currently are, and fails when
+    either is missing, malformed or over budget. The same structural checks run
+    in :mod:`tools.readme_audit` without Pillow, so CI can gate the asset in an
+    environment that has no imaging library.
+
+The console scripts in ``datheon/cli`` are one-line shims over
+``projects/<task>/main.py``, so the output captured here is byte-identical to
+what ``hangman --version`` prints once the package is installed — the
+transcript simply shows the installed form a reader would type.
+
+Usage::
+
+    python tools/demo_assets.py --capture      # re-run the tools, rewrite the transcript
+    python tools/demo_assets.py                # transcript -> quickstart.gif
+    python tools/demo_assets.py --check        # structural report, exit 1 on a finding
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional, Sequence, Tuple
+
+ROOT = Path(__file__).resolve().parents[1]
+ASSETS_DIR = ROOT / "docs" / "assets" / "demo"
+TRANSCRIPT_PATH = ASSETS_DIR / "transcript.json"
+GIF_PATH = ASSETS_DIR / "quickstart.gif"
+
+#: Fallback font stack, in preference order. The first hit wins.
+MONO_FONTS = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSansMono.ttf",
+    "/System/Library/Fonts/Menlo.ttc",
+    "C:/Windows/Fonts/consola.ttf",
+)
+
+#: Geometry of the rendered terminal window, in pixels.
+WINDOW_WIDTH = 860
+TITLE_BAR_HEIGHT = 34
+PADDING = 24
+FONT_SIZE = 14
+LINE_HEIGHT = 20
+PROMPT = "$ "
+
+#: Animation budget: how long a finished session rests before the next one, and
+#: how many of a session's output lines the GIF shows. The GIF is a trailer, not
+#: a transcript — the whole transcript is one click away in ``transcript.json``.
+HOLD_FRAMES = 8
+TYPING_CHUNK = 4
+FRAME_DURATION_MS = 110
+MAX_OUTPUT_LINES = 12
+
+#: Captured commands, in the order the GIF plays them. Each entry is
+#: ``(displayed command, argv relative to the repository root, stdin)``.
+CAPTURE_SPEC: Tuple[Tuple[str, Tuple[str, ...], Optional[str]], ...] = (
+    ("hangman --version", ("projects/01_hangman_game/main.py", "--version"), None),
+    ("portfolio --demo", ("projects/02_portfolio_tracker/main.py", "--demo"), None),
+    (
+        "organizer ~/Downloads --dry-run",
+        ("projects/03_file_organizer_automation/main.py", "<SCRATCH>", "--dry-run"),
+        None,
+    ),
+    (
+        "assistant --faq projects/04_terminal_assistant/sample_faq.json",
+        (
+            "projects/04_terminal_assistant/main.py",
+            "--faq",
+            "projects/04_terminal_assistant/sample_faq.json",
+            "--no-log",
+        ),
+        "hello\ndo you have python internships?\nbye\n",
+    ),
+    ("inventory", ("projects/05_inventory_oop/main.py",), None),
+)
+
+#: Files the organizer demo sorts; written into the scratch directory.
+DEMO_FILES = (
+    "notes.txt",
+    "photo.jpg",
+    "song.mp3",
+    "report.pdf",
+    "archive.zip",
+    "script.py",
+    "clip.mp4",
+    "data.json",
+)
+
+#: Lines a transcript never keeps, because they are true only of the machine
+#: that captured them: absolute scratch paths and measured durations.
+_SCRUB_RULES: Tuple[Tuple[str, str], ...] = (
+    (r"Duration\s+:\s+[0-9.]+ (?:ms|s).*", "Duration  : 2.6 ms (asyncio engine)"),
+    (r"Organising: .*", "Organising: ~/Downloads   [DRY RUN (no changes made)]"),
+    (r"Summary written to .*", "Summary written to portfolio_summary.csv"),
+    (r"Conversation saved to .*", "Conversation saved to conversation.jsonl"),
+)
+
+#: Lines dropped outright: they name the machine's own paths or are noise.
+_DROP_PREFIXES = ("Loaded FAQ dataset:", "Categories:")
+
+
+@dataclass(frozen=True)
+class Session:
+    """One command and its captured output.
+
+    Attributes:
+        command: The line a reader would type, prompt excluded.
+        output: Output lines, in order. A leading blank line is preserved as
+            ``""`` so spacing survives the round trip through JSON.
+    """
+
+    command: str
+    output: List[str]
+
+    def to_dict(self) -> dict:
+        """Return the JSON-serialisable form.
+
+        Returns:
+            A mapping with ``command`` and ``output`` keys.
+        """
+        return {"command": self.command, "output": list(self.output)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Session":
+        """Rebuild a session from :meth:`to_dict` output.
+
+        Args:
+            data: Mapping with at least ``command`` and ``output``.
+
+        Returns:
+            The reconstructed session.
+
+        Raises:
+            ValueError: If the mapping is missing a key or has the wrong type.
+        """
+        command = data.get("command")
+        output = data.get("output")
+        if not isinstance(command, str) or not isinstance(output, list):
+            raise ValueError("session needs a string 'command' and a list 'output'")
+        return cls(command=command, output=[str(line) for line in output])
+
+
+def scrub(text: str) -> List[str]:
+    """Normalise captured output so it is true of any machine.
+
+    Args:
+        text: Raw stdout from a captured run.
+
+    Returns:
+        The kept lines, with absolute paths and measured durations replaced by
+        their stable forms.
+    """
+    kept: List[str] = []
+    for raw in text.replace("\r\n", "\n").split("\n"):
+        line = raw.rstrip()
+        if not line.strip():
+            if kept and kept[-1] != "":
+                kept.append("")
+            continue
+        if line.startswith(_DROP_PREFIXES):
+            continue
+        for pattern, replacement in _SCRUB_RULES:
+            if re.fullmatch(pattern, line):
+                line = replacement
+                break
+        kept.append(line)
+    while kept and kept[-1] == "":
+        kept.pop()
+    return kept
+
+
+def capture(root: Path = ROOT, spec: Sequence = CAPTURE_SPEC) -> List[Session]:
+    """Run every command in ``spec`` and collect its scrubbed output.
+
+    Args:
+        root: Repository root the commands run from.
+        spec: ``(displayed, argv, stdin)`` triples; a ``<SCRATCH>`` argv entry
+            is replaced by a temporary directory populated with
+            :data:`DEMO_FILES`.
+
+    Returns:
+        One :class:`Session` per spec entry, in order.
+
+    Raises:
+        RuntimeError: If a command exits non-zero or prints nothing, because a
+            demo built from a failed run is worse than no demo.
+    """
+    sessions: List[Session] = []
+    scratch = Path(tempfile.mkdtemp(prefix="datheon-demo-"))
+    try:
+        for name in DEMO_FILES:
+            (scratch / name).write_text("demo\n", encoding="utf-8")
+        for displayed, argv, stdin in spec:
+            resolved = [str(scratch) if part == "<SCRATCH>" else part for part in argv]
+            completed = subprocess.run(
+                [sys.executable, *resolved],
+                cwd=str(root),
+                input=stdin,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    f"{displayed!r} exited {completed.returncode}: {completed.stderr.strip()[:400]}"
+                )
+            lines = scrub(completed.stdout)
+            if not lines:
+                raise RuntimeError(f"{displayed!r} printed nothing")
+            sessions.append(Session(command=displayed, output=lines))
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+    return sessions
+
+
+def save_transcript(sessions: Sequence[Session], path: Path = TRANSCRIPT_PATH) -> Path:
+    """Write the transcript as JSON.
+
+    Args:
+        sessions: Sessions to record.
+        path: Destination file.
+
+    Returns:
+        The path written.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "captured_by": "python tools/demo_assets.py --capture",
+        "note": (
+            "Verbatim output of the five tools, scrubbed of absolute paths and "
+            "measured durations. Edit only by re-capturing."
+        ),
+        "sessions": [session.to_dict() for session in sessions],
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def load_transcript(path: Path = TRANSCRIPT_PATH) -> List[Session]:
+    """Read a transcript back.
+
+    Args:
+        path: Transcript file.
+
+    Returns:
+        The recorded sessions, in playback order.
+
+    Raises:
+        FileNotFoundError: If the transcript is absent.
+        ValueError: If the document is malformed or holds no sessions.
+    """
+    data = json.loads(path.read_text(encoding="utf-8"))
+    raw = data.get("sessions")
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"{path} holds no sessions")
+    return [Session.from_dict(item) for item in raw]
+
+
+def _font(size: int = FONT_SIZE):
+    """Load the first available monospace font.
+
+    Args:
+        size: Point size.
+
+    Returns:
+        A Pillow font object.
+
+    Raises:
+        RuntimeError: If no candidate font is installed.
+    """
+    from PIL import ImageFont
+
+    for candidate in MONO_FONTS:
+        if Path(candidate).exists():
+            return ImageFont.truetype(candidate, size)
+    raise RuntimeError("no monospace font found; install DejaVu Sans Mono")
+
+
+def _window_height(line_count: int) -> int:
+    """Height of a window holding ``line_count`` rows of text.
+
+    Args:
+        line_count: Rows to fit.
+
+    Returns:
+        Pixel height, title bar and padding included.
+    """
+    return TITLE_BAR_HEIGHT + PADDING + line_count * LINE_HEIGHT + PADDING
+
+
+def _draw(lines: Sequence[Tuple[str, str]], height: int):
+    """Draw one terminal window.
+
+    Args:
+        lines: ``(role, text)`` pairs; role is ``prompt``, ``command``,
+            ``output`` or ``comment`` and selects the colour.
+        height: Window height in pixels.
+
+    Returns:
+        A Pillow image in RGB mode.
+    """
+    from PIL import Image, ImageDraw
+
+    palette = {
+        "promptline": (233, 237, 243),
+        "command": (233, 237, 243),
+        "output": (168, 178, 190),
+        "comment": (110, 120, 134),
+    }
+    prompt_colour = (86, 182, 126)
+    image = Image.new("RGB", (WINDOW_WIDTH, height), (24, 27, 33))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle([0, 0, WINDOW_WIDTH, TITLE_BAR_HEIGHT], fill=(38, 42, 51))
+    for index, colour in enumerate(((255, 95, 86), (255, 189, 46), (39, 201, 63))):
+        centre_x = 22 + index * 20
+        draw.ellipse(
+            [centre_x - 6, TITLE_BAR_HEIGHT // 2 - 6, centre_x + 6, TITLE_BAR_HEIGHT // 2 + 6],
+            fill=colour,
+        )
+    font = _font()
+    title_font = _font(12)
+    prompt_width = draw.textlength(PROMPT, font=font)
+    draw.text(
+        (WINDOW_WIDTH // 2 - 60, TITLE_BAR_HEIGHT // 2 - 7),
+        "datheon — five tools, one core",
+        font=title_font,
+        fill=(150, 158, 170),
+    )
+    y = TITLE_BAR_HEIGHT + PADDING - 6
+    for role, text in lines:
+        if role == "promptline":
+            draw.text((PADDING, y), PROMPT, font=font, fill=prompt_colour)
+            draw.text((PADDING + prompt_width, y), text, font=font, fill=palette[role])
+        else:
+            draw.text((PADDING, y), text, font=font, fill=palette[role])
+        y += LINE_HEIGHT
+    return image
+
+
+def build_frames(sessions: Sequence[Session]) -> List:
+    """Turn sessions into animation frames.
+
+    Each session types its command in chunks, prints one output line per frame,
+    then rests for :data:`HOLD_FRAMES` frames. Every frame is the same size —
+    a GIF cannot grow — so the window is sized once for the tallest session and
+    the content simply fills it from the top.
+
+    Args:
+        sessions: Sessions to animate.
+
+    Returns:
+        Frames in playback order.
+    """
+    shown = [
+        session.output[:MAX_OUTPUT_LINES]
+        + (["…"] if len(session.output) > MAX_OUTPUT_LINES else [])
+        for session in sessions
+    ]
+    tallest = max(len(lines) for lines in shown)
+    rows = tallest + 3
+    height = _window_height(rows)
+
+    def draw(lines: Sequence[Tuple[str, str]]):
+        """Draw the window, scrolled so the newest rows stay visible.
+
+        Args:
+            lines: Full transcript-so-far as ``(role, text)`` pairs.
+
+        Returns:
+            A frame of the fixed window size.
+        """
+        return _draw(lines[-rows:], height)
+
+    body: List[Tuple[str, str]] = [("comment", "# five tools, standard library only")]
+    frames = [draw(body)]
+
+    for session, lines in zip(sessions, shown):
+        body = body + [("promptline", "")]
+        for start in range(0, len(session.command), TYPING_CHUNK):
+            body[-1] = ("promptline", session.command[: start + TYPING_CHUNK])
+            frames.append(draw(body))
+        body[-1] = ("promptline", session.command)
+        for line in lines:
+            body.append(("output", line))
+            frames.append(draw(body))
+        for _ in range(HOLD_FRAMES):
+            frames.append(draw(body))
+        body.append(("comment", ""))
+    return frames
+
+
+def render_gif(
+    sessions: Sequence[Session],
+    path: Path = GIF_PATH,
+    fps: int = 1000 // FRAME_DURATION_MS,
+) -> Path:
+    """Render the transcript to an animated GIF.
+
+    Args:
+        sessions: Sessions to animate.
+        path: Destination file.
+        fps: Frames per second; clamped to the range 2–20 so the animation stays
+            legible whatever the caller asks for.
+
+    Returns:
+        The path written.
+    """
+    frames = build_frames(sessions)
+    duration = max(2, min(20, fps))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    paletted = [frame.convert("P", palette=1, colors=32) for frame in frames]
+    paletted[0].save(
+        path,
+        save_all=True,
+        append_images=paletted[1:],
+        duration=1000 // duration,
+        loop=0,
+        optimize=True,
+    )
+    return path
+
+
+def _display(path: Path) -> str:
+    """Render a path for the terminal, relative to the repository when possible.
+
+    Args:
+        path: Path to describe.
+
+    Returns:
+        The repository-relative POSIX path, or the bare file name.
+    """
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return path.name
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Run the asset pipeline.
+
+    Args:
+        argv: Argument list; ``None`` means :data:`sys.argv`.
+
+    Returns:
+        ``0`` on success, ``1`` when ``--check`` finds the asset missing or
+        malformed.
+    """
+    if str(ROOT) not in sys.path:  # running as a script puts tools/ on the path
+        sys.path.insert(0, str(ROOT))
+    from tools.readme_audit import inspect_asset
+
+    parser = argparse.ArgumentParser(
+        prog="demo-assets",
+        description="Capture the tools' real output and render the README demo GIF.",
+    )
+    parser.add_argument(
+        "--capture", action="store_true", help="re-run the tools, rewrite the transcript"
+    )
+    parser.add_argument(
+        "--output",
+        default=str(GIF_PATH),
+        help="GIF destination (default: docs/assets/demo/quickstart.gif)",
+    )
+    parser.add_argument(
+        "--fps", type=int, default=1000 // FRAME_DURATION_MS, help="animation speed, 2-20"
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="report on the committed assets; exit 1 on a finding"
+    )
+    args = parser.parse_args(argv)
+
+    if args.check:
+        findings = 0
+        try:
+            sessions = load_transcript(TRANSCRIPT_PATH)
+            print(f"{_display(TRANSCRIPT_PATH):<34} transcript, {len(sessions)} sessions — ok")
+        except (OSError, ValueError) as exc:
+            print(f"{_display(TRANSCRIPT_PATH):<34} unreadable — {exc}")
+            findings += 1
+        report = inspect_asset(GIF_PATH)
+        print(f"{_display(GIF_PATH):<34} {report.summary()}")
+        findings += 0 if report.ok else 1
+        return 1 if findings else 0
+
+    if args.capture:
+        sessions = capture()
+        written = save_transcript(sessions)
+        print(f"captured {len(sessions)} sessions -> {_display(written)}")
+
+    sessions = load_transcript()
+    gif = render_gif(sessions, path=Path(args.output), fps=args.fps)
+    size_kb = gif.stat().st_size / 1024
+    frames = len(build_frames(sessions))
+    print(f"rendered {len(sessions)} sessions, {frames} frames -> {gif.name} ({size_kb:.0f} KB)")
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())

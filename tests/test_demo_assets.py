@@ -1,1 +1,194 @@
-IiIiVGVzdHMgZm9yIHRoZSBEYXkgMjcgZGVtby1hc3NldCBwaXBlbGluZSAoYGB0b29scy9kZW1vX2Fzc2V0cy5weWBgKS4KClR3byB0aGluZ3MgYXJlIGJlaW5nIHByb3RlY3RlZCBoZXJlLiBUaGUgc2NydWJiZXIsIGJlY2F1c2UgaXQgaXMgdGhlIG9ubHkKcmVhc29uIHRoZSB0cmFuc2NyaXB0IGlzIHJlcHJvZHVjaWJsZSBvbiBhIG1hY2hpbmUgdGhhdCBpcyBub3QgdGhpcyBvbmUg4oCUIGEKbGVha2VkIHNjcmF0Y2ggcGF0aCBvciBhIG1lYXN1cmVkIGR1cmF0aW9uIG1ha2VzIGV2ZXJ5IHJlLWNhcHR1cmUgYSBzcHVyaW91cwpkaWZmLiBBbmQgdGhlIHJlbmRlcmVyJ3MgZ2VvbWV0cnksIGJlY2F1c2UgYSBHSUYgY2Fubm90IGdyb3c6IHRoZSBmaXJzdCB2ZXJzaW9uCm9mIHRoaXMgZmlsZSBzaXplZCBlYWNoIGZyYW1lIGZyb20gaXRzIG93biBjb250ZW50IGFuZCBQaWxsb3cgY3JvcHBlZCBldmVyeQpmcmFtZSBhZnRlciB0aGUgZmlyc3QgdG8gdGhlIGluaXRpYWwgaGVpZ2h0LCBwcm9kdWNpbmcgYSBwZXJmZWN0bHkgdmFsaWQKYW5pbWF0aW9uIG9mIG9uZSBjb21tYW5kLgoKUmVuZGVyaW5nIG5lZWRzIFBpbGxvdywgc28gdGhvc2UgdGVzdHMgc2tpcCB3aGVuIGl0IGlzIGFic2VudDsgdGhlIHRyYW5zY3JpcHQKdGVzdHMgcnVuIGV2ZXJ5d2hlcmUsIHNpbmNlIHRoZSB0cmFuc2NyaXB0IGlzIHBsYWluIEpTT04uCiIiIgoKZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IHN5cwpmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKCmltcG9ydCBweXRlc3QKClJPT1QgPSBQYXRoKF9fZmlsZV9fKS5yZXNvbHZlKCkucGFyZW50c1sxXQppZiBzdHIoUk9PVCkgbm90IGluIHN5cy5wYXRoOiAgIyBwcmFnbWE6IG5vIGNvdmVyIC0gY29uZnRlc3QgYWxyZWFkeSBkb2VzIHRoaXMKICAgIHN5cy5wYXRoLmluc2VydCgwLCBzdHIoUk9PVCkpCgpmcm9tIHRvb2xzIGltcG9ydCBkZW1vX2Fzc2V0cyAgIyBub3FhOiBFNDAyICAocGF0aCBzZXQgdXAgYWJvdmUpCmZyb20gdG9vbHMgaW1wb3J0IHJlYWRtZV9hdWRpdCAgIyBub3FhOiBFNDAyCgoKZGVmIF9waWxsb3coKToKICAgICIiIkltcG9ydCBQaWxsb3csIHNraXBwaW5nIHRoZSB0ZXN0IHdoZW4gaXQgaXMgbm90IGluc3RhbGxlZC4KCiAgICBSZXR1cm5zOgogICAgICAgIFRoZSBgYFBJTC5JbWFnZWBgIG1vZHVsZS4KICAgICIiIgogICAgcHl0ZXN0LmltcG9ydG9yc2tpcCgiUElMIiwgcmVhc29uPSJ0aGUgcmVuZGVyZXIgbmVlZHMgUGlsbG93IChkZXYgZXh0cmEpIikKICAgIGZyb20gUElMIGltcG9ydCBJbWFnZQoKICAgIHJldHVybiBJbWFnZQoKCiMgLS0tIHNjcnViYmluZyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZGVmIHRlc3RfbWVhc3VyZWRfZHVyYXRpb25faXNfcmVwbGFjZWRfYnlfYV9zdGFibGVfb25lKCk6CiAgICBsaW5lcyA9IGRlbW9fYXNzZXRzLnNjcnViKCJQcm9jZXNzZWQgOiA4XG5EdXJhdGlvbiAgOiAyLjYxIG1zIChhc3luY2lvIGVuZ2luZSlcbiIpCiAgICBhc3NlcnQgbGluZXNbLTFdID09ICJEdXJhdGlvbiAgOiAyLjYgbXMgKGFzeW5jaW8gZW5naW5lKSIKCgpkZWYgdGVzdF9zY3JhdGNoX3BhdGhzX25ldmVyX3JlYWNoX3RoZV90cmFuc2NyaXB0KCk6CiAgICBsaW5lcyA9IGRlbW9fYXNzZXRzLnNjcnViKCJPcmdhbmlzaW5nOiAvdG1wL2RhdGhlb24tZGVtby1hYmMxMjMgICBbRFJZIFJVTiAobm8gY2hhbmdlcyBtYWRlKV0iKQogICAgYXNzZXJ0IGxpbmVzID09IFsiT3JnYW5pc2luZzogfi9Eb3dubG9hZHMgICBbRFJZIFJVTiAobm8gY2hhbmdlcyBtYWRlKV0iXQoKCmRlZiB0ZXN0X291dHB1dF9wYXRoc19hcmVfcmVkdWNlZF90b19maWxlX25hbWVzKCk6CiAgICB0ZXh0ID0gIlN1bW1hcnkgd3JpdHRlbiB0byAvaG9tZS9rcmlzaC9yZXBvL3BvcnRmb2xpb19zdW1tYXJ5LmNzdlxuIgogICAgYXNzZXJ0IGRlbW9fYXNzZXRzLnNjcnViKHRleHQpID09IFsiU3VtbWFyeSB3cml0dGVuIHRvIHBvcnRmb2xpb19zdW1tYXJ5LmNzdiJdCgoKZGVmIHRlc3RfbWFjaGluZV9zcGVjaWZpY19iYW5uZXJfbGluZXNfYXJlX2Ryb3BwZWQoKToKICAgIHRleHQgPSAiTG9hZGVkIEZBUSBkYXRhc2V0OiBwcm9qZWN0cy8wNC9zYW1wbGVfZmFxLmpzb25cbkNhdGVnb3JpZXM6IEF1ZGlvXG5oZWxsb1xuIgogICAgYXNzZXJ0IGRlbW9fYXNzZXRzLnNjcnViKHRleHQpID09IFsiaGVsbG8iXQoKCmRlZiB0ZXN0X2JsYW5rX2xpbmVzX2FyZV9jb2xsYXBzZWRfYnV0X2tlcHRfYXNfc3BhY2luZygpOgogICAgYXNzZXJ0IGRlbW9fYXNzZXRzLnNjcnViKCJhXG5cblxuXG5iXG5cbiIpID09IFsiYSIsICIiLCAiYiJdCgoKZGVmIHRlc3RfY3JsZl9pc19ub3JtYWxpc2VkKCk6CiAgICBhc3NlcnQgZGVtb19hc3NldHMuc2NydWIoImFcclxuYlxyXG4iKSA9PSBbImEiLCAiYiJdCgoKIyAtLS0gdHJhbnNjcmlwdCByb3VuZCB0cmlwIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmRlZiB0ZXN0X3Nlc3Npb25fcm91bmRfdHJpcHNfdGhyb3VnaF9qc29uKHRtcF9wYXRoOiBQYXRoKToKICAgIHNlc3Npb25zID0gW2RlbW9fYXNzZXRzLlNlc3Npb24oY29tbWFuZD0iaGFuZ21hbiAtLXZlcnNpb24iLCBvdXRwdXQ9WyJoYW5nbWFuIDEuMS4wIl0pXQogICAgcGF0aCA9IGRlbW9fYXNzZXRzLnNhdmVfdHJhbnNjcmlwdChzZXNzaW9ucywgdG1wX3BhdGggLyAidC5qc29uIikKICAgIGFzc2VydCBkZW1vX2Fzc2V0cy5sb2FkX3RyYW5zY3JpcHQocGF0aCkgPT0gc2Vzc2lvbnMKCgpkZWYgdGVzdF90cmFuc2NyaXB0X2lzX3dyaXR0ZW5fd2l0aF9hX3RyYWlsaW5nX25ld2xpbmUodG1wX3BhdGg6IFBhdGgpOgogICAgcGF0aCA9IGRlbW9fYXNzZXRzLnNhdmVfdHJhbnNjcmlwdChbZGVtb19hc3NldHMuU2Vzc2lvbigieCIsIFsieSJdKV0sIHRtcF9wYXRoIC8gInQuanNvbiIpCiAgICBhc3NlcnQgcGF0aC5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikuZW5kc3dpdGgoIlxuIikKCgpkZWYgdGVzdF90cmFuc2NyaXB0X3dpdGhvdXRfc2Vzc2lvbnNfaXNfcmVqZWN0ZWQodG1wX3BhdGg6IFBhdGgpOgogICAgcGF0aCA9IHRtcF9wYXRoIC8gInQuanNvbiIKICAgIHBhdGgud3JpdGVfdGV4dCgneyJzZXNzaW9ucyI6IFtdfScsIGVuY29kaW5nPSJ1dGYtOCIpCiAgICB3aXRoIHB5dGVzdC5yYWlzZXMoVmFsdWVFcnJvcik6CiAgICAgICAgZGVtb19hc3NldHMubG9hZF90cmFuc2NyaXB0KHBhdGgpCgoKZGVmIHRlc3Rfc2Vzc2lvbl9kaWN0X3dpdGhfdGhlX3dyb25nX3NoYXBlX2lzX3JlamVjdGVkKCk6CiAgICB3aXRoIHB5dGVzdC5yYWlzZXMoVmFsdWVFcnJvcik6CiAgICAgICAgZGVtb19hc3NldHMuU2Vzc2lvbi5mcm9tX2RpY3QoeyJjb21tYW5kIjogMywgIm91dHB1dCI6ICJub3BlIn0pCgoKIyAtLS0gY2FwdHVyZSAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpkZWYgdGVzdF9jYXB0dXJlX3J1bnNfYV9jb21tYW5kX2FuZF9zY3J1YnNfaXRzX291dHB1dCgpOgogICAgc2Vzc2lvbnMgPSBkZW1vX2Fzc2V0cy5jYXB0dXJlKHNwZWM9KCgicHl0aG9uIC1jIiwgKCItYyIsICJwcmludCgnaGknKSIpLCBOb25lKSwpKQogICAgYXNzZXJ0IFtzZXNzaW9uLmNvbW1hbmQgZm9yIHNlc3Npb24gaW4gc2Vzc2lvbnNdID09IFsicHl0aG9uIC1jIl0KICAgIGFzc2VydCBzZXNzaW9uc1swXS5vdXRwdXQgPT0gWyJoaSJdCgoKZGVmIHRlc3RfY2FwdHVyZV9yZWFkc19zdGFuZGFyZF9pbnB1dCgpOgogICAgc3BlYyA9ICgoImNhdCIsICgiLWMiLCAiaW1wb3J0IHN5czsgcHJpbnQoc3lzLnN0ZGluLnJlYWQoKS5zdHJpcCgpKSIpLCAicGlwZWRcbiIpLCkKICAgIGFzc2VydCBkZW1vX2Fzc2V0cy5jYXB0dXJlKHNwZWM9c3BlYylbMF0ub3V0cHV0ID09IFsicGlwZWQiXQoKCmRlZiB0ZXN0X2NhcHR1cmVfcmVmdXNlc19hX2ZhaWxlZF9jb21tYW5kKCk6CiAgICB3aXRoIHB5dGVzdC5yYWlzZXMoUnVudGltZUVycm9yLCBtYXRjaD0iZXhpdGVkIDMiKToKICAgICAgICBkZW1vX2Fzc2V0cy5jYXB0dXJlKHNwZWM9KCgiYm9vbSIsICgiLWMiLCAicmFpc2UgU3lzdGVtRXhpdCgzKSIpLCBOb25lKSwpKQoKCmRlZiB0ZXN0X2NhcHR1cmVfcmVmdXNlc19hX3NpbGVudF9jb21tYW5kKCk6CiAgICB3aXRoIHB5dGVzdC5yYWlzZXMoUnVudGltZUVycm9yLCBtYXRjaD0icHJpbnRlZCBub3RoaW5nIik6CiAgICAgICAgZGVtb19hc3NldHMuY2FwdHVyZShzcGVjPSgoInF1aWV0IiwgKCItYyIsICJwYXNzIiksIE5vbmUpLCkpCgoKIyAtLS0gcmVuZGVyaW5nIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpkZWYgdGVzdF9ldmVyeV9mcmFtZV9pc190aGVfc2FtZV9zaXplKCk6CiAgICBfcGlsbG93KCkKICAgIGZyYW1lcyA9IGRlbW9fYXNzZXRzLmJ1aWxkX2ZyYW1lcyhkZW1vX2Fzc2V0cy5sb2FkX3RyYW5zY3JpcHQoKSkKICAgIGFzc2VydCBsZW4oe2ZyYW1lLnNpemUgZm9yIGZyYW1lIGluIGZyYW1lc30pID09IDEKCgpkZWYgdGVzdF9mcmFtZV9jb3VudF9mb2xsb3dzX3RoZV90eXBpbmdfYW5kX2hvbGRfYnVkZ2V0KCk6CiAgICBfcGlsbG93KCkKICAgIHNlc3Npb25zID0gZGVtb19hc3NldHMubG9hZF90cmFuc2NyaXB0KCkKICAgIGZyYW1lcyA9IGRlbW9fYXNzZXRzLmJ1aWxkX2ZyYW1lcyhzZXNzaW9ucykKICAgIGV4cGVjdGVkID0gMQogICAgZm9yIHNlc3Npb24gaW4gc2Vzc2lvbnM6CiAgICAgICAgdHlwaW5nID0gLSgtbGVuKHNlc3Npb24uY29tbWFuZCkgLy8gZGVtb19hc3NldHMuVFlQSU5HX0NIVU5LKQogICAgICAgIHNob3duID0gbWluKGxlbihzZXNzaW9uLm91dHB1dCksIGRlbW9fYXNzZXRzLk1BWF9PVVRQVVRfTElORVMpCiAgICAgICAgaWYgbGVuKHNlc3Npb24ub3V0cHV0KSA+IGRlbW9fYXNzZXRzLk1BWF9PVVRQVVRfTElORVM6CiAgICAgICAgICAgIHNob3duICs9IDEKICAgICAgICBleHBlY3RlZCArPSB0eXBpbmcgKyBzaG93biArIGRlbW9fYXNzZXRzLkhPTERfRlJBTUVTCiAgICBhc3NlcnQgbGVuKGZyYW1lcykgPT0gZXhwZWN0ZWQKCgpkZWYgdGVzdF9sb25nX291dHB1dF9pc190cnVuY2F0ZWRfd2l0aF9hbl9lbGxpcHNpcygpOgogICAgX3BpbGxvdygpCiAgICBzZXNzaW9uID0gZGVtb19hc3NldHMuU2Vzc2lvbigiY21kIiwgW2YibGluZSB7aX0iIGZvciBpIGluIHJhbmdlKDQwKV0pCiAgICBmcmFtZXMgPSBkZW1vX2Fzc2V0cy5idWlsZF9mcmFtZXMoW3Nlc3Npb25dKQogICAgYXNzZXJ0IGxlbihmcmFtZXMpID09IDEgKyAxICsgZGVtb19hc3NldHMuTUFYX09VVFBVVF9MSU5FUyArIDEgKyBkZW1vX2Fzc2V0cy5IT0xEX0ZSQU1FUwoKCmRlZiB0ZXN0X3JlbmRlcmVkX2dpZl9pc19hbmltYXRlZF9hbmRfd2l0aGluX2J1ZGdldCh0bXBfcGF0aDogUGF0aCk6CiAgICBfcGlsbG93KCkKICAgIHBhdGggPSBkZW1vX2Fzc2V0cy5yZW5kZXJfZ2lmKGRlbW9fYXNzZXRzLmxvYWRfdHJhbnNjcmlwdCgpLCB0bXBfcGF0aCAvICJkZW1vLmdpZiIpCiAgICByZXBvcnQgPSByZWFkbWVfYXVkaXQuaW5zcGVjdF9hc3NldChwYXRoKQogICAgYXNzZXJ0IHJlcG9ydC5vawogICAgYXNzZXJ0IHJlcG9ydC5mcmFtZXMgPj0gNjAKICAgIGFzc2VydCByZXBvcnQuc2l6ZSA8PSByZWFkbWVfYXVkaXQuQVNTRVRfQlVER0VUX0JZVEVTCgoKZGVmIHRlc3RfcmVuZGVyaW5nX2lzX2RldGVybWluaXN0aWModG1wX3BhdGg6IFBhdGgpOgogICAgX3BpbGxvdygpCiAgICBzZXNzaW9ucyA9IGRlbW9fYXNzZXRzLmxvYWRfdHJhbnNjcmlwdCgpCiAgICBmaXJzdCA9IGRlbW9fYXNzZXRzLnJlbmRlcl9naWYoc2Vzc2lvbnMsIHRtcF9wYXRoIC8gImEuZ2lmIikucmVhZF9ieXRlcygpCiAgICBzZWNvbmQgPSBkZW1vX2Fzc2V0cy5yZW5kZXJfZ2lmKHNlc3Npb25zLCB0bXBfcGF0aCAvICJiLmdpZiIpLnJlYWRfYnl0ZXMoKQogICAgYXNzZXJ0IGZpcnN0ID09IHNlY29uZAoKCmRlZiB0ZXN0X2Zwc19pc19jbGFtcGVkX3RvX2FfbGVnaWJsZV9yYW5nZSh0bXBfcGF0aDogUGF0aCk6CiAgICBfcGlsbG93KCkKICAgIGltYWdlID0gX3BpbGxvdygpCiAgICBwYXRoID0gZGVtb19hc3NldHMucmVuZGVyX2dpZihkZW1vX2Fzc2V0cy5sb2FkX3RyYW5zY3JpcHQoKSwgdG1wX3BhdGggLyAiZmFzdC5naWYiLCBmcHM9OTk5KQogICAgd2l0aCBpbWFnZS5vcGVuKHBhdGgpIGFzIGdpZjoKICAgICAgICBhc3NlcnQgZ2lmLmluZm9bImR1cmF0aW9uIl0gPj0gNTAKCgojIC0tLSBjb21tYW5kIGxpbmUgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmRlZiB0ZXN0X2NoZWNrX3JlcG9ydHNfbWlzc2luZ19hc3NldHNfYW5kX2V4aXRzX29uZSh0bXBfcGF0aDogUGF0aCwgbW9ua2V5cGF0Y2gsIGNhcHN5cyk6CiAgICBtb25rZXlwYXRjaC5zZXRhdHRyKGRlbW9fYXNzZXRzLCAiVFJBTlNDUklQVF9QQVRIIiwgdG1wX3BhdGggLyAibWlzc2luZy5qc29uIikKICAgIG1vbmtleXBhdGNoLnNldGF0dHIoZGVtb19hc3NldHMsICJHSUZfUEFUSCIsIHRtcF9wYXRoIC8gIm1pc3NpbmcuZ2lmIikKICAgIGFzc2VydCBkZW1vX2Fzc2V0cy5tYWluKFsiLS1jaGVjayJdKSA9PSAxCiAgICBhc3NlcnQgIm1pc3NpbmciIGluIGNhcHN5cy5yZWFkb3V0ZXJyKCkub3V0CgoKZGVmIHRlc3RfY2hlY2tfcGFzc2VzX29uX3RoZV9jb21taXR0ZWRfYXNzZXRzKGNhcHN5cyk6CiAgICBhc3NlcnQgZGVtb19hc3NldHMubWFpbihbIi0tY2hlY2siXSkgPT0gMAogICAgYXNzZXJ0ICJvayIgaW4gY2Fwc3lzLnJlYWRvdXRlcnIoKS5vdXQKCgojIC0tLSB0aGUgY29tbWl0dGVkIGFzc2V0cyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZGVmIHRlc3RfdGhlX2NvbW1pdHRlZF90cmFuc2NyaXB0X2NvdmVyc19hbGxfZml2ZV90b29scygpOgogICAgc2Vzc2lvbnMgPSBkZW1vX2Fzc2V0cy5sb2FkX3RyYW5zY3JpcHQoKQogICAgYXNzZXJ0IGxlbihzZXNzaW9ucykgPT0gNQogICAgY29tbWFuZHMgPSBbc2Vzc2lvbi5jb21tYW5kLnNwbGl0KClbMF0gZm9yIHNlc3Npb24gaW4gc2Vzc2lvbnNdCiAgICBhc3NlcnQgY29tbWFuZHMgPT0gWyJoYW5nbWFuIiwgInBvcnRmb2xpbyIsICJvcmdhbml6ZXIiLCAiYXNzaXN0YW50IiwgImludmVudG9yeSJdCiAgICBhc3NlcnQgYWxsKHNlc3Npb24ub3V0cHV0IGZvciBzZXNzaW9uIGluIHNlc3Npb25zKQoKCmRlZiB0ZXN0X3RoZV9jb21taXR0ZWRfdHJhbnNjcmlwdF9pc19mcmVlX29mX2Fic29sdXRlX3BhdGhzKCk6CiAgICB0ZXh0ID0gZGVtb19hc3NldHMuVFJBTlNDUklQVF9QQVRILnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQogICAgYXNzZXJ0ICIvdG1wLyIgbm90IGluIHRleHQgYW5kICIvaG9tZS8iIG5vdCBpbiB0ZXh0IGFuZCAiL3NjcmF0Y2gvIiBub3QgaW4gdGV4dAo=
+"""Tests for the Day 27 demo-asset pipeline (``tools/demo_assets.py``).
+
+Two things are being protected here. The scrubber, because it is the only
+reason the transcript is reproducible on a machine that is not this one — a
+leaked scratch path or a measured duration makes every re-capture a spurious
+diff. And the renderer's geometry, because a GIF cannot grow: the first version
+of this file sized each frame from its own content and Pillow cropped every
+frame after the first to the initial height, producing a perfectly valid
+animation of one command.
+
+Rendering needs Pillow, so those tests skip when it is absent; the transcript
+tests run everywhere, since the transcript is plain JSON.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:  # pragma: no cover - conftest already does this
+    sys.path.insert(0, str(ROOT))
+
+from tools import demo_assets  # noqa: E402  (path set up above)
+from tools import readme_audit  # noqa: E402
+
+
+def _pillow():
+    """Import Pillow, skipping the test when it is not installed.
+
+    Returns:
+        The ``PIL.Image`` module.
+    """
+    pytest.importorskip("PIL", reason="the renderer needs Pillow (dev extra)")
+    from PIL import Image
+
+    return Image
+
+
+# --- scrubbing ---------------------------------------------------------
+def test_measured_duration_is_replaced_by_a_stable_one():
+    lines = demo_assets.scrub("Processed : 8\nDuration  : 2.61 ms (asyncio engine)\n")
+    assert lines[-1] == "Duration  : 2.6 ms (asyncio engine)"
+
+
+def test_scratch_paths_never_reach_the_transcript():
+    lines = demo_assets.scrub("Organising: /tmp/datheon-demo-abc123   [DRY RUN (no changes made)]")
+    assert lines == ["Organising: ~/Downloads   [DRY RUN (no changes made)]"]
+
+
+def test_output_paths_are_reduced_to_file_names():
+    text = "Summary written to /home/krish/repo/portfolio_summary.csv\n"
+    assert demo_assets.scrub(text) == ["Summary written to portfolio_summary.csv"]
+
+
+def test_machine_specific_banner_lines_are_dropped():
+    text = "Loaded FAQ dataset: projects/04/sample_faq.json\nCategories: Audio\nhello\n"
+    assert demo_assets.scrub(text) == ["hello"]
+
+
+def test_blank_lines_are_collapsed_but_kept_as_spacing():
+    assert demo_assets.scrub("a\n\n\n\nb\n\n") == ["a", "", "b"]
+
+
+def test_crlf_is_normalised():
+    assert demo_assets.scrub("a\r\nb\r\n") == ["a", "b"]
+
+
+# --- transcript round trip --------------------------------------------
+def test_session_round_trips_through_json(tmp_path: Path):
+    sessions = [demo_assets.Session(command="hangman --version", output=["hangman 1.1.0"])]
+    path = demo_assets.save_transcript(sessions, tmp_path / "t.json")
+    assert demo_assets.load_transcript(path) == sessions
+
+
+def test_transcript_is_written_with_a_trailing_newline(tmp_path: Path):
+    path = demo_assets.save_transcript([demo_assets.Session("x", ["y"])], tmp_path / "t.json")
+    assert path.read_text(encoding="utf-8").endswith("\n")
+
+
+def test_transcript_without_sessions_is_rejected(tmp_path: Path):
+    path = tmp_path / "t.json"
+    path.write_text('{"sessions": []}', encoding="utf-8")
+    with pytest.raises(ValueError):
+        demo_assets.load_transcript(path)
+
+
+def test_session_dict_with_the_wrong_shape_is_rejected():
+    with pytest.raises(ValueError):
+        demo_assets.Session.from_dict({"command": 3, "output": "nope"})
+
+
+# --- capture -----------------------------------------------------------
+def test_capture_runs_a_command_and_scrubs_its_output():
+    sessions = demo_assets.capture(spec=(("python -c", ("-c", "print('hi')"), None),))
+    assert [session.command for session in sessions] == ["python -c"]
+    assert sessions[0].output == ["hi"]
+
+
+def test_capture_reads_standard_input():
+    spec = (("cat", ("-c", "import sys; print(sys.stdin.read().strip())"), "piped\n"),)
+    assert demo_assets.capture(spec=spec)[0].output == ["piped"]
+
+
+def test_capture_refuses_a_failed_command():
+    with pytest.raises(RuntimeError, match="exited 3"):
+        demo_assets.capture(spec=(("boom", ("-c", "raise SystemExit(3)"), None),))
+
+
+def test_capture_refuses_a_silent_command():
+    with pytest.raises(RuntimeError, match="printed nothing"):
+        demo_assets.capture(spec=(("quiet", ("-c", "pass"), None),))
+
+
+# --- rendering ---------------------------------------------------------
+def test_every_frame_is_the_same_size():
+    _pillow()
+    frames = demo_assets.build_frames(demo_assets.load_transcript())
+    assert len({frame.size for frame in frames}) == 1
+
+
+def test_frame_count_follows_the_typing_and_hold_budget():
+    _pillow()
+    sessions = demo_assets.load_transcript()
+    frames = demo_assets.build_frames(sessions)
+    expected = 1
+    for session in sessions:
+        typing = -(-len(session.command) // demo_assets.TYPING_CHUNK)
+        shown = min(len(session.output), demo_assets.MAX_OUTPUT_LINES)
+        if len(session.output) > demo_assets.MAX_OUTPUT_LINES:
+            shown += 1
+        expected += typing + shown + demo_assets.HOLD_FRAMES
+    assert len(frames) == expected
+
+
+def test_long_output_is_truncated_with_an_ellipsis():
+    _pillow()
+    session = demo_assets.Session("cmd", [f"line {i}" for i in range(40)])
+    frames = demo_assets.build_frames([session])
+    assert len(frames) == 1 + 1 + demo_assets.MAX_OUTPUT_LINES + 1 + demo_assets.HOLD_FRAMES
+
+
+def test_rendered_gif_is_animated_and_within_budget(tmp_path: Path):
+    _pillow()
+    path = demo_assets.render_gif(demo_assets.load_transcript(), tmp_path / "demo.gif")
+    report = readme_audit.inspect_asset(path)
+    assert report.ok
+    assert report.frames >= 60
+    assert report.size <= readme_audit.ASSET_BUDGET_BYTES
+
+
+def test_rendering_is_deterministic(tmp_path: Path):
+    _pillow()
+    sessions = demo_assets.load_transcript()
+    first = demo_assets.render_gif(sessions, tmp_path / "a.gif").read_bytes()
+    second = demo_assets.render_gif(sessions, tmp_path / "b.gif").read_bytes()
+    assert first == second
+
+
+def test_fps_is_clamped_to_a_legible_range(tmp_path: Path):
+    _pillow()
+    image = _pillow()
+    path = demo_assets.render_gif(demo_assets.load_transcript(), tmp_path / "fast.gif", fps=999)
+    with image.open(path) as gif:
+        assert gif.info["duration"] >= 50
+
+
+# --- command line ------------------------------------------------------
+def test_check_reports_missing_assets_and_exits_one(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.setattr(demo_assets, "TRANSCRIPT_PATH", tmp_path / "missing.json")
+    monkeypatch.setattr(demo_assets, "GIF_PATH", tmp_path / "missing.gif")
+    assert demo_assets.main(["--check"]) == 1
+    assert "missing" in capsys.readouterr().out
+
+
+def test_check_passes_on_the_committed_assets(capsys):
+    assert demo_assets.main(["--check"]) == 0
+    assert "ok" in capsys.readouterr().out
+
+
+# --- the committed assets ---------------------------------------------
+def test_the_committed_transcript_covers_all_five_tools():
+    sessions = demo_assets.load_transcript()
+    assert len(sessions) == 5
+    commands = [session.command.split()[0] for session in sessions]
+    assert commands == ["hangman", "portfolio", "organizer", "assistant", "inventory"]
+    assert all(session.output for session in sessions)
+
+
+def test_the_committed_transcript_is_free_of_absolute_paths():
+    text = demo_assets.TRANSCRIPT_PATH.read_text(encoding="utf-8")
+    assert "/tmp/" not in text and "/home/" not in text and "/scratch/" not in text

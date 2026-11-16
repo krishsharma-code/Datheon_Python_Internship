@@ -1,1 +1,132 @@
-IyBTdWJtaXNzaW9uIHBvbGlzaDogdGhlIFJFQURNRSBhcyBhbiBhcnRlZmFjdCAoRGF5IDI3KQoKVGhlIFJFQURNRSBpcyB0aGUgb25seSBmaWxlIGluIHRoaXMgcmVwb3NpdG9yeSB3aXRoIG5vIHRlc3QgYmVoaW5kIGl0LiBFdmVyeQpvdGhlciBjbGFpbSBpbiB0aGUgcHJvamVjdCDigJQgdGhlIGV4aXQgY29kZXMsIHRoZSBjb3ZlcmFnZSBmbG9vciwgdGhlIENJIG1hdHJpeCwKdGhlIHJlbGVhc2UgdmVyc2lvbiDigJQgaXMgcmUtbWVhc3VyZWQgb24gZWFjaCBydW4gYnkgc29tZXRoaW5nIGluIGB0b29scy9gLiBUaGUKUkVBRE1FIHdhcyBtZWFzdXJlZCBieSBub3RoaW5nLCB3aGljaCBpcyBob3cgYSBzdWJtaXNzaW9uIGVuZHMgdXAgd2l0aCBhIGxpbmsgdG8KYSBkaWFncmFtIG5vYm9keSBjb21taXR0ZWQgYW5kIGEgcXVpY2tzdGFydCB0aGF0IG5vIGxvbmdlciBjbG9uZXMuCgpEYXkgMjcgY2xvc2VzIHRoYXQgZ2FwIGluIHRocmVlIHBhcnRzOiBhIGRpYWdyYW0sIGEgZGVtbywgYW5kIGFuIGF1ZGl0IHRoYXQKa2VlcHMgYm90aCBob25lc3QuCgotLS0KCiMjIDEuIFRoZSBhcmNoaXRlY3R1cmUgZGlhZ3JhbQoKYGRvY3MvYXNzZXRzL2FyY2hpdGVjdHVyZS5zdmdgIGlzIGEgaGFuZC1hdXRob3JlZCBTVkcg4oCUIG9uZSBwYWdlLCBmaXZlIGxheWVyczoKCnwgTGF5ZXIgfCBNb2R1bGVzIHwKfCAtLS0gfCAtLS0gfAp8IEVudHJ5IHBvaW50cyB8IGBkYXRoZW9uL2NsaS9gIHNoaW1zIG92ZXIgYHByb2plY3RzLzx0YXNrPi9tYWluLnB5YCB8CnwgQ29udHJhY3QgfCBgY2xpX2NvbnRyYWN0LnB5YCwgYHZhbGlkYXRvcnMucHlgLCBgZXJyb3JzLnB5YCwgYGVkZ2VfY2FzZXMucHlgIHwKfCBDb3JlIHwgYGxvZ2dpbmdfY29uZmlnLnB5YCwgYHN0cnVjdHVyZWRfbG9nZ2luZy5weWAsIGBwZXJzaXN0ZW5jZS5weWAsIGBjYWNoaW5nLnB5YCwgYGRhdGFzZXRfbG9hZGVyLnB5YCwgYHByb2ZpbGluZy5weWAsIGBvYnNlcnZhYmlsaXR5LnB5YCwgYGZ1enppbmcucHlgLCBgZXJyb3JfY2F0YWxvZ3VlLnB5YCB8CnwgQXJ0ZWZhY3RzIHwgYnVuZGxlZCBkYXRhc2V0cywgYH4vLmRhdGhlb24vbG9nc2AsIGBwb3J0Zm9saW9fc3VtbWFyeS5jc3ZgLCBhY3Rpdml0eSBhbmQgY29udmVyc2F0aW9uIGxvZ3MgfAp8IEdhdGVzIHwgcHl0ZXN0LCB0aGUgc3RhdGljIGF1ZGl0cywgdGhlIENJIG1hdHJpeCwgdGhlIE1rRG9jcyBidWlsZCwgdGhlIHJlbGVhc2UgcGlwZWxpbmUgfAoKKipXaHkgU1ZHIGFuZCBub3QgYSBQTkcuKiogQSBQTkcgaXMgYSBzY3JlZW5zaG90IG9mIGEgZGlhZ3JhbTogaXQgY2Fubm90IGJlCmRpZmZlZCwgaXRzIHRleHQgY2Fubm90IGJlIHNlYXJjaGVkLCBhbmQgaXQgaGFzIHRvIGJlIHJlLWV4cG9ydGVkIGZyb20gd2hhdGV2ZXIKcHJvZHVjZWQgaXQuIEFuIFNWRyBpcyB0ZXh0LCBzbyBhIHJldmlld2VyIHJlYWRzIHRoZSBkaWZmIG9mIGEgZGlhZ3JhbSBjaGFuZ2UKdGhlIHNhbWUgd2F5IHRoZXkgcmVhZCB0aGUgZGlmZiBvZiBhIG1vZHVsZSwgYW5kIEdpdEh1YiByZW5kZXJzIGl0IG5hdGl2ZWx5IGF0CmFueSB6b29tLiBUaGUgY29zdCBpcyB0aGF0IGEgaGFuZC1hdXRob3JlZCBTVkcgY2FuIGJlIG1hbGZvcm1lZCDigJQgd2hpY2ggaXMKZXhhY3RseSB3aGF0IHRoZSBhdWRpdCBjaGVja3MuCgpUaGUgZGlhZ3JhbSBpcyBlbWJlZGRlZCB0d2ljZSBvbiBwdXJwb3NlOiBpbiB0aGUgcmVwb3NpdG9yeSBSRUFETUUsIHdoZXJlIGEKcmV2aWV3ZXIgbGFuZHMsIGFuZCBvbiB0aGUgZG9jdW1lbnRhdGlvbiBob21lIHBhZ2UsIHdoZXJlIHRoZSBzaXRlJ3MgcmVhZGVycwpsYW5kLiBUaGUgYXVkaXQgZmFpbHMgaWYgZWl0aGVyIHN0b3BzIHNob3dpbmcgaXQuCgotLS0KCiMjIDIuIFRoZSBkZW1vIGFzc2V0CgpgZG9jcy9hc3NldHMvZGVtby9xdWlja3N0YXJ0LmdpZmAgaXMgYSBmaWZ0ZWVuLXNlY29uZCBhbmltYXRpb24gb2YgdGhlIGZpdmUKdG9vbHMgcnVubmluZy4gSXQgaXMgZ2VuZXJhdGVkLCBub3QgcmVjb3JkZWQ6CgpgYGB0ZXh0CmRvY3MvYXNzZXRzL2RlbW8vdHJhbnNjcmlwdC5qc29uICAgICAgY2FwdHVyZWQgb3V0cHV0LCBvbmUgc2Vzc2lvbiBwZXIgY29tbWFuZAogICAgICAgIOKUggogICAgICAgIOKWvCAgcHl0aG9uIHRvb2xzL2RlbW9fYXNzZXRzLnB5CmRvY3MvYXNzZXRzL2RlbW8vcXVpY2tzdGFydC5naWYgICAgICAgZml4ZWQgODYww5c0MDIgd2luZG93LCAzMi1jb2xvdXIgcGFsZXR0ZQpgYGAKCmAtLWNhcHR1cmVgIHJ1bnMgdGhlIGZpdmUgY29tbWFuZHMgZnJvbSB0aGUgc291cmNlIHRyZWUsIHNjcnVicyB0aGUgdHdvIHRoaW5ncwp0aGF0IGFyZSB0cnVlIG9ubHkgb2YgdGhlIGNhcHR1cmluZyBtYWNoaW5lIOKAlCB0aGUgc2NyYXRjaCBkaXJlY3RvcnkncyBhYnNvbHV0ZQpwYXRoIGFuZCB0aGUgb3JnYW5pemVyJ3MgbWVhc3VyZWQgZHVyYXRpb24g4oCUIGFuZCByZXdyaXRlcyB0aGUgdHJhbnNjcmlwdC4gVGhlCnRyYW5zY3JpcHQgaXMgdGhlIHNvdXJjZSBvZiB0cnV0aDogZWRpdGluZyBpdCBieSBoYW5kIGlzIHBvaW50bGVzcywgYmVjYXVzZSB0aGUKbmV4dCBjYXB0dXJlIG92ZXJ3cml0ZXMgaXQsIGFuZCB0aGF0IGlzIHRoZSBwb2ludC4gQSBkZW1vIHRoYXQgaXMgcmV0eXBlZCBkcmlmdHMKYXdheSBmcm9tIHRoZSB0b29sIGl0IGNsYWltcyB0byBzaG93LgoKVGhlIHJlbmRlcmVyIHNpemVzIHRoZSB3aW5kb3cgb25jZSwgZnJvbSB0aGUgbG9uZ2VzdCBzZXNzaW9uLCBiZWNhdXNlIGEgR0lGCmNhbm5vdCBncm93IGEgZnJhbWU7IHRoZSB0cmFuc2NyaXB0IHNjcm9sbHMgaW5zaWRlIGl0IGxpa2UgYSByZWFsIHRlcm1pbmFsLiBUaGUKZmlyc3QgYXR0ZW1wdCBncmV3IHRoZSB3aW5kb3cgZnJhbWUgYnkgZnJhbWUsIGFuZCBQaWxsb3cgY3JvcHBlZCBldmVyeSBmcmFtZQphZnRlciB0aGUgZmlyc3QgdG8gdGhlIGluaXRpYWwgaGVpZ2h0IOKAlCBhIGJ1ZyB0aGF0IHByb2R1Y2VkIGEgdmFsaWQgR0lGIHNob3dpbmcKb25lIGNvbW1hbmQuIFRoZSBmcmFtZXMgYXJlIG5vdyBhbGwgdGhlIHNhbWUgc2l6ZSBieSBjb25zdHJ1Y3Rpb24uCgojIyMgQnVkZ2V0CgpUaGUgYXNzZXQgaXMgYSB0cmFpbGVyLCBub3QgYSB0cmFuc2NyaXB0LiBUaHJlZSBsaW1pdHMga2VlcCBpdCBlbWJlZGRhYmxlOgoKLSAqKkZyYW1lcyoqIOKAlCBjb21tYW5kcyBhcmUgdHlwZWQgZm91ciBjaGFyYWN0ZXJzIGF0IGEgdGltZSBhbmQgZWFjaCBzZXNzaW9uCiAgcmVzdHMgZm9yIGVpZ2h0IGZyYW1lcywgc28gMTI5IGZyYW1lcyBhcmUgYnVpbHQgZm9yIGZpdmUgY29tbWFuZHMgKH4xNCBzKTsKICBQaWxsb3cgbWVyZ2VzIHRoZSBpZGVudGljYWwgaG9sZCBmcmFtZXMsIGxlYXZpbmcgODkgaW4gdGhlIGZpbGUuCi0gKipMaW5lcyoqIOKAlCBhIHNlc3Npb24gc2hvd3MgYXQgbW9zdCB0d2VsdmUgb3V0cHV0IGxpbmVzLCB0aGVuIGDigKZgLgotICoqQnl0ZXMqKiDigJQgYHJlYWRtZV9hdWRpdGAgZmFpbHMgYW4gYXNzZXQgb3ZlciAyIE1CLiBUaGUgY29tbWl0dGVkIEdJRiBpcwogIH4wLjggTUIgYXQgMzIgY29sb3VyczsgdGhlIDY0LWNvbG91ciBmaXJzdCBjdXQgd2FzIDQuMyBNQiwgd2hpY2ggaXMgYSBwYWdlCiAgdGhhdCB0YWtlcyBzZWNvbmRzIHRvIHBhaW50IGFuZCBhIHJlcG9zaXRvcnkgdGhhdCBncm93cyBieSA0IE1CIHBlciByZS1zaG9vdC4KCi0tLQoKIyMgMy4gVGhlIGF1ZGl0CgpgYGBiYXNoCnB5dGhvbiB0b29scy9yZWFkbWVfYXVkaXQucHkgICAgICAgICAgICAjIHRhYmxlLCBleGl0IDEgb24gYW55IGZpbmRpbmcKcHl0aG9uIHRvb2xzL3JlYWRtZV9hdWRpdC5weSAtLWpzb24gICAgICMgbWFjaGluZS1yZWFkYWJsZQpweXRob24gdG9vbHMvcmVhZG1lX2F1ZGl0LnB5IC0tc3RyaWN0ICAgIyB3YXJuaW5ncyBjb3VudCBhcyBmYWlsdXJlcwpgYGAKCnwgQ29kZSB8IEZhaWxzIHdoZW4gfAp8IC0tLSB8IC0tLSB8CnwgYHJlYWRtZS5zZWN0aW9uYCB8IGEgcmVxdWlyZWQgc2VjdGlvbiAob3ZlcnZpZXcsIHF1aWNrc3RhcnQsIGFyY2hpdGVjdHVyZSwgZG9jdW1lbnRhdGlvbiwgcHJvamVjdHMsIGxpY2VuY2UpIGlzIG1pc3NpbmcgfAp8IGByZWFkbWUucXVpY2tzdGFydGAgfCB0aGUgcXVpY2tzdGFydCBsb3N0IGl0cyBjbG9uZSwgaW5zdGFsbCBvciB0ZXN0IGNvbW1hbmQgfAp8IGByZWFkbWUubGlua2AgfCBhIHJlbGF0aXZlIGxpbmsgb3IgaW1hZ2UgZG9lcyBub3QgcmVzb2x2ZSwgb3IgYSBgI2ZyYWdtZW50YCBubyBoZWFkaW5nIHByb2R1Y2VzIHwKfCBgcmVhZG1lLmFzc2V0YCB8IGFuIGVtYmVkZGVkIGFzc2V0IGlzIG1pc3NpbmcsIGVtcHR5LCBub3QgdmFsaWQgU1ZHLCBhIHN0aWxsIEdJRiwgb3Igb3ZlciBidWRnZXQgfAp8IGByZWFkbWUuZGlhZ3JhbWAgfCB0aGUgYXJjaGl0ZWN0dXJlIGRpYWdyYW0gaXMgbm90IGVtYmVkZGVkIGluIGJvdGggdGhlIFJFQURNRSBhbmQgYGRvY3MvaW5kZXgubWRgIHwKfCBgcmVhZG1lLmRlbW9gIHwgdGhlIGRlbW8gR0lGIGlzIG5vdCByZWZlcmVuY2VkIGZyb20gdGhlIFJFQURNRSB8CnwgYHJlYWRtZS5vcnBoYW5gIHwgYW4gYXNzZXQgdW5kZXIgYGRvY3MvYXNzZXRzYCB0aGF0IG5vIGRvY3VtZW50IHJlZmVyZW5jZXMgKih3YXJuaW5nKSogfAp8IGByZWFkbWUucGxhY2Vob2xkZXJgIHwgYFRPRE9gLCBgVEJEYCwgYEZJWE1FYCBvciBgbG9yZW0gaXBzdW1gIGxlZnQgaW4gdGhlIHByb3NlIHwKfCBgcmVhZG1lLnNlY3JldGAgfCBhIGBnaHBfYC9gZ2l0aHViX3BhdF9gL2B4b3hiLWAvYEFLSUFgIHNoYXBlZCBzdHJpbmcgfAoKIyMjIFR3byBkZXRhaWxzIHRoYXQgbWF0dGVyCgoqKkNvZGUgaXMgbm90IHByb3NlLioqIExpbmsgc2Nhbm5pbmcgc3RyaXBzIGZlbmNlZCBibG9ja3MgYW5kIGlubGluZSBjb2RlIHNwYW5zCmZpcnN0LiBPdGhlcndpc2UgZXZlcnkgY29tbWFuZCBpbiB0aGUgcXVpY2tzdGFydCB0aGF0IGhhcHBlbnMgdG8gY29udGFpbgpicmFja2V0cyDigJQgYW5kIGV2ZXJ5IGBbbGFiZWxdOiB1cmxgIGV4YW1wbGUg4oCUIGlzIHJlcG9ydGVkIGFzIGEgYnJva2VuIGxpbmssIGFuZAphIGdhdGUgd2l0aCBmYWxzZSBwb3NpdGl2ZXMgZ2V0cyBzd2l0Y2hlZCBvZmYuCgoqKkFuY2hvcnMgYXJlIGNvbXB1dGVkIHRoZSB3YXkgR2l0SHViIGNvbXB1dGVzIHRoZW0uKiogRW1vamkgYW5kIHB1bmN0dWF0aW9uIGFyZQpkcm9wcGVkLCBzcGFjZXMgYmVjb21lIGh5cGhlbnMsIHNvIGAjIyDwn46vIE92ZXJ2aWV3YCBpcyBgIy1vdmVydmlld2Ag4oCUIHRoZSBsZWFkaW5nCmh5cGhlbiBpcyBub3QgYSB0eXBvLCBpdCBpcyB3aGF0IHRoZSBlbW9qaSBsZWZ0IGJlaGluZC4gVGhlIGF1ZGl0IHJlYnVpbGRzIGVhY2gKZG9jdW1lbnQncyBhbmNob3Igc2V0IGFuZCBjaGVja3MgZXZlcnkgZnJhZ21lbnQgYWdhaW5zdCBpdCwgd2hpY2ggaXMgd2hhdCBtYWtlcwp0aGUgdGFibGUgb2YgY29udGVudHMgc2FmZSB0byBrZWVwLgoKIyMjIEV4aXQgY29kZXMKCmAwYCBjbGVhbiwgYDFgIGZpbmRpbmdzLCBgMmAgdW5tZWFzdXJhYmxlIOKAlCB0aGUgUkVBRE1FIGlzIGFic2VudCwgc28gbm90aGluZyBjYW4KYmUgY2hlY2tlZC4gVGhlIGAyYCBpcyBkZWxpYmVyYXRlOiBhbiBhdWRpdCB0aGF0IHJldHVybnMgYDBgIHdoZW4gaXQgY291bGQgbm90Cmxvb2sgaXMgd29yc2UgdGhhbiBubyBhdWRpdCwgYmVjYXVzZSBpdCBjb252ZXJ0cyAidW5rbm93biIgaW50byAicGFzcyIuIEl0IGlzCnRoZSBzYW1lIHJ1bGUgYGRvY3Nfc2l0ZS5weWAsIGBkaXN0cmlidXRpb24ucHlgLCBgY2lfbWF0cml4LnB5YCBhbmQKYHJlbGVhc2UucHlgIGZvbGxvdy4KCi0tLQoKIyMgV2hhdCB0aGlzIGRheSBkaWQgbm90IGRvCgotICoqTm8gc2NyZWVuc2hvdHMgb2YgdGhlIGRvY3VtZW50YXRpb24gc2l0ZS4qKiBBIFBORyBvZiBhIHNpdGUgdGhhdCBpcyBvbmUKICBjbGljayBhd2F5LCBhbmQgdGhhdCBjaGFuZ2VzIG9uIGV2ZXJ5IHJlbGVhc2UsIGlzIG1haW50ZW5hbmNlIHdpdGggbm8gcGF5b2ZmOwogIHRoZSBkZW1vIEdJRiBlYXJucyBpdHMgYnl0ZXMgYmVjYXVzZSB0aGUgdGVybWluYWwgaXMgdGhlIHByb2R1Y3QuCi0gKipObyB2aWRlbyB3YWxrdGhyb3VnaC4qKiBUaGUgYmFja2xvZyBsaXN0cyBhIHR3by1taW51dGUgcmVjb3JkaW5nIGZvciB0aGUKICBMaW5rZWRJbiBwb3N0LiBUaGF0IG5lZWRzIGEgdm9pY2UsIGEgc2NyaXB0IGFuZCBhIHNjcmVlbiByZWNvcmRlciDigJQgbm90IGEKICByZXByb2R1Y2libGUgYnVpbGQgc3RlcCwgc28gaXQgZG9lcyBub3QgYmVsb25nIGluIHRoaXMgcmVwb3NpdG9yeS4KLSAqKk5vIGJhZGdlIG9yIGxpbmsgbGl2ZW5lc3MgY2hlY2suKiogRXZlcnkgYmFkZ2UgcG9pbnRzIGF0IEdpdEh1YiBvciBTaGllbGRzLAogIGFuZCB0aGUgYXVkaXQgcnVucyBpbiBhIHNhbmRib3ggd2l0aCBubyBuZXR3b3JrLiBBIGAtLW9ubGluZWAgbW9kZSB0aGF0IEhFQURzCiAgZWFjaCBleHRlcm5hbCBVUkwgaXMgdGhlIGhvbmVzdCB3YXkgdG8gYWRkIGl0OyBhIG5ldHdvcmsgY2FsbCBpbnNpZGUgYQogIGhlcm1ldGljIGdhdGUgaXMgbm90Lgo=
+# Submission polish: the README as an artefact (Day 27)
+
+The README is the only file in this repository with no test behind it. Every
+other claim in the project — the exit codes, the coverage floor, the CI matrix,
+the release version — is re-measured on each run by something in `tools/`. The
+README was measured by nothing, which is how a submission ends up with a link to
+a diagram nobody committed and a quickstart that no longer clones.
+
+Day 27 closes that gap in three parts: a diagram, a demo, and an audit that
+keeps both honest.
+
+---
+
+## 1. The architecture diagram
+
+`docs/assets/architecture.svg` is a hand-authored SVG — one page, five layers:
+
+| Layer | Modules |
+| --- | --- |
+| Entry points | `datheon/cli/` shims over `projects/<task>/main.py` |
+| Contract | `cli_contract.py`, `validators.py`, `errors.py`, `edge_cases.py` |
+| Core | `logging_config.py`, `structured_logging.py`, `persistence.py`, `caching.py`, `dataset_loader.py`, `profiling.py`, `observability.py`, `fuzzing.py`, `error_catalogue.py` |
+| Artefacts | bundled datasets, `~/.datheon/logs`, `portfolio_summary.csv`, activity and conversation logs |
+| Gates | pytest, the static audits, the CI matrix, the MkDocs build, the release pipeline |
+
+**Why SVG and not a PNG.** A PNG is a screenshot of a diagram: it cannot be
+diffed, its text cannot be searched, and it has to be re-exported from whatever
+produced it. An SVG is text, so a reviewer reads the diff of a diagram change
+the same way they read the diff of a module, and GitHub renders it natively at
+any zoom. The cost is that a hand-authored SVG can be malformed — which is
+exactly what the audit checks.
+
+The diagram is embedded twice on purpose: in the repository README, where a
+reviewer lands, and on the documentation home page, where the site's readers
+land. The audit fails if either stops showing it.
+
+---
+
+## 2. The demo asset
+
+`docs/assets/demo/quickstart.gif` is a fifteen-second animation of the five
+tools running. It is generated, not recorded:
+
+```text
+docs/assets/demo/transcript.json      captured output, one session per command
+        │
+        ▼  python tools/demo_assets.py
+docs/assets/demo/quickstart.gif       fixed 860×402 window, 32-colour palette
+```
+
+`--capture` runs the five commands from the source tree, scrubs the two things
+that are true only of the capturing machine — the scratch directory's absolute
+path and the organizer's measured duration — and rewrites the transcript. The
+transcript is the source of truth: editing it by hand is pointless, because the
+next capture overwrites it, and that is the point. A demo that is retyped drifts
+away from the tool it claims to show.
+
+The renderer sizes the window once, from the longest session, because a GIF
+cannot grow a frame; the transcript scrolls inside it like a real terminal. The
+first attempt grew the window frame by frame, and Pillow cropped every frame
+after the first to the initial height — a bug that produced a valid GIF showing
+one command. The frames are now all the same size by construction.
+
+### Budget
+
+The asset is a trailer, not a transcript. Three limits keep it embeddable:
+
+- **Frames** — commands are typed four characters at a time and each session
+  rests for eight frames, so 129 frames are built for five commands (~14 s);
+  Pillow merges the identical hold frames, leaving 89 in the file.
+- **Lines** — a session shows at most twelve output lines, then `…`.
+- **Bytes** — `readme_audit` fails an asset over 2 MB. The committed GIF is
+  ~0.8 MB at 32 colours; the 64-colour first cut was 4.3 MB, which is a page
+  that takes seconds to paint and a repository that grows by 4 MB per re-shoot.
+
+---
+
+## 3. The audit
+
+```bash
+python tools/readme_audit.py            # table, exit 1 on any finding
+python tools/readme_audit.py --json     # machine-readable
+python tools/readme_audit.py --strict   # warnings count as failures
+```
+
+| Code | Fails when |
+| --- | --- |
+| `readme.section` | a required section (overview, quickstart, architecture, documentation, projects, licence) is missing |
+| `readme.quickstart` | the quickstart lost its clone, install or test command |
+| `readme.link` | a relative link or image does not resolve, or a `#fragment` no heading produces |
+| `readme.asset` | an embedded asset is missing, empty, not valid SVG, a still GIF, or over budget |
+| `readme.diagram` | the architecture diagram is not embedded in both the README and `docs/index.md` |
+| `readme.demo` | the demo GIF is not referenced from the README |
+| `readme.orphan` | an asset under `docs/assets` that no document references *(warning)* |
+| `readme.placeholder` | `TODO`, `TBD`, `FIXME` or `lorem ipsum` left in the prose |
+| `readme.secret` | a `ghp_`/`github_pat_`/`xoxb-`/`AKIA` shaped string |
+
+### Two details that matter
+
+**Code is not prose.** Link scanning strips fenced blocks and inline code spans
+first. Otherwise every command in the quickstart that happens to contain
+brackets — and every `[label]: url` example — is reported as a broken link, and
+a gate with false positives gets switched off.
+
+**Anchors are computed the way GitHub computes them.** Emoji and punctuation are
+dropped, spaces become hyphens, so `## 🎯 Overview` is `#-overview` — the leading
+hyphen is not a typo, it is what the emoji left behind. The audit rebuilds each
+document's anchor set and checks every fragment against it, which is what makes
+the table of contents safe to keep.
+
+### Exit codes
+
+`0` clean, `1` findings, `2` unmeasurable — the README is absent, so nothing can
+be checked. The `2` is deliberate: an audit that returns `0` when it could not
+look is worse than no audit, because it converts "unknown" into "pass". It is
+the same rule `docs_site.py`, `distribution.py`, `ci_matrix.py` and
+`release.py` follow.
+
+---
+
+## What this day did not do
+
+- **No screenshots of the documentation site.** A PNG of a site that is one
+  click away, and that changes on every release, is maintenance with no payoff;
+  the demo GIF earns its bytes because the terminal is the product.
+- **No video walkthrough.** The backlog lists a two-minute recording for the
+  LinkedIn post. That needs a voice, a script and a screen recorder — not a
+  reproducible build step, so it does not belong in this repository.
+- **No badge or link liveness check.** Every badge points at GitHub or Shields,
+  and the audit runs in a sandbox with no network. A `--online` mode that HEADs
+  each external URL is the honest way to add it; a network call inside a
+  hermetic gate is not.
