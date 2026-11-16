@@ -17,6 +17,22 @@ format, one test strategy.
 Every tool is standard-library only at runtime. Nothing here needs a network
 connection, an API key or a database.
 
+![Architecture: five console entry points over one shared core, its local artefacts and the quality gates around them](assets/architecture.svg)
+
+The diagram is the call path of a single command: entry points, the contract
+layer, the shared core, the artefacts it reads and writes, and the gates that
+check each of them. How it is kept honest is in
+[Submission polish](polish.md).
+
+---
+
+## See it run
+
+![A terminal session running all five tools](assets/demo/quickstart.gif)
+
+Fifteen seconds, five commands, rendered from the tools' own output by
+`python tools/demo_assets.py`.
+
 ---
 
 ## Quickstart

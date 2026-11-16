@@ -1,0 +1,110 @@
+{
+  "captured_by": "python tools/demo_assets.py --capture",
+  "note": "Verbatim output of the five tools, scrubbed of absolute paths and measured durations. Edit only by re-capturing.",
+  "sessions": [
+    {
+      "command": "hangman --version",
+      "output": [
+        "hangman 1.1.0"
+      ]
+    },
+    {
+      "command": "portfolio --demo",
+      "output": [
+        "SYMBOL           SHARES       BUY       NOW        VALUE    GAIN%",
+        "-----------------------------------------------------------------",
+        "AAPL              10.00    150.00    189.45     1,894.50   26.30%",
+        "MSFT               5.00    300.00    412.30     2,061.50   37.43%",
+        "NVDA               8.00    420.00    495.75     3,966.00   18.04%",
+        "RELIANCE.NS       12.00   2400.00   2465.75    29,589.00    2.74%",
+        "-----------------------------------------------------------------",
+        "Invested                                       35,160.00",
+        "Market value                                   37,511.00",
+        "Net P/L                                         2,351.00",
+        "Return                                             6.69%",
+        "",
+        "Summary written to portfolio_summary.csv"
+      ]
+    },
+    {
+      "command": "organizer ~/Downloads --dry-run",
+      "output": [
+        "Organising: ~/Downloads   [DRY RUN (no changes made)]",
+        "------------------------------------------------------------",
+        " ~> archive.zip  =>  Archives/",
+        " ~> clip.mp4  =>  Videos/",
+        " ~> data.json  =>  Code/",
+        " ~> notes.txt  =>  Documents/",
+        " ~> photo.jpg  =>  Images/",
+        " ~> report.pdf  =>  Documents/",
+        " ~> script.py  =>  Code/",
+        " ~> song.mp3  =>  Audio/",
+        "------------------------------------------------------------",
+        "Processed : 8",
+        "Moved     : 0",
+        "Planned   : 8",
+        "Errors    : 0",
+        "Duration  : 2.6 ms (asyncio engine)"
+      ]
+    },
+    {
+      "command": "assistant --faq projects/04_terminal_assistant/sample_faq.json",
+      "output": [
+        "  ____        _   _   _",
+        " |  _ \\  __ _| |_| | | | ___  ___  _ __",
+        " | | | |/ _` | __| |_| |/ _ \\/ _ \\| '_ \\",
+        " | |_| | (_| | |_|  _  |  __/ (_) | | | |",
+        " |____/ \\__,_|\\__|_| |_|\\___|\\___/|_| |_|",
+        " Rule-Based Terminal Assistant \u2014 Datheon Task 4",
+        "",
+        "Type a message, or 'bye'/'exit'/'quit' to finish.",
+        "",
+        "you > bot > Hello! How can I help you today?  [greeting \u00b7 50%]",
+        "you > bot > I'm not sure I understood that. Could you rephrase?  [fallback \u00b7 0%]",
+        "you > bot > Goodbye! Have a great day. \ud83d\udc4b  [exit \u00b7 100%]"
+      ]
+    },
+    {
+      "command": "inventory",
+      "output": [
+        "== Initial inventory ==",
+        "ID      TYPE          TITLE                     STATUS       LENGTH      FEE",
+        "----------------------------------------------------------------------------",
+        "B001    Book          Clean Code                available       464    12.00",
+        "B002    Book          The Pragmatic Programmer  available       352    12.00",
+        "D001    DigitalMedia  Python Deep Dive          available       420     0.00",
+        "M001    Magazine      Wired                     available        18     3.40",
+        "----------------------------------------------------------------------------",
+        "Items: 4 | On loan: 0 | Revenue: \u20b90.00",
+        "",
+        "== Checkouts ==",
+        "  Krish borrowed B001 for 14 days (fee \u20b912.00)",
+        "  Aisha borrowed M001 for 7 days (fee \u20b93.40)",
+        "",
+        "== Demonstrating error handling ==",
+        "  ! Item 'B001' is already on loan.",
+        "  ! No such item: 'ZZZ'",
+        "  ! Item 'B002' is not on loan.",
+        "",
+        "== Return ==",
+        "  Krish returned B001",
+        "",
+        "== Final audit ==",
+        "ID      TYPE          TITLE                     STATUS       LENGTH      FEE",
+        "----------------------------------------------------------------------------",
+        "B001    Book          Clean Code                available       464    12.00",
+        "B002    Book          The Pragmatic Programmer  available       352    12.00",
+        "D001    DigitalMedia  Python Deep Dive          available       420     0.00",
+        "M001    Magazine      Wired                     on loan          18     3.40",
+        "----------------------------------------------------------------------------",
+        "Items: 4 | On loan: 1 | Revenue: \u20b915.40",
+        "",
+        "== Dunder method showcase ==",
+        "  str(book)  -> The Pragmatic Programmer [B002] \u2014 \u20b91,099.00 (available)",
+        "  repr(book) -> Book(item_id='B002', title='The Pragmatic Programmer', price=1099.0)",
+        "  len(book)  -> 352 pages",
+        "  book == copy -> True"
+      ]
+    }
+  ]
+}

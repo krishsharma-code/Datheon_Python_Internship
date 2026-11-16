@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="820" viewBox="0 0 1120 820" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Datheon Python Internship — system architecture</title>
+  <desc id="arch-desc">Five console entry points sit on one shared engineering core, which reads and writes only local artefacts. Every layer is checked by an automated gate: the hermetic pytest suite, the static audits in tools/, the CI matrix, the MkDocs site and the release pipeline.</desc>
+
+  <style>
+    .bg      { fill: #ffffff; }
+    .frame   { fill: #f7f8fa; stroke: #d8dde5; stroke-width: 1.5; rx: 12; }
+    .frame-label { font: 600 13px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #5b6472; letter-spacing: .02em; }
+    .box     { fill: #ffffff; stroke: #c3cbd6; stroke-width: 1.25; rx: 8; }
+    .box-cli { fill: #eef4ff; stroke: #b9cdf3; }
+    .box-core{ fill: #ffffff; stroke: #c3cbd6; }
+    .box-gate{ fill: #f2fbf4; stroke: #bfe3c8; }
+    .box-data{ fill: #fffaf0; stroke: #ecd9b0; }
+    .name    { font: 600 14px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1f2733; }
+    .mono    { font: 13px 'DejaVu Sans Mono', 'SFMono-Regular', Consolas, monospace; fill: #1f2733; }
+    .sub     { font: 11px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #6b7480; }
+    .gate    { font: 12.5px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #24402c; }
+    .gate-h  { font: 600 12.5px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1c3323; }
+    .flow    { stroke: #8a94a3; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+    .flow-d  { stroke: #b3bcc8; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow-l); }
+    .legend  { font: 11.5px 'DejaVu Sans', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #5b6472; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a94a3"/>
+    </marker>
+    <marker id="arrow-l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b3bcc8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1120" height="820"/>
+
+  <text x="40" y="34" class="name" style="font-size:17px">Datheon Python Internship — system architecture</text>
+  <text x="40" y="52" class="sub">five standard-library tools · one shared engineering core · every layer gated by an automated check</text>
+
+  <!-- Entry points -->
+  <rect class="frame" x="40" y="68" width="1020" height="104"/>
+  <text x="56" y="90" class="frame-label">CONSOLE ENTRY POINTS — datheon/cli, one shim per tool (Day 22)</text>
+
+  <rect class="box box-cli" x="56" y="102" width="176" height="54"/>
+  <text x="144" y="125" class="mono" text-anchor="middle">hangman</text>
+  <text x="144" y="143" class="sub" text-anchor="middle">Task 1 · game engine</text>
+
+  <rect class="box box-cli" x="250" y="102" width="176" height="54"/>
+  <text x="338" y="125" class="mono" text-anchor="middle">portfolio</text>
+  <text x="338" y="143" class="sub" text-anchor="middle">Task 2 · positions</text>
+
+  <rect class="box box-cli" x="444" y="102" width="176" height="54"/>
+  <text x="532" y="125" class="mono" text-anchor="middle">organizer</text>
+  <text x="532" y="143" class="sub" text-anchor="middle">Task 3 · asyncio moves</text>
+
+  <rect class="box box-cli" x="638" y="102" width="176" height="54"/>
+  <text x="726" y="125" class="mono" text-anchor="middle">assistant</text>
+  <text x="726" y="143" class="sub" text-anchor="middle">Task 4 · intents</text>
+
+  <rect class="box box-cli" x="832" y="102" width="212" height="54"/>
+  <text x="938" y="125" class="mono" text-anchor="middle">inventory</text>
+  <text x="938" y="143" class="sub" text-anchor="middle">Task 5 · OOP asset system</text>
+
+  <!-- Contract layer -->
+  <rect class="frame" x="40" y="196" width="1020" height="98"/>
+  <text x="56" y="218" class="frame-label">COMMAND-LINE CONTRACT, VALIDATION &amp; ERROR TAXONOMY — identical in all five tools</text>
+
+  <rect class="box" x="56" y="230" width="225" height="48"/>
+  <text x="168" y="250" class="mono" text-anchor="middle">cli_contract.py</text>
+  <text x="168" y="267" class="sub" text-anchor="middle">argparse · --version · 0/1/2</text>
+
+  <rect class="box" x="301" y="230" width="225" height="48"/>
+  <text x="413" y="250" class="mono" text-anchor="middle">validators.py</text>
+  <text x="413" y="267" class="sub" text-anchor="middle">strict input · --strict</text>
+
+  <rect class="box" x="546" y="230" width="225" height="48"/>
+  <text x="658" y="250" class="mono" text-anchor="middle">errors.py</text>
+  <text x="658" y="267" class="sub" text-anchor="middle">DatheonError · DT-1xxx codes</text>
+
+  <rect class="box" x="791" y="230" width="225" height="48"/>
+  <text x="903" y="250" class="mono" text-anchor="middle">edge_cases.py</text>
+  <text x="903" y="267" class="sub" text-anchor="middle">shared hostile-input handling</text>
+
+  <!-- Shared core -->
+  <rect class="frame" x="40" y="318" width="1020" height="196"/>
+  <text x="56" y="340" class="frame-label">SHARED ENGINEERING CORE — standard library only, imported by name from the repository root</text>
+
+  <rect class="box box-core" x="56" y="352" width="300" height="42"/>
+  <text x="206" y="378" class="mono" text-anchor="middle">logging_config.py</text>
+
+  <rect class="box box-core" x="386" y="352" width="300" height="42"/>
+  <text x="536" y="378" class="mono" text-anchor="middle">structured_logging.py</text>
+
+  <rect class="box box-core" x="716" y="352" width="300" height="42"/>
+  <text x="866" y="378" class="mono" text-anchor="middle">observability.py</text>
+
+  <rect class="box box-core" x="56" y="402" width="300" height="42"/>
+  <text x="206" y="428" class="mono" text-anchor="middle">persistence.py</text>
+
+  <rect class="box box-core" x="386" y="402" width="300" height="42"/>
+  <text x="536" y="428" class="mono" text-anchor="middle">caching.py</text>
+
+  <rect class="box box-core" x="716" y="402" width="300" height="42"/>
+  <text x="866" y="428" class="mono" text-anchor="middle">dataset_loader.py</text>
+
+  <rect class="box box-core" x="56" y="452" width="300" height="42"/>
+  <text x="206" y="478" class="mono" text-anchor="middle">profiling.py</text>
+
+  <rect class="box box-core" x="386" y="452" width="300" height="42"/>
+  <text x="536" y="478" class="mono" text-anchor="middle">fuzzing.py</text>
+
+  <rect class="box box-core" x="716" y="452" width="300" height="42"/>
+  <text x="866" y="478" class="mono" text-anchor="middle">error_catalogue.py</text>
+
+  <!-- Runtime artefacts -->
+  <rect class="frame" x="40" y="540" width="600" height="152"/>
+  <text x="56" y="562" class="frame-label">RUNTIME ARTEFACTS — local only: no network, no API key, no database</text>
+
+  <rect class="box box-data" x="56" y="574" width="270" height="48"/>
+  <text x="191" y="594" class="mono" text-anchor="middle">bundled datasets</text>
+  <text x="191" y="611" class="sub" text-anchor="middle">words.txt · constituents.csv · FAQ</text>
+
+  <rect class="box box-data" x="346" y="574" width="278" height="48"/>
+  <text x="485" y="594" class="mono" text-anchor="middle">~/.datheon/logs</text>
+  <text x="485" y="611" class="sub" text-anchor="middle">rotating · JSON records · run IDs</text>
+
+  <rect class="box box-data" x="56" y="632" width="270" height="48"/>
+  <text x="191" y="652" class="mono" text-anchor="middle">portfolio_summary.csv</text>
+  <text x="191" y="669" class="sub" text-anchor="middle">atomic write · schema_version</text>
+
+  <rect class="box box-data" x="346" y="632" width="278" height="48"/>
+  <text x="485" y="652" class="mono" text-anchor="middle">activity · conversation logs</text>
+  <text x="485" y="669" class="sub" text-anchor="middle">JSON / JSONL, collision-safe</text>
+
+  <!-- Quality gates -->
+  <rect class="frame" x="664" y="540" width="396" height="152"/>
+  <text x="680" y="562" class="frame-label">QUALITY GATES — each one fails the build, not a review</text>
+
+  <text x="680" y="588" class="gate-h">pytest — hermetic suite</text>
+  <text x="680" y="605" class="gate">no sockets, no wall clock, no HOME</text>
+
+  <text x="680" y="628" class="gate-h">tools/*.py — static audits</text>
+  <text x="680" y="645" class="gate">census · I/O · coverage · CI · docs · release</text>
+
+  <text x="680" y="668" class="gate-h">CI — 3 OS × 4 Python</text>
+  <text x="680" y="685" class="gate">lint · format · tests · gates, twelve cells</text>
+
+  <text x="680" y="708" class="gate-h">MkDocs site · GitHub Release</text>
+  <text x="680" y="725" class="gate">strict build · tag → wheel + sdist</text>
+
+  <!-- Delivery strip -->
+  <rect class="frame" x="40" y="712" width="600" height="70"/>
+  <text x="56" y="734" class="frame-label">DELIVERY — one milestone per pull request, never a push to main</text>
+  <text x="56" y="762" class="mono" style="font-size:12.5px">branch → PR → COMMENT review → squash-merge → tag → Release</text>
+
+  <!-- Flow arrows -->
+  <path class="flow" d="M 550 172 L 550 196"/>
+  <path class="flow" d="M 550 294 L 550 318"/>
+  <path class="flow" d="M 300 514 L 300 540"/>
+  <path class="flow" d="M 800 514 L 800 540"/>
+  <path class="flow-d" d="M 300 686 L 300 712"/>
+  <path class="flow-d" d="M 656 616 L 664 616"/>
+
+  <text x="560" y="188" class="legend">same parser, same exit codes</text>
+  <text x="560" y="310" class="legend">one contract, one taxonomy</text>
+  <text x="310" y="532" class="legend">reads and writes</text>
+  <text x="810" y="532" class="legend">checked by</text>
+
+  <text x="40" y="806" class="legend">Generated by hand for Day 27; audited by <tspan class="mono" style="font-size:11.5px">python tools/readme_audit.py</tspan>, which checks the SVG parses, is referenced by the README, and stays within its byte budget.</text>
+</svg>

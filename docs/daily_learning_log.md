@@ -2762,3 +2762,114 @@ four declarations of the version from drifting apart.
 - Left deliberately undone today: no PyPI publish (needs an account and a free
   name), no signed tags (needs a key on the runner), no automatic SemVer bump (a
   tool that guesses MAJOR/MINOR/PATCH guesses wrong at the worst moment).
+
+---
+
+## Day 27 — Submission polish: the README as an audited artefact
+
+**Branch:** `feat/datheon-day-27-polish`
+**Scope:** A layered architecture diagram, an animated demo rendered from the
+tools' real output, a README final pass, and the audit that keeps all three
+honest.
+
+### Milestones
+
+- **`docs/assets/architecture.svg`** — one hand-authored SVG, five layers:
+  console entry points → contract (`cli_contract`, `validators`, `errors`,
+  `edge_cases`) → core (logging, structured logging, persistence, caching,
+  dataset loading, profiling, observability, fuzzing, error catalogue) →
+  local artefacts → the gates around them. Embedded in the README *and* on the
+  documentation home page, because those are two different readers.
+- **`docs/assets/demo/quickstart.gif`** — 89 frames, 860×402, 32 colours,
+  824 KB, ~14 s: `hangman --version`, `portfolio --demo`,
+  `organizer ~/Downloads --dry-run`, `assistant --faq …`, `inventory`. Rendered,
+  not recorded.
+- **`docs/assets/demo/transcript.json`** — the captured output the GIF is drawn
+  from, scrubbed of the two things that are true only of the capturing machine.
+- **`tools/demo_assets.py`** — `--capture` re-runs the five tools and rewrites
+  the transcript; the default run renders the GIF; `--check` reports frame
+  count, geometry and budget.
+- **`tools/readme_audit.py`** — nine finding codes: `readme.section`,
+  `readme.quickstart`, `readme.link` (targets *and* fragments), `readme.asset`,
+  `readme.diagram`, `readme.demo`, `readme.orphan` (warning),
+  `readme.placeholder`, `readme.secret`. Exit `0` clean, `1` findings, `2`
+  unmeasurable.
+- **`docs/polish.md`** — why SVG over PNG, why the demo is generated, the byte
+  budget, and what this day deliberately did not do (no site screenshots, no
+  video, no network link-checker).
+- **README final pass** — a table of contents, an architecture section with the
+  diagram and a layer-by-layer table, a demo section, an updated repository
+  tree, and the changelog moved from *Planned* to *Added*.
+
+### Defects found and fixed
+
+1. **The first GIF was a valid animation of one command.** Each frame was
+   sized from its own content, and a GIF cannot grow: Pillow kept the first
+   frame's height and cropped every later frame to it. The window is now sized
+   once, from the tallest session, and the transcript scrolls inside it.
+2. **The second GIF was 130 frames of the same picture.** With a fixed window
+   and a transcript that keeps growing, the new rows were drawn below the
+   canvas — the visible top was identical in every frame. Clipping the body to
+   the last *n* rows, terminal-style, fixed it (129 built frames, 89 in the file).
+3. **The organizer leaked its scratch path into the demo.** `--capture` scrubbed
+   durations and output paths but not the line that prints the directory being
+   organised, so the transcript held `/tmp/datheon-demo-abc123`. A scrub rule
+   now rewrites it to `~/Downloads`, and a test asserts the committed transcript
+   contains no absolute path.
+4. **`--check` treated the transcript as an image.** The first version ran
+   `inspect_asset` over both assets, so a perfectly good `.json` was reported as
+   `unsupported suffix`. The transcript is now validated by loading it.
+5. **The asset budget was only enforced for documents.** `inspect_asset`
+   checked the 2 MB ceiling for plain images but returned early for GIFs, so a
+   huge animation passed the inspection and only failed later in
+   `audit_document`. The check moved up, where every caller inherits it.
+6. **The audit crashed on a README outside the repository.** `relative_to`
+   raised for the tests' temporary repositories, which is a real shape — the
+   tool takes `--readme` as an argument. Location resolution now falls back to
+   the file name, and `main` derives the root from the README it was given.
+
+### Edge cases covered by tests
+
+- `## 🎯 Overview` is anchored as `#-overview`: emoji and punctuation are
+  dropped, spaces become hyphens, and the leading hyphen is what the emoji left
+  behind. The table of contents is checked against the anchors the audit
+  computes, so the two cannot drift.
+- A `[label]: url` reference definition is only a link when it starts a line;
+  mid-sentence it is prose.
+- Links inside fenced blocks and inline code spans are not links. Without that,
+  every bracketed command in the quickstart is a `readme.link` finding, and a
+  gate with false positives gets switched off.
+- A link that climbs out of the repository (`../../etc/passwd`) is reported
+  rather than resolved.
+- A one-frame GIF is `not animated (1 frame)`, not a small animation; an SVG
+  whose root element is not `<svg>` is not a diagram.
+- `--fps 999` is clamped to a legible range; two renders of the same transcript
+  are byte-identical.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
+| `flake8 .` | 0 findings over 90 files |
+| `black --check .` | 90 files unchanged |
+| `pytest` | 1,590 passed, 2 skipped, 0 failed (+68 tests) |
+| `pytest --cov` | 95.80% over 3,368 statements (floor 90%) |
+| `python tools/readme_audit.py` | PASS — README is submission-ready |
+| `python tools/demo_assets.py --check` | PASS — 5 sessions, 89 frames, 824 KB |
+| `python tools/docs_site.py --strict` | PASS — 41 pages, 15 documented modules |
+| `python tools/release.py --strict` | PASS — 2 releases, 0 warnings |
+| `mkdocs build --strict` | clean |
+| Assertion census | 1,305 test functions / 2,352 assertions (floor 200) |
+
+### Next up
+
+- Day 28: the full green run, the repository freeze and the certificate
+  checklist.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).
+- Left deliberately undone today: no screenshots of the docs site (a PNG of a
+  page one click away, re-shot every release), no video walkthrough (needs a
+  voice and a recorder, not a build step), and no online link-checker — the
+  audit runs in a sandbox with no network, and a hermetic gate must stay
+  hermetic.

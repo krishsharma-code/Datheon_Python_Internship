@@ -56,6 +56,10 @@ dev = [
     # drives both, and fails loudly (exit 2) when either is missing.
     "build>=1.2",
     "twine>=5.1",
+    # Day 27: `tools/demo_assets.py` renders the README's demo GIF from the
+    # captured transcript. Pillow is a build-time dependency of an asset, never
+    # of a tool: nothing under `projects/` imports it.
+    "pillow>=10.0",
 ]
 docs = [
     # Day 25: the documentation site. `pip install -e ".[docs]"` is the whole

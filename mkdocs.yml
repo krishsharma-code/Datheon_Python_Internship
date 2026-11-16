@@ -145,6 +145,7 @@ nav:
       - CI multi-OS matrix: ci_matrix.md
       - Documentation site: docs_site.md
       - Release automation: release.md
+      - Submission polish: polish.md
   - API reference:
       - Overview: api/index.md
       - errors: api/errors.md

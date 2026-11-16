@@ -12,10 +12,23 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ## [Unreleased]
 
+### Added
+
+- **Submission polish (Day 27).** The README is now an audited artefact. A
+  hand-authored layered architecture diagram (`docs/assets/architecture.svg`)
+  embedded in both the README and the documentation home, an animated demo of
+  all five tools rendered from their real output
+  (`docs/assets/demo/quickstart.gif` + the transcript behind it), and
+  `tools/readme_audit.py` — nine finding codes covering missing sections, a
+  quickstart that lost a command, broken relative links and anchors, unusable
+  or over-budget assets, an unreferenced diagram or demo, orphan assets,
+  leftover placeholders and token-shaped strings. `tools/demo_assets.py`
+  re-captures the transcript and re-renders the GIF, so the demo is rebuilt
+  rather than retyped. The README gains a table of contents, an architecture
+  section and a demo section; `docs/polish.md` documents the contract.
+
 ### Planned
 
-- Day 27 — submission polish: README final pass, architecture diagram, demo
-  assets.
 - Day 28 — final verification: full green local and CI run, repository freeze,
   certificate checklist, final summary.
 

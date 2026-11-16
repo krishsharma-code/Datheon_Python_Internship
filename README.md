@@ -36,6 +36,22 @@ Datheon Python Programming Internship (Credential ID `DT-2026-O6Q0X`).*
 
 ---
 
+## 📑 Contents
+
+- [Overview](#-overview)
+- [Architecture](#-architecture) — how the five tools share one core
+- [Quickstart](#-quickstart) — clone, install, run
+- [See it run](#-see-it-run) — a fifteen-second demo of all five tools
+- [Documentation](#-documentation) — the published site and its guides
+- [Repository structure](#-repository-structure)
+- [Projects](#-projects) — the five Datheon task-pack tasks
+- [Bundled datasets](#-bundled-datasets)
+- [Git workflow](#-git-workflow)
+- [Daily progress](#-daily-progress)
+- [License](#-license)
+
+---
+
 ## 🎯 Overview
 
 This repository contains five independent, self-contained Python projects that
@@ -54,6 +70,38 @@ Every project is built to the same engineering standard:
   (invalid input, missing files, duplicate operations, collisions).
 - **CI automation** — linting and the full test suite run on every pull request,
   across **ubuntu / macOS / Windows × Python 3.10–3.13** (twelve cells, pip-cached).
+
+---
+
+## 🏗️ Architecture
+
+Five tools, one core. The diagram below is the whole system on one page — the
+console entry points, the contract layer every tool goes through, the shared
+modules underneath, and the gates that check each of them.
+
+![Architecture of the Datheon Python Internship: five console entry points over one shared core, its local artefacts, and the quality gates around them](docs/assets/architecture.svg)
+
+Read it top to bottom and it is the call path of a single command:
+
+| Layer | What lives there | Why it is shared |
+| --- | --- | --- |
+| **Entry points** | `datheon/cli/` — one shim per tool, each delegating to `projects/<task>/main.py` | `pip install -e .` puts five commands on `PATH` without moving the tools out of their task-pack directories |
+| **Contract** | `cli_contract.py`, `validators.py`, `errors.py`, `edge_cases.py` | the same `argparse` conventions, `--version`, `0/1/2` exit codes, `--strict` validation and `DT-xxxx` error codes in all five tools |
+| **Core** | `logging_config.py`, `structured_logging.py`, `persistence.py`, `caching.py`, `dataset_loader.py`, `profiling.py`, `observability.py`, `fuzzing.py`, `error_catalogue.py` | logging, atomic writes, the dataset cache and the error catalogue are one implementation, not five |
+| **Artefacts** | bundled datasets, `~/.datheon/logs`, `portfolio_summary.csv`, the organizer's JSON activity log, the assistant's JSONL transcript | everything is local: no network, no API key, no database |
+| **Gates** | the hermetic pytest suite, nine static audits in `tools/`, the 3 OS × 4 Python CI matrix, the strict MkDocs build, the tag-triggered release | every claim in this README is re-measured on each run |
+
+Two properties fall out of that shape and are worth stating plainly:
+
+- **Nothing is standard-library-plus.** The five tools import only the standard
+  library at runtime; `pip install datheon-python-internship` pulls in no
+  dependency at all. Everything a contributor needs is a `dev` or `docs` extra.
+- **Every layer is measured.** The core modules carry the coverage floor, the
+  contract layer is exercised by `tests/test_cli_contract.py` and
+  `tests/test_validation.py`, and the diagram itself is checked — it must parse
+  as SVG, stay under budget and be referenced from both this page and the
+  [documentation home](docs/index.md), which is what
+  `python tools/readme_audit.py` enforces.
 
 ---
 
@@ -111,6 +159,10 @@ Datheon_Python_Internship/
 │   ├── ci_matrix.md                # OS × Python CI matrix contract & audit (Day 24)
 │   ├── release.md                  # versioning, changelog & release pipeline (Day 26)
 │   ├── index.md                    # documentation site home page (Day 25)
+│   ├── polish.md                   # README contract, diagram and demo assets (Day 27)
+│   ├── assets/
+│   │   ├── architecture.svg        # the layered diagram embedded above (Day 27)
+│   │   └── demo/                   # quickstart.gif + the transcript it is rendered from
 │   ├── api/                        # generated API reference, one page per core module
 │   ├── week2_performance_observability_report.md  # Week 2 consolidation
 │   └── error_catalogue.md          # generated catalogue of every error code
@@ -133,7 +185,8 @@ Datheon_Python_Internship/
 ├── fuzzing.py                      # deterministic fuzz corpus + crash verdicts
 ├── tools/                          # repository tooling (census, IO audit, fuzz driver,
 │                                   #   coverage gate, mutation score, distribution gate,
-│                                   #   CI matrix audit, docs-site audit, release audit)
+│                                   #   CI matrix audit, docs-site audit, release audit,
+│                                   #   README audit and demo renderer)
 ├── observability.py                # reduces JSON logs to run/outcome/duration figures
 ├── conftest.py                     # makes each project importable by pytest
 ├── requirements.txt
@@ -255,6 +308,23 @@ python projects/02_portfolio_tracker/main.py
 python projects/03_file_organizer_automation/main.py --help
 python projects/04_terminal_assistant/main.py
 python projects/05_inventory_oop/main.py
+```
+
+### See it run
+
+![A terminal session running all five tools: hangman --version, portfolio --demo, organizer ~/Downloads --dry-run, assistant --faq, inventory](docs/assets/demo/quickstart.gif)
+
+About fifteen seconds, five commands, no editing: the GIF is rendered from the
+tools' own output.
+[`docs/assets/demo/transcript.json`](docs/assets/demo/transcript.json) holds
+that output verbatim and
+`python tools/demo_assets.py` turns it back into the animation, so the demo can
+be re-shot rather than re-typed after any change.
+
+```bash
+python tools/demo_assets.py --capture   # re-run the five tools, rewrite the transcript
+python tools/demo_assets.py             # transcript -> docs/assets/demo/quickstart.gif
+python tools/demo_assets.py --check     # frame count, geometry and size budget
 ```
 
 ### Command-line contract
