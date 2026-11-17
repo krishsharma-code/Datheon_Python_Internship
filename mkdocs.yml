@@ -166,6 +166,7 @@ nav:
   - Project log:
       - Daily learning log: daily_learning_log.md
       - Milestones plan: internship_milestones_plan.md
+      - Final verification & freeze: final_verification.md
 
 extra:
   generator: false

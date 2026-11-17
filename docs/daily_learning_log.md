@@ -2873,3 +2873,136 @@ honest.
   voice and a recorder, not a build step), and no online link-checker — the
   audit runs in a sandbox with no network, and a hermetic gate must stay
   hermetic.
+
+---
+
+## Day 28 — Final verification: one verdict, one freeze
+
+**Branch:** `feat/datheon-day-28-final` · **PR:** #29
+**Scope:** A single command that runs the whole green run, reads the
+submission's claims back out of the files that make them, and freezes the state
+that was submitted — plus the certificate checklist and the final post.
+
+### Milestones
+
+- `tools/final_verification.py` — one verdict over 23 checks: the twelve live
+  checks (compileall, flake8, black, pytest, and the six static audits) and the
+  eleven static claims (licence, packaging metadata, entry points, changelog,
+  ledger, learning log, the plan's own paths, `.gitignore`, secrets, freeze).
+- `docs/submission/freeze.json` — a SHA-256 manifest over the 146 shipped files,
+  versioned by schema, re-cut only by an explicit `--manifest`.
+- `docs/final_verification.md` — the run record: the green run, the certificate
+  checklist with the check behind each line, the freeze's rules, the final
+  LinkedIn post (drafted, not published) and the five defects this day found.
+- The plan's §4 checklist now reads as data: ticked where a local check proves
+  the line, explicitly `manual` where only GitHub, LinkedIn or the Datheon
+  portal can, and each manual line says who decides it.
+- 62 new tests, 112 new assertions: 1,653 passed, 1 skipped, 0 failed.
+
+### Architectural decisions
+
+1. **One suite pass, two verdicts.** The naive verifier ran `pytest` and then
+   `tools/coverage_gate.py`, which runs `pytest` again — four and a half minutes
+   to learn one thing twice. The suite now runs once with
+   `--cov-report=json:coverage.json` and the gate is invoked `--report-only`
+   against that report. The whole verification costs 2m29s, and 2m08s of it is
+   the one test run.
+2. **Live checks and static claims are different questions.** A subprocess exit
+   code says "the tool is green"; reading `pyproject.toml` says "the metadata
+   still describes what ships". Mixing them into one list of pass/fail hides
+   which kind of evidence a line has, so the report labels every row and the
+   checklist names the checks behind each item.
+3. **`manual` is a status, not a gap.** Six checklist lines cannot be decided by
+   a local run. They are printed as `manual` and are excluded from the verdict —
+   a checklist that ticks itself is a checklist nobody reads.
+4. **The freeze pins content, not commits.** A commit SHA records a position in
+   a history the squash-merge rewrites, so the manifest would name a commit that
+   never lands on `main`. Digests are true of the file wherever it sits, survive
+   the squash, and can be checked by anyone who clones the repository.
+5. **The freeze excludes the documents that change to deliver a day.** The
+   ledger gains a PR number and the log gains an entry as part of shipping, so
+   pinning either would make the freeze expire in the commit that cuts it.
+
+### Complexity analysis
+
+The verifier is linear in the tree: eleven static audits each read one file, and
+`audit_secrets` and `audit_freeze` each stream the 146 pinned files once — two
+passes, 0.5 s cold, against 2m08s for the suite it wraps. Hashing dominates at
+~700 KB/s of small files; the 824 KB demo GIF is the single largest read and is
+deliberately pinned by digest, because an asset that silently changes is exactly
+what a freeze exists to catch.
+
+`pinned_paths` is O(files) with one `rglob` per pinned directory and a set
+union at the end, which is what keeps the "is this file pinned?" check linear
+rather than quadratic — the naive version compared every tree file against every
+manifest entry.
+
+### Defects found
+
+1. **The checklist named a file that was never committed.** The plan's §4
+   pointed at `Datheon_LinkedIn_Post.md` as the evidence for the walkthrough
+   post; the file does not exist and never did — the post was published on
+   LinkedIn. Four weeks of gates missed it because nothing had ever read the
+   checklist as data. The line now says where the evidence actually is.
+2. **`LICENSE` was silently unchecked.** The path extractor only treated a
+   backticked token as a file claim when it ended in a known suffix, and the one
+   file in the checklist with no suffix at all fell through. Bare filenames are
+   now named explicitly.
+3. **`--strict` reported PASS over a skipped suite.** The verdict looked only for
+   `fail` and `unmeasurable`, so a `--skip-slow` run collected the skip, added it
+   to the blocking list and returned `pass` anyway. Found by the test that
+   asserted strictness.
+4. **`--manifest PATH` wrote a record the audit never read.** Cutting the
+   manifest elsewhere produced a file, and the next check looked for the default
+   path and reported it missing. The path is now threaded through to the audit.
+5. **`--static` graded unrun checks as `unmeasurable`.** A fast claims-only run
+   is not a run that could not measure; the checklist says `not run`, which is
+   the honest word.
+
+### Edge cases covered by tests
+
+- A ledger whose §2 repeats the day numbers: only §1 is the ledger, so the §2
+  table must not be counted as days.
+- A `done` row with an em dash in its PR column is not complete — the plan's own
+  rule, enforced instead of trusted.
+- A gap in the day numbers (`1, 3`) is a finding; a `pending` row is a warning,
+  because future work is not a defect.
+- A backticked branch name (`feat/day-1`) and a backlog wish (`SECURITY.md` in
+  §5) are not file claims; `.gitignore` and `LICENSE` are.
+- A `--manifest` cut for 1.1.0 verified against a tree declaring 1.2.0 fails, and
+  so does a manifest with an old schema, a deleted pinned file, an edited one,
+  and a new file the manifest does not cover.
+- A command exiting 2 or timing out is `unmeasurable`, not `fail`: "I could not
+  look" is a different answer from "it is wrong".
+- The committed tree is verified by the suite itself (`--static`, 0.4 s), so a
+  broken freeze or a stale ledger fails `pytest` and not just the last run.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` (projects, tests, datheon, tools, conftest) | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 92 files unchanged |
+| `pytest` | 1,653 passed, 1 skipped, 0 failed (+62 tests) |
+| `pytest --cov` | 95.80% over 3,368 statements, 770 branches (floor 90%) |
+| `python tools/final_verification.py` | 23 checks, 23 green |
+| `python tools/readme_audit.py --strict` | PASS |
+| `python tools/docs_site.py --strict` | PASS — 42 pages, 15 modules |
+| `python tools/release.py --strict` | PASS — 2 releases |
+| `python tools/ci_matrix.py --strict` | PASS — 12 cells |
+| `python tools/demo_assets.py --check` | PASS — 89 frames, 824 KB |
+| `python tools/io_audit.py --strict` | PASS |
+| Assertion census | 1,366 test functions / 2,464 assertions (floor 200) |
+| Freeze manifest | 146 files pinned at 1.1.0, all digests match |
+
+### Next up
+
+- Nothing in the ledger: every row reads `done` with a PR number. The
+  repository is frozen at 1.1.0 + Day 28; the scheduled run switches to
+  maintenance mode and takes work from §5 of the plan.
+- Still open from Week 3: O1 (the five `main.py` shells at 76–89% coverage) and
+  O6 (`tools/qa_report.py` as a non-blocking CI report job).
+- Manual, and staying manual: publishing the final post, verifying the
+  credential on the Datheon portal, and the certificate itself. A scheduled job
+  that could do those would be holding credentials it should not have.
