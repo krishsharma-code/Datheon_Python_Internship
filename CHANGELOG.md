@@ -27,10 +27,18 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
   rather than retyped. The README gains a table of contents, an architecture
   section and a demo section; `docs/polish.md` documents the contract.
 
-### Planned
-
-- Day 28 — final verification: full green local and CI run, repository freeze,
-  certificate checklist, final summary.
+- **Final verification & submission (Day 28).** `tools/final_verification.py`
+  gives the whole submission one verdict: it runs the green run (compileall,
+  flake8, black, pytest, and the six static audits) as one command, reads the
+  submission's claims back out of the files that make them — licence, console
+  scripts, changelog, ledger PR numbers, one log entry per completed day, the
+  `.gitignore` rules and the paths the plan's checklist names — and prints the
+  certificate checklist with the check that proves each line. Twelve finding
+  codes, exit `2` when a check cannot measure, and `docs/submission/freeze.json`
+  — a SHA-256 manifest over 146 shipped files that fails the run when the tree
+  drifts from the state that was submitted. The suite runs once under coverage
+  and the coverage gate re-reads that report, so the whole verification costs
+  one suite pass rather than two. `docs/final_verification.md` records the run.
 
 ## [1.1.0] - 2026-11-14
 
