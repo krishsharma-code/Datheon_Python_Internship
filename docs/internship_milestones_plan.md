@@ -130,29 +130,40 @@ The cron job **"Datheon internship daily progress"** fires at **09:00 IST** and 
 Required to qualify for the **Datheon Verified Certificate of Completion**
 (Credential ID `DT-2026-O6Q0X`).
 
+Every line below is checked by `tools/final_verification.py`, which reports the
+whole checklist in one table: `pass` where a local check proves it, `manual`
+where only the GitHub UI, LinkedIn or the Datheon portal can. A `manual` line is
+never counted as evidence, and the tool fails if a line it does claim stops
+being true. Ticked boxes are the state at the Day 28 freeze
+(see `docs/final_verification.md`).
+
 ### Repository
-- [ ] Public repository named exactly **`Datheon_Python_Internship`** on GitHub.
-- [ ] **Minimum 2–3 completed task-pack tasks** — this repo implements **all 5**.
-- [ ] `README.md` with installation, architecture, and quickstart commands.
-- [ ] `LICENSE` (MIT, 2026 Krish Sharma), `CONTRIBUTING.md`, strict `.gitignore`.
-- [ ] Full docstrings and type hints on all public callables.
+- [x] Public repository named exactly **`Datheon_Python_Internship`** on GitHub.
+- [x] **Minimum 2–3 completed task-pack tasks** — this repo implements **all 5**.
+- [x] `README.md` with installation, architecture, and quickstart commands.
+- [x] `LICENSE` (MIT, 2026 Krish Sharma), `CONTRIBUTING.md`, strict `.gitignore`.
+- [x] Full docstrings and type hints on all public callables.
 
 ### Quality
-- [ ] Test suite green — target **200+ assertions**, ≥ **90%** coverage.
+- [x] Test suite green — target **200+ assertions**, ≥ **90%** coverage.
 - [ ] CI pipeline green across the multi-OS / multi-Python matrix.
-- [ ] Linting clean (`flake8`) and formatting clean (`black --check`).
-- [ ] No secrets, tokens, or credentials anywhere in history.
+      *(Decided by GitHub Actions on the merge commit; no local run can see it.)*
+- [x] Linting clean (`flake8`) and formatting clean (`black --check`).
+- [x] No secrets, tokens, or credentials anywhere in history.
 
 ### Delivery
-- [ ] Installable package with console entry points (Day 22).
-- [ ] Tagged release with `CHANGELOG.md` and attached build artefacts (Day 26).
-- [ ] Generated documentation site (Day 25), linked from the README.
+- [x] Installable package with console entry points (Day 22).
+- [x] Tagged release with `CHANGELOG.md` and attached build artefacts (Day 26).
+- [x] Generated documentation site (Day 25), linked from the README.
 
 ### Proof of work (Datheon requirements)
-- [ ] **LinkedIn walkthrough post tagging @Datheon** — done on 2026-10-21 ✅
-      (offer announcement; see `Datheon_LinkedIn_Post.md`).
+- [x] **LinkedIn walkthrough post tagging @Datheon** — done on 2026-10-21 ✅
+      (offer announcement; published on LinkedIn, not committed here, so the
+      verifier reports this line as `manual`).
 - [ ] Optional: short **video walkthrough** of one project for the LinkedIn post.
 - [ ] **Final LinkedIn post** (Option C) published once the internship completes.
+      *(Draft ready — `docs/final_verification.md`, “The final post”. Publishing
+      is a manual step; nothing in this repository can post as the intern.)*
 - [ ] Credential ID **DT-2026-O6Q0X** verified on the Datheon portal
       (`https://datheon.in/verify` — enter credential ID `DT-2026-O6Q0X`).
 - [ ] Repository link submitted through the **Datheon Student Workspace**.
