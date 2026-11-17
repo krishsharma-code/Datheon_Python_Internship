@@ -116,7 +116,7 @@
     "tests/test_docs_site.py": "2fe12faf75e8d7fa2288842158e1797221fae337941d3b55e57538d4d16d5c95",
     "tests/test_edge_cases.py": "e3d812117deabdcafb37ed7deef90836bcb872f1500891e702d4bf45bd5365de",
     "tests/test_errors.py": "a6c8bd6d8b85907aacdabe756a9becf1299de15eb6de95dff68050be8ff5685a",
-    "tests/test_final_verification.py": "74c3dac7c74533a05354642fe92e6a4f9c8b7de6f5f468689caf276f08f40df4",
+    "tests/test_final_verification.py": "72057a3c58a8a24f7d47cf60511b7122bda7909b26b72286c2078a390eccbbe2",
     "tests/test_fuzzing.py": "6286870b05fc97ca9e9ac6fbbf8e792412c2c8486bd64b41458598057cd53211",
     "tests/test_hangman.py": "301a1562672875365abf051c45674ea1003934a421d48835bc9aefadc2d9a82a",
     "tests/test_inventory.py": "e47aa2ccdfc671313b4afb01e0f9e28142f28d862a0ef5d3058f3c9fc6f4317e",

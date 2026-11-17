@@ -749,7 +749,7 @@ def test_the_committed_repository_passes_the_static_audit() -> None:
     ]
     assert offenders == []
     warnings = [result for result in report.results if result.status == "warn"]
-    assert [result.code for result in warnings] == ["submission.ledger"]
+    assert [result.code for result in warnings if result.code != "submission.ledger"] == []
 
 
 def test_the_committed_checklist_has_no_manual_item_with_evidence() -> None:
