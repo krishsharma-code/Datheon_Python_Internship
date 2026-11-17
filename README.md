@@ -597,6 +597,11 @@ Progress Ledger that the daily scheduled run executes against — lives in
 Both are pages of the documentation site as well:
 <https://krishsharma-code.github.io/Datheon_Python_Internship/>.
 
+The submission record — the final green run, the certificate checklist and the
+frozen manifest that pins the state that was submitted — is
+[`docs/final_verification.md`](docs/final_verification.md). It is reproducible:
+`python tools/final_verification.py` re-measures every line of it.
+
 ---
 
 ## 📄 License
