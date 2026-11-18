@@ -3006,3 +3006,94 @@ manifest entry.
 - Manual, and staying manual: publishing the final post, verifying the
   credential on the Datheon portal, and the certificate itself. A scheduled job
   that could do those would be holding credentials it should not have.
+
+## Day 29 — Maintenance: one JSON document from every tool
+
+**Branch:** `feat/datheon-day-29-json-output`
+**Scope:** The first backlog item in §5 of the plan. Every ledger row was
+already `done`, so the run switched to maintenance mode and gave all five tools
+a `--json` mode: the same run, reported as data instead of a table.
+
+### Milestones
+
+- `cli_contract.py` gained the whole mode — `add_json_flag`, `json_requested`,
+  `human_output` and `JsonEmitter` — so the five entry points share one
+  implementation and one envelope rather than five hand-rolled `json.dumps`
+  calls that drift.
+- The envelope is `tool`, `schema`, `version`, `command`, `ok`, and then `data`
+  on success or `error` (the `DatheonError.to_dict()` payload, catalogue code
+  included) on failure. `schema` is `JSON_SCHEMA_VERSION`, so a consumer can
+  tell an additive change from a breaking one.
+- Each entry point now splits into `main` (parse, wrap, emit) and `_run`
+  (the work, returning a `(command, payload, exit_code)` triple). The split is
+  what keeps the document off `stdout` while the human output is redirected.
+- `hangman`'s guess loop gained an `abortable` round: with `--json` a closed
+  input stream unwinds the round so the document still reports the rounds that
+  finished, where the non-JSON path deliberately stops the process.
+- `docs/cli_contract.md` documents the envelope, the per-command payload table
+  and the two behaviours that differ under the flag.
+- 22 new test functions / 116 new assertions in `tests/test_cli_json.py`.
+
+### Architectural decisions
+
+1. **The contract module, not a new module.** A `json_output.py` would have
+   been tidier to read and worse to ship: it would need its own API page, its
+   own nav entry and its own audit exemptions. The `--json` mode *is* part of
+   the command-line contract — it changes how every tool reports, and nothing
+   about what it computes — so it lives with `build_parser` and `run_cli`,
+   where a tool cannot add the flag without also getting the envelope.
+2. **Redirect the human output, do not silence it.** Deleting the tables would
+   have made `--json` a different program. `contextlib.redirect_stdout` moves
+   the existing prints to `stderr` for the duration of the run, so a person who
+   adds the flag still sees the banner, the prompts and the report — and a
+   script that adds it gets a clean pipe. The logger already wrote to `stderr`,
+   so nothing about diagnostics changed.
+3. **Emit outside the redirect.** The first cut emitted the document from
+   inside the redirected block and the JSON landed on `stderr`. That is the
+   whole bug the design now prevents structurally: `_run` returns the payload
+   and `main` emits it after the `with` block exits, so no future edit can
+   interleave the two streams by calling `print` in the wrong place.
+4. **Failure is a document too.** A `--json` run that raises emits
+   `{"ok": false, "error": {...}}` and then re-raises, so `run_cli` still
+   prints the human message and returns the documented exit code. Making the
+   JSON path swallow the error would have given scripts a second, silent
+   contract to learn.
+5. **`"ok": true` on a rejected dataset.** `--validate` on a corrupt file is a
+   *successful* validation that found problems: the document says
+   `"valid": false` with the offending line numbers and the process still exits
+   `1`. Conflating "the tool broke" with "the data is wrong" would make the
+   document useless for the one job it exists to do.
+6. **Exit codes are untouched.** `$?` remains the contract; `--json` adds a
+   payload, never a new way to fail. That is also why the emitter is a no-op
+   when the flag is absent — the entry points carry no `if json:` branches
+   around their reporting.
+
+### Complexity analysis
+
+The mode is O(size of the payload) and adds one `json.dumps` per run; every
+document is built from data the tool already had, so no tool does extra I/O to
+report itself. `sort_keys=True` keeps two runs byte-identical for the same
+input, which is what makes the output diffable in a test without normalising
+anything.
+
+`human_output` costs one context-manager entry and one attribute swap on
+`sys.stdout` — the redirect is a `try/finally` around the block, not a wrapper
+around every `print`, so the human path pays nothing measurable. The `assistant`
+grows a `turns` list, which is O(turns) memory in a session that already keeps
+its transcript on disk; the `organizer` and `portfolio` payloads reuse
+`OrganizeReport.to_dict()` and `Holding.as_row()` rather than re-deriving them,
+so the JSON and the CSV cannot disagree.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 93 files unchanged |
+| `pytest` | 1,678 passed, 2 skipped, 0 failed (+22 test functions) |
+| `pytest --cov` | 95.89% over 3,499 statements, 780 branches (floor 90%) |
+| `python tools/final_verification.py --static` | green — freeze re-cut for this day |
+| `python tools/docs_site.py --strict` | PASS — 42 pages, 15 modules |
+| `python tools/io_audit.py --strict` | PASS |
+| Assertion census | 1,388 test functions / 2,580 assertions (floor 200) |

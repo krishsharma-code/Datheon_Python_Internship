@@ -11,9 +11,10 @@ Nothing is deleted: files are only relocated into category subfolders, and
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -23,9 +24,14 @@ from cli_contract import (  # noqa: E402
     EXIT_CODE_EPILOG,
     PROGRAM_VERSION,
     ExitCode,
+    JsonEmitter,
+    add_json_flag,
     build_parser,
+    human_output,
+    json_requested,
     run_cli,
 )
+from errors import DatheonError  # noqa: E402
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from async_organizer import DEFAULT_CONCURRENCY, MAX_CONCURRENCY  # noqa: E402
 from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
@@ -82,7 +88,8 @@ def main(argv: List[str] | None = None) -> int:
 
     Returns:
         Process exit code: ``0`` on success, ``1`` on a bad directory
-        (see :mod:`cli_contract`).
+        (see :mod:`cli_contract`). With ``--json`` the same code is returned
+        and one document is written to ``stdout``.
     """
     parser = build_parser(
         PROG,
@@ -121,8 +128,32 @@ def main(argv: List[str] | None = None) -> int:
     )
     add_strict_flag(parser)
     add_logging_flags(parser)
+    add_json_flag(parser)
     args = parser.parse_args(argv)
 
+    emitter = JsonEmitter(PROG, json_requested(args))
+    try:
+        with human_output(emitter.enabled):
+            command, payload, code = _run(args)
+    except DatheonError as exc:
+        emitter.failure("organize", exc)
+        raise
+    return emitter.success(command, payload, code=code)
+
+
+def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
+    """Organise the requested directory and return what to report.
+
+    The JSON document is emitted by :func:`main` once this returns, so the
+    per-file human report and the machine-readable payload never interleave on
+    ``stdout``.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        A ``(command, payload, exit_code)`` triple for the emitter.
+    """
     session = configure_logging_from_args(PROG, args)
     logger = session.logger
     logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
@@ -169,7 +200,24 @@ def main(argv: List[str] | None = None) -> int:
         # (permission denied) with a single actionable line.
         logger.error("could not organize %s: %s", args.directory, exc)
         print(f"! {exc}")
-        return int(ExitCode.DATA_ERROR)
+        payload = {
+            "directory": str(args.directory),
+            "dry_run": bool(args.dry_run),
+            "summary": {
+                "total_processed": 0,
+                "moved": 0,
+                "planned": 0,
+                "skipped": 0,
+                "errors": 1,
+                "duration_ms": 0.0,
+                "engine": "asyncio",
+            },
+            "duplicates": {},
+            "records": [],
+            "log_path": None,
+            "error": str(exc),
+        }
+        return "organize", payload, int(ExitCode.DATA_ERROR)
 
     logger.info(
         "processed=%d moved=%d planned=%d errors=%d duplicates=%d duration_ms=%.1f",
@@ -182,11 +230,16 @@ def main(argv: List[str] | None = None) -> int:
     )
     _print_report(report)
 
+    log_path = None
     if args.log:
         out = write_json_log(report, args.log)
         logger.info("activity log written to %s", out)
+        log_path = str(out)
         print(f"\nActivity log written to {out}")
-    return int(ExitCode.OK)
+
+    payload = report.to_dict()
+    payload["log_path"] = log_path
+    return "organize", payload, int(ExitCode.OK)
 
 
 if __name__ == "__main__":

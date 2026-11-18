@@ -10,9 +10,10 @@ the reply with its confidence, and appends every turn to ``conversation.jsonl``.
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -23,10 +24,15 @@ from cli_contract import (  # noqa: E402
     EXIT_CODE_EPILOG,
     PROGRAM_VERSION,
     ExitCode,
+    JsonEmitter,
+    add_json_flag,
     build_parser,
+    human_output,
+    json_requested,
     run_cli,
 )
 from dataset_loader import LoadReport  # noqa: E402
+from errors import DatheonError  # noqa: E402
 from edge_cases import InputClosed, safe_input  # noqa: E402
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from validators import (  # noqa: E402
@@ -84,14 +90,15 @@ def _log_turn(
     return logger
 
 
-def _run_validation(args) -> int:
+def _run_validation(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
     """Validate the intent or FAQ dataset and exit, without starting the REPL.
 
     Args:
         args: Parsed command-line arguments (``--intents`` or ``--faq``).
 
     Returns:
-        ``0`` when the dataset is valid, ``1`` when it is missing or corrupt.
+        A ``(command, payload, exit_code)`` triple: code ``0`` when the dataset
+        is valid, ``1`` when it is missing or corrupt.
     """
     if args.faq is not None:
         label, path, loader = "FAQ file", args.faq, IntentEngine.from_faq_json
@@ -103,10 +110,45 @@ def _run_validation(args) -> int:
         loader(path, strict=True, report=report)
     except (OSError, ValueError) as exc:
         print(f"! {label}: {exc}")
-        return int(ExitCode.DATA_ERROR)
+        return (
+            "validate",
+            _validation_payload(label, path, report, valid=False),
+            int(ExitCode.DATA_ERROR),
+        )
     print(report.render())
     print(f"OK: {label} {path} is valid ({report.rows_accepted} entries).")
-    return int(ExitCode.OK)
+    return "validate", _validation_payload(label, path, report, valid=True), int(ExitCode.OK)
+
+
+def _validation_payload(
+    label: str,
+    path: Path,
+    report: LoadReport,
+    *,
+    valid: bool,
+) -> Dict[str, Any]:
+    """Describe one ``--validate`` run as a JSON-ready mapping.
+
+    Args:
+        label: Human name for the dataset (``"FAQ file"``, ``"intent file"``).
+        path: The dataset that was checked.
+        report: The :class:`~dataset_loader.LoadReport` collected while loading.
+        valid: Whether the dataset passed every check.
+
+    Returns:
+        A mapping with the label, path, verdict, entry counts and issues.
+    """
+    return {
+        "label": label,
+        "path": str(path),
+        "valid": valid,
+        "rows_checked": report.rows_checked,
+        "rows_accepted": report.rows_accepted,
+        "issues": [
+            {"severity": issue.severity, "line": issue.line, "message": issue.message}
+            for issue in report.issues
+        ],
+    }
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -117,7 +159,8 @@ def main(argv: List[str] | None = None) -> int:
 
     Returns:
         Process exit code: ``0`` on success, ``1`` if intents fail to load
-        (see :mod:`cli_contract`).
+        (see :mod:`cli_contract`). With ``--json`` the same code is returned
+        and one document is written to ``stdout``.
     """
     parser = build_parser(
         PROG,
@@ -139,6 +182,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--no-log", action="store_true", help="Disable conversation logging.")
     add_strict_flag(parser)
     add_logging_flags(parser)
+    add_json_flag(parser)
     parser.add_argument(
         "--validate",
         action="store_true",
@@ -146,6 +190,28 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    emitter = JsonEmitter(PROG, json_requested(args))
+    try:
+        with human_output(emitter.enabled):
+            command, payload, code = _run(args)
+    except DatheonError as exc:
+        emitter.failure("validate" if args.validate else "chat", exc)
+        raise
+    return emitter.success(command, payload, code=code)
+
+
+def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
+    """Run one assistant session (or a dataset validation) and report it.
+
+    The JSON document is emitted by :func:`main` once this returns, so the
+    transcript and the machine-readable payload never interleave on ``stdout``.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        A ``(command, payload, exit_code)`` triple for the emitter.
+    """
     session = configure_logging_from_args(PROG, args)
     logger = session.logger
     logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
@@ -177,7 +243,17 @@ def main(argv: List[str] | None = None) -> int:
     except (FileNotFoundError, ValueError) as exc:
         logger.error("could not load intents: %s", exc)
         print(f"! Could not load intents: {exc}")
-        return int(ExitCode.DATA_ERROR)
+        return (
+            "chat",
+            {
+                "dataset": str(args.faq if args.faq is not None else args.intents),
+                "turns": [],
+                "turns_count": 0,
+                "log_path": None,
+                "error": str(exc),
+            },
+            int(ExitCode.DATA_ERROR),
+        )
 
     # The conversation transcript and the diagnostic logger are two different
     # streams: keep them in separate names so --no-log disables only the JSONL
@@ -185,6 +261,7 @@ def main(argv: List[str] | None = None) -> int:
     # are written to.
     conversation = None if args.no_log else ConversationLogger(args.log)
     print("Type a message, or 'bye'/'exit'/'quit' to finish.\n")
+    turns: List[Dict[str, Any]] = []
 
     while True:
         try:
@@ -201,6 +278,7 @@ def main(argv: List[str] | None = None) -> int:
 
         if conversation:
             conversation = _log_turn(conversation, "user", user_input)
+        turns.append({"role": "user", "text": user_input})
 
         response = engine.respond(user_input)
         logger.debug(
@@ -219,13 +297,28 @@ def main(argv: List[str] | None = None) -> int:
                 intent=response.intent,
                 confidence=response.confidence,
             )
+        turns.append(
+            {
+                "role": "assistant",
+                "text": response.text,
+                "intent": response.intent,
+                "confidence": round(response.confidence, 4),
+            }
+        )
 
         if response.is_exit:
             break
 
     if conversation:
         print(f"\nConversation saved to {conversation.path}")
-    return int(ExitCode.OK)
+
+    payload = {
+        "dataset": str(args.faq if args.faq is not None else args.intents),
+        "turns": turns,
+        "turns_count": len(turns),
+        "log_path": str(conversation.path) if conversation else None,
+    }
+    return "chat", payload, int(ExitCode.OK)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -23,10 +23,15 @@ from cli_contract import (  # noqa: E402
     EXIT_CODE_EPILOG,
     PROGRAM_VERSION,
     ExitCode,
+    JsonEmitter,
+    add_json_flag,
     build_parser,
+    human_output,
+    json_requested,
     run_cli,
 )
-from inventory import InventoryError, InventoryManager  # noqa: E402
+from errors import DatheonError  # noqa: E402
+from inventory import InventoryError, InventoryManager, LoanRecord  # noqa: E402
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from models import Book, DigitalMedia, Magazine  # noqa: E402
 from validators import add_strict_flag, validate_date, validate_int, validate_name  # noqa: E402
@@ -49,7 +54,25 @@ def build_demo_inventory() -> InventoryManager:
     return manager
 
 
-def _single_checkout(args: argparse.Namespace) -> int:
+def _loan_dict(record: LoanRecord) -> Dict[str, Any]:
+    """Describe one loan as a JSON-ready mapping.
+
+    Args:
+        record: The :class:`~inventory.LoanRecord` to serialise.
+
+    Returns:
+        A mapping with the item, borrower, loan period, fee and checkout date.
+    """
+    return {
+        "item_id": record.item_id,
+        "borrower": record.borrower,
+        "days": record.days,
+        "fee": record.fee,
+        "checked_out_on": record.checked_out_on.isoformat(),
+    }
+
+
+def _single_checkout(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
     """Check the first demo item out to a validated borrower.
 
     This is the input-driven path: the borrower name, the optional loan period,
@@ -60,7 +83,8 @@ def _single_checkout(args: argparse.Namespace) -> int:
         args: Parsed command-line arguments (``borrower`` is required).
 
     Returns:
-        Process exit code (``0`` on success).
+        A ``(command, payload, exit_code)`` triple for the emitter; code ``0``
+        on success.
     """
     borrower = validate_name(args.borrower, strict=args.strict, field="--borrower")
     days = None
@@ -80,7 +104,15 @@ def _single_checkout(args: argparse.Namespace) -> int:
         f"{record.borrower} borrowed {record.item_id} for {record.days} days "
         f"(fee ₹{record.fee:,.2f})"
     )
-    return int(ExitCode.OK)
+    payload = {
+        "record": _loan_dict(record),
+        "summary": {
+            "items": len(manager),
+            "on_loan": manager.items_on_loan,
+            "revenue": manager.total_revenue,
+        },
+    }
+    return "checkout", payload, int(ExitCode.OK)
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -90,7 +122,9 @@ def main(argv: List[str] | None = None) -> int:
         argv: Optional argument vector (defaults to ``sys.argv[1:]``).
 
     Returns:
-        Process exit code (``0`` on success — see :mod:`cli_contract`).
+        Process exit code (``0`` on success — see :mod:`cli_contract`). With
+        ``--json`` the same code is returned and one document is written to
+        ``stdout``.
     """
     parser = build_parser(
         PROG,
@@ -99,6 +133,7 @@ def main(argv: List[str] | None = None) -> int:
     )
     add_strict_flag(parser)
     add_logging_flags(parser)
+    add_json_flag(parser)
     parser.add_argument(
         "--borrower",
         default=None,
@@ -114,6 +149,29 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    emitter = JsonEmitter(PROG, json_requested(args))
+    try:
+        with human_output(emitter.enabled):
+            command, payload, code = _run(args)
+    except DatheonError as exc:
+        emitter.failure("checkout" if args.borrower is not None else "demo", exc)
+        raise
+    return emitter.success(command, payload, code=code)
+
+
+def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
+    """Run the demo (or one checkout) and return what to report.
+
+    The JSON document is emitted by :func:`main` once this returns, so the
+    printed walkthrough and the machine-readable payload never interleave on
+    ``stdout``.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        A ``(command, payload, exit_code)`` triple for the emitter.
+    """
     session = configure_logging_from_args(PROG, args)
     logger = session.logger
     logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
@@ -135,6 +193,7 @@ def main(argv: List[str] | None = None) -> int:
     print(manager.audit_report())
 
     print("\n== Checkouts ==")
+    checkouts: List[Dict[str, Any]] = []
     for item_id, borrower in [("B001", "Krish"), ("M001", "Aisha")]:
         try:
             record = manager.checkout(item_id, borrower)
@@ -144,8 +203,11 @@ def main(argv: List[str] | None = None) -> int:
             )
         except InventoryError as exc:
             print(f"  ! {exc}")
+        else:
+            checkouts.append(_loan_dict(record))
 
     print("\n== Demonstrating error handling ==")
+    rejected: List[Dict[str, str]] = []
     for action in (
         lambda: manager.checkout("B001", "Ravi"),  # already on loan
         lambda: manager.checkout("ZZZ", "Ravi"),  # unknown item
@@ -155,6 +217,7 @@ def main(argv: List[str] | None = None) -> int:
             action()
         except InventoryError as exc:
             print(f"  ! {exc}")
+            rejected.append({"type": type(exc).__name__, "message": str(exc)})
 
     print("\n== Return ==")
     record = manager.return_item("B001")
@@ -174,7 +237,19 @@ def main(argv: List[str] | None = None) -> int:
     print(f"  repr(book) -> {book!r}")
     print(f"  len(book)  -> {len(book)} pages")
     print(f"  book == copy -> {book == manager.get('B002')}")
-    return int(ExitCode.OK)
+
+    payload = {
+        "items": manager.audit_rows(),
+        "checkouts": checkouts,
+        "returns": [_loan_dict(record)],
+        "rejected": rejected,
+        "summary": {
+            "items": len(manager),
+            "on_loan": manager.items_on_loan,
+            "revenue": manager.total_revenue,
+        },
+    }
+    return "demo", payload, int(ExitCode.OK)
 
 
 if __name__ == "__main__":

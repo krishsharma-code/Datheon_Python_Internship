@@ -11,6 +11,7 @@ CI script.
 | --- | --- |
 | `-h`, `--help` | Print usage and the exit-code legend, then exit with code `0`. |
 | `--version` | Print `"<program> <version>"` (e.g. `hangman 1.1.0`) and exit with code `0`. |
+| `--json` | Write one machine-readable JSON document to `stdout`; every human-readable line moves to `stderr`. Exit codes are unchanged. |
 
 `--version` reports the single shared version constant `PROGRAM_VERSION`
 (currently `1.1.0`) so a release bump is a one-line change.
@@ -124,6 +125,89 @@ OK: price file …/sample_prices.csv is valid (12 rows).
 
 The layer is covered by
 [`tests/test_dataset_loader.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_dataset_loader.py).
+
+## Machine-readable output (`--json`)
+
+The five tools were built to be read by a person, which made them awkward to
+script: every result arrived as a table to scrape. `--json` turns a run into
+data without changing what the run *does* — same parser, same validation, same
+domain logic, same exit code — and it is implemented once, in
+`cli_contract.py`, so the five tools cannot drift apart:
+
+* `add_json_flag(parser)` registers the flag on every parser;
+* `human_output(enabled)` redirects the human-readable output — banners,
+  tables, prompts — to `stderr` for the duration of the run;
+* `JsonEmitter` writes the single document that lands on `stdout`.
+
+```bash
+organizer ~/Downloads --dry-run --json | jq '.data.summary'
+portfolio --demo --json | jq -r '.data.totals.total_gain'
+hangman --validate --json | jq '.data.valid'
+```
+
+`stdout` carries exactly one document and nothing else, so a pipe never needs
+filtering. `stderr` keeps everything a person would want to read, and the
+logger already wrote there, so `--json` is composable with `2>` redirection.
+
+### The envelope
+
+Every tool emits the same shape, so one parser reads all five:
+
+```json
+{
+  "command": "organize",
+  "data": {"directory": "/home/krish/Downloads", "summary": {"moved": 3}},
+  "ok": true,
+  "schema": 1,
+  "tool": "organizer",
+  "version": "1.1.0"
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `tool` | The program name, identical to `--version`'s first word. |
+| `schema` | Version of this document shape (`JSON_SCHEMA_VERSION`, currently `1`). |
+| `version` | `PROGRAM_VERSION` — the same constant `--version` prints. |
+| `command` | Which sub-command ran: `play`, `report`, `organize`, `chat`, `demo`, `checkout` or `validate`. |
+| `ok` | `true` for a completed run, `false` when the run raised a `DatheonError`. |
+| `data` | The tool's payload — present when `ok` is `true`. |
+| `error` | `DatheonError.to_dict()` (code, type, message, hint, context, exit_code) — present when `ok` is `false`. |
+
+A failure therefore produces a document *and* an exit code: `$?` still decides
+success, and the document says why. A run that fails with `--json` prints its
+human message on `stderr` exactly as it would without the flag.
+
+### What each tool reports
+
+| Tool | `command` | `data` |
+| --- | --- | --- |
+| `hangman` | `play` | source (`word_list`/`categories`), word count, rounds played, wins, losses, win rate |
+| `hangman` | `validate` | path, verdict, rows checked/accepted, every issue with its line number |
+| `portfolio` | `report` | every position (`as_row`), portfolio totals, unknown tickers, summary CSV path |
+| `portfolio` | `validate` | one entry per dataset: label, path, verdict, row counts, issues |
+| `organizer` | `organize` | `OrganizeReport.to_dict()` — summary counts, duplicates, every record — plus `log_path` |
+| `assistant` | `chat` | every turn (role, text, and intent/confidence for replies), dataset, log path |
+| `assistant` | `validate` | label, path, verdict, entry counts, issues |
+| `inventory` | `demo` | audit rows, checkouts, the return, the rejected operations, and the totals |
+| `inventory` | `checkout` | the loan record and the resulting totals |
+
+### Behaviour that only changes with the flag
+
+Two things are worth knowing before scripting a tool:
+
+- An **interactive session** still prompts, on `stderr`. A closed input stream
+  ends `hangman`'s round and the document reports the rounds that completed,
+  where the non-JSON path stops the process from inside the guess loop.
+- `--json` never changes an exit code, including `--validate` on a corrupt
+  dataset: the document reports `"valid": false` with `"ok": true` — the run
+  itself succeeded — and the process still exits `1`.
+
+The mode is covered by
+[`tests/test_cli_json.py`](https://github.com/krishsharma-code/Datheon_Python_Internship/blob/main/tests/test_cli_json.py),
+which asserts the envelope for all five tools, that `stdout` holds one
+document, that the human report moved to `stderr`, and that the exit code is
+identical with and without the flag.
 
 ## How it is wired
 
