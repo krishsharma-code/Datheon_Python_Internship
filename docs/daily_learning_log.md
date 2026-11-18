@@ -3009,7 +3009,7 @@ manifest entry.
 
 ## Day 29 — Maintenance: one JSON document from every tool
 
-**Branch:** `feat/datheon-day-29-json-output`
+**Branch:** `feat/datheon-day-29-json-output` · **PR:** #30
 **Scope:** The first backlog item in §5 of the plan. Every ledger row was
 already `done`, so the run switched to maintenance mode and gave all five tools
 a `--json` mode: the same run, reported as data instead of a table.
