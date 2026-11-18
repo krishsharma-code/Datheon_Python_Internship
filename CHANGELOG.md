@@ -14,6 +14,17 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Maintenance: `--json` on every tool (Day 29).** Each of the five command
+  lines can now emit one machine-readable JSON document instead of a table.
+  The mode lives in `cli_contract.py` — `add_json_flag`, `human_output` and
+  `JsonEmitter` — so the envelope (`tool`, `schema`, `version`, `command`,
+  `ok`, and `data` or `error`) is identical across `hangman`, `portfolio`,
+  `organizer`, `assistant` and `inventory`. Human-readable output moves to
+  `stderr`, `stdout` carries exactly one document, and exit codes are
+  unchanged, including on the failure path where the document carries the
+  `DatheonError` catalogue code. `docs/cli_contract.md` documents the payload
+  per sub-command and `tests/test_cli_json.py` pins the envelope for all five.
+
 - **Submission polish (Day 27).** The README is now an audited artefact. A
   hand-authored layered architecture diagram (`docs/assets/architecture.svg`)
   embedded in both the README and the documentation home, an animated demo of

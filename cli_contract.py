@@ -20,30 +20,51 @@ Since Day 7 the mapping is driven by the exception taxonomy in :mod:`errors`:
 any :class:`~errors.DatheonError` knows its own ``exit_code`` and renders its
 own user-facing message, so ``run_cli`` no longer has to infer the exit code
 from the exception's builtin type.
+
+The module also owns the shared ``--json`` output contract (maintenance-mode
+backlog item). :func:`add_json_flag` puts the flag on every parser,
+:func:`human_output` pushes the human-readable chatter to ``stderr`` while it
+is active, and :class:`JsonEmitter` writes the one document that lands on
+``stdout``. Exit codes are identical with and without the flag, so a script
+can key off ``$?`` and still parse the payload.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from contextlib import contextmanager, redirect_stdout
 from enum import IntEnum
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Iterator, Mapping, Optional
 
 from edge_cases import guard_broken_pipe
 from errors import EXIT_DATA_ERROR, EXIT_SUCCESS, EXIT_USAGE_ERROR, DatheonError
 from logging_config import finish_active_runs, shutdown_logging
 
 __all__ = [
+    "JSON_SCHEMA_VERSION",
     "PROGRAM_VERSION",
     "EXIT_CODE_EPILOG",
     "ExitCode",
+    "JsonEmitter",
+    "add_json_flag",
     "build_parser",
+    "human_output",
+    "json_requested",
     "run_cli",
     "version_string",
 ]
 
 #: Semantic version shared by every tool in the repository.
 PROGRAM_VERSION = "1.1.0"
+
+#: Version of the ``--json`` document schema.
+#:
+#: The envelope gains fields additively, so a consumer that reads
+#: ``schema``/``ok``/``data`` keeps working when a tool adds a key. A bump
+#: means a field was removed or changed meaning.
+JSON_SCHEMA_VERSION = 1
 
 #: Help epilog documenting the exit-code contract, appended to every parser.
 EXIT_CODE_EPILOG = (
@@ -113,6 +134,172 @@ def build_parser(
         help="Show the program version and exit.",
     )
     return parser
+
+
+def add_json_flag(parser: argparse.ArgumentParser) -> None:
+    """Add the shared ``--json`` flag to a tool's parser.
+
+    The flag is deliberately uniform across the five tools: it selects a
+    machine-readable run, never a different code path through the domain
+    logic. Use :func:`json_requested` to read it and :class:`JsonEmitter` to
+    write the document.
+
+    Args:
+        parser: The parser returned by :func:`build_parser`.
+    """
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json",
+        help=(
+            "Emit one machine-readable JSON document on stdout; human-readable "
+            "output is redirected to stderr."
+        ),
+    )
+
+
+def json_requested(args: argparse.Namespace) -> bool:
+    """Return whether ``--json`` was passed.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        ``True`` when the parsed namespace carries ``--json``.
+    """
+    return bool(getattr(args, "json", False))
+
+
+@contextmanager
+def human_output(enabled: bool) -> Iterator[None]:
+    """Send human-readable output to ``stderr`` while ``--json`` is active.
+
+    A ``--json`` run writes exactly one document to ``stdout`` and nothing
+    else, so the caller's banners, tables and prompts are redirected to
+    ``stderr`` for the duration of the block. Diagnostics already go there:
+    the logger and every ``run_cli`` error message use ``stderr``.
+
+    Args:
+        enabled: ``True`` for a ``--json`` run; ``False`` leaves ``stdout``
+            untouched, which is what every non-JSON invocation gets.
+
+    Yields:
+        ``None``; the block runs with ``stdout`` either redirected or not.
+    """
+    if not enabled:
+        yield
+        return
+    with redirect_stdout(sys.stderr):
+        yield
+
+
+class JsonEmitter:
+    """Writes the single JSON document a ``--json`` run produces.
+
+    The envelope is identical for every tool, so a caller can parse the output
+    of ``hangman``, ``portfolio``, ``organizer``, ``assistant`` and
+    ``inventory`` with one piece of code::
+
+        {
+          "tool": "organizer",
+          "schema": 1,
+          "version": "1.1.0",
+          "command": "organize",
+          "ok": true,
+          "data": {"directory": "...", "summary": {"moved": 3}}
+        }
+
+    A failed run replaces ``data`` with ``error`` and sets ``ok`` to
+    ``false``; the process exit code is unchanged, so ``$?`` stays the
+    authoritative signal alongside the document.
+
+    Args:
+        tool: Program name, as shown by ``--version``.
+        enabled: ``True`` when ``--json`` was passed. When ``False`` every
+            method is a no-op, which keeps the entry points free of branches.
+    """
+
+    def __init__(self, tool: str, enabled: bool) -> None:
+        self.tool: str = tool
+        self.enabled: bool = enabled
+
+    def success(
+        self,
+        command: str,
+        data: Mapping[str, Any],
+        *,
+        code: int = int(ExitCode.OK),
+    ) -> int:
+        """Emit a success document and return the exit code to use.
+
+        Args:
+            command: The sub-command that ran (``"play"``, ``"validate"`` …).
+            data: The tool-specific payload; must be JSON-serialisable.
+            code: Exit code to return, so a caller can report a partial
+                success (for example ``--validate`` on a corrupt dataset)
+                while still emitting a well-formed document.
+
+        Returns:
+            ``code``, unchanged.
+        """
+        if self.enabled:
+            self._write(self._document(command, ok=True, data=dict(data)))
+        return int(code)
+
+    def failure(self, command: str, exc: BaseException) -> None:
+        """Emit a failure document for an exception the tool is about to raise.
+
+        The entry point calls this from its ``except`` block and re-raises, so
+        :func:`run_cli` still prints the human message on ``stderr`` and
+        returns the documented exit code. A :class:`~errors.DatheonError`
+        contributes its catalogue code, hint and context; any other exception
+        contributes its type and message.
+
+        Args:
+            command: The sub-command that was running.
+            exc: The exception that aborted the run.
+        """
+        if not self.enabled:
+            return
+        if isinstance(exc, DatheonError):
+            error: Dict[str, Any] = exc.to_dict()
+        else:
+            error = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "exit_code": int(ExitCode.DATA_ERROR),
+            }
+        self._write(self._document(command, ok=False, error=error))
+
+    def _document(self, command: str, *, ok: bool, **payload: Any) -> Dict[str, Any]:
+        """Build the envelope for one run.
+
+        Args:
+            command: The sub-command that ran.
+            ok: Whether the run succeeded.
+            **payload: ``data`` or ``error``, merged into the envelope.
+
+        Returns:
+            The JSON-ready envelope.
+        """
+        document: Dict[str, Any] = {
+            "tool": self.tool,
+            "schema": JSON_SCHEMA_VERSION,
+            "version": PROGRAM_VERSION,
+            "command": command,
+            "ok": ok,
+        }
+        document.update(payload)
+        return document
+
+    @staticmethod
+    def _write(document: Mapping[str, Any]) -> None:
+        """Print one document, keys sorted so two runs diff cleanly.
+
+        Args:
+            document: The envelope to serialise.
+        """
+        print(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 def run_cli(main: Callable[[], int]) -> int:

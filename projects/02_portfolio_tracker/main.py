@@ -11,9 +11,10 @@ The script collects positions, prints a formatted valuation report, and writes
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -23,10 +24,15 @@ from cli_contract import (  # noqa: E402
     EXIT_CODE_EPILOG,
     PROGRAM_VERSION,
     ExitCode,
+    JsonEmitter,
+    add_json_flag,
     build_parser,
+    human_output,
+    json_requested,
     run_cli,
 )
 from dataset_loader import LoadReport  # noqa: E402
+from errors import DatheonError  # noqa: E402
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from portfolio import (  # noqa: E402
     Portfolio,
@@ -153,7 +159,7 @@ def _print_report(portfolio: Portfolio) -> None:
     print(f"{'Return':<14}{totals['total_gain_pct']:>41.2f}%")
 
 
-def _run_validation(args) -> int:
+def _run_validation(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
     """Validate the price (and optional constituents) datasets and exit.
 
     Each dataset is loaded in strict mode so a missing column or a malformed
@@ -163,24 +169,42 @@ def _run_validation(args) -> int:
         args: Parsed command-line arguments.
 
     Returns:
-        ``0`` when every requested dataset is valid, ``1`` otherwise.
+        A ``(command, payload, exit_code)`` triple: code ``0`` when every
+        requested dataset is valid, ``1`` otherwise.
     """
     targets = [("price file", args.prices, load_prices_from_csv)]
     if args.constituents is not None:
         targets.append(("constituents file", args.constituents, load_symbols_from_csv))
 
     status = int(ExitCode.OK)
+    datasets: List[Dict[str, Any]] = []
     for label, path, loader in targets:
         report = LoadReport(path)
+        valid = True
         try:
             loader(path, strict=True, report=report)
         except (OSError, ValueError) as exc:
             print(f"! {label}: {exc}")
             status = int(ExitCode.DATA_ERROR)
-            continue
-        print(report.render())
-        print(f"OK: {label} {path} is valid ({report.rows_accepted} rows).")
-    return status
+            valid = False
+        else:
+            print(report.render())
+            print(f"OK: {label} {path} is valid ({report.rows_accepted} rows).")
+        datasets.append(
+            {
+                "label": label,
+                "path": str(path),
+                "valid": valid,
+                "rows_checked": report.rows_checked,
+                "rows_accepted": report.rows_accepted,
+                "issues": [
+                    {"severity": issue.severity, "line": issue.line, "message": issue.message}
+                    for issue in report.issues
+                ],
+            }
+        )
+    payload = {"valid": status == int(ExitCode.OK), "datasets": datasets}
+    return "validate", payload, status
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -191,7 +215,8 @@ def main(argv: List[str] | None = None) -> int:
 
     Returns:
         Process exit code: ``0`` on success, ``1`` on a user or data error
-        (see :mod:`cli_contract`).
+        (see :mod:`cli_contract`). With ``--json`` the same code is returned
+        and one document is written to ``stdout``.
     """
     parser = build_parser(
         PROG,
@@ -215,6 +240,7 @@ def main(argv: List[str] | None = None) -> int:
     )
     add_strict_flag(parser)
     add_logging_flags(parser)
+    add_json_flag(parser)
     parser.add_argument(
         "--validate",
         action="store_true",
@@ -222,6 +248,29 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    emitter = JsonEmitter(PROG, json_requested(args))
+    try:
+        with human_output(emitter.enabled):
+            command, payload, code = _run(args)
+    except DatheonError as exc:
+        emitter.failure("validate" if args.validate else "report", exc)
+        raise
+    return emitter.success(command, payload, code=code)
+
+
+def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
+    """Value the portfolio (or validate a dataset) and return what to report.
+
+    The JSON document is emitted by :func:`main` once this returns, so the
+    human-readable report and the machine-readable payload can never
+    interleave on ``stdout``.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        A ``(command, payload, exit_code)`` triple for the emitter.
+    """
     session = configure_logging_from_args(PROG, args)
     logger = session.logger
     logger.debug("%s %s starting", PROG, PROGRAM_VERSION)
@@ -250,6 +299,7 @@ def main(argv: List[str] | None = None) -> int:
     _print_report(portfolio)
     logger.info("valued %d position(s)", len(portfolio.holdings))
 
+    unknown: Optional[List[str]] = None
     if args.constituents is not None:
         if args.strict:
             validate_path(args.constituents, must_be_file=True, field="--constituents")
@@ -268,11 +318,22 @@ def main(argv: List[str] | None = None) -> int:
                     )
                 print(f"  ! Not found in the reference list: {', '.join(unknown)}")
 
+    summary_path: Optional[str] = None
     if portfolio.holdings:
         out = write_summary_csv(portfolio, args.output)
         logger.info("summary written to %s", out)
+        summary_path = str(out)
         print(f"\nSummary written to {out}")
-    return int(ExitCode.OK)
+
+    payload = {
+        "prices_path": str(args.prices),
+        "demo": bool(args.demo),
+        "positions": portfolio.rows(),
+        "totals": portfolio.summary(),
+        "unknown_symbols": unknown,
+        "summary_csv": summary_path,
+    }
+    return "report", payload, int(ExitCode.OK)
 
 
 if __name__ == "__main__":
