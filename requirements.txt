@@ -28,6 +28,11 @@ twine>=5.1
 # module, so the suite needs it too.
 pyyaml>=6.0
 
+# Day 30: the benchmark harness. `pytest benchmarks/` is timed by this plugin
+# and `tools/benchmark_budget.py` grades the JSON report it writes against
+# `benchmarks/budget.json`. Not needed to run the five tools or the test suite.
+pytest-benchmark>=4.0
+
 # Day 19: mutation testing. `tools/mutation.py` drives it and gates the score;
 # the run takes about two minutes for the configured target, so it lives in its
 # own workflow rather than in the per-commit CI job.

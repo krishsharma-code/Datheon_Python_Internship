@@ -60,6 +60,10 @@ dev = [
     # captured transcript. Pillow is a build-time dependency of an asset, never
     # of a tool: nothing under `projects/` imports it.
     "pillow>=10.0",
+    # Day 30: the benchmark harness. `benchmarks/bench_core.py` is timed by the
+    # plugin's `benchmark` fixture and `tools/benchmark_budget.py` reads the
+    # report it writes. The five tools still import only the standard library.
+    "pytest-benchmark>=4.0",
 ]
 docs = [
     # Day 25: the documentation site. `pip install -e ".[docs]"` is the whole
@@ -137,8 +141,12 @@ extend-exclude = '''
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q"
+# Day 30: `testpaths` keeps a bare `pytest` on the hermetic suite, so a timing
+# can never fail a correctness run. The benchmark modules are collected only
+# when the directory is named — `pytest benchmarks/` — which is why they are
+# allowed their own `bench_*.py` filename instead of masquerading as tests.
 testpaths = ["tests"]
-python_files = ["test_*.py"]
+python_files = ["test_*.py", "bench_*.py"]
 
 [tool.coverage.run]
 # Day 20: measure the shipped code — the five projects and the shared core
@@ -150,6 +158,10 @@ omit = [
     "tests/*",
     "tools/*",
     "conftest.py",
+    # Day 30: the benchmark harness is run by `pytest benchmarks/`, never by the
+    # correctness suite, so it is not executed when coverage is measured. Counting
+    # it as 0% would penalise the gate for a file that is not supposed to run here.
+    "benchmarks/*",
     "*/__pycache__/*",
 ]
 

@@ -51,6 +51,11 @@ secrets.json
 .DS_Store
 Thumbs.db
 
+# Day 30: the report `pytest benchmarks/ --benchmark-json=...` writes, and the
+# file `tools/benchmark_budget.py` reads by default. An artefact of a run, never
+# a source file — `benchmarks/budget.json` is the committed one.
+benchmark-results.json
+
 # Runtime output produced by the projects
 projects/02_portfolio_tracker/portfolio_summary.csv
 projects/03_file_organizer_automation/*.log

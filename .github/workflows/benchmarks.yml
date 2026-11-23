@@ -1,0 +1,84 @@
+name: Benchmarks
+
+# Day 30 — the performance regression gate.
+#
+# Day 12 profiled four hot paths and Day 14 wrote the numbers down. Numbers in a
+# document do not fail a build, so nothing stopped a later change from quietly
+# doubling the cost of parsing the constituents table. This workflow closes that
+# gap: it times the same four paths, writes pytest-benchmark's JSON report, and
+# hands it to `tools/benchmark_budget.py`, which fails the job when a median
+# crosses its committed ceiling.
+#
+# Kept out of `ci.yml` on purpose. A timing on a shared runner is noisy, so it
+# is a signal about *change*, not about every commit: it runs weekly, on demand,
+# and on a pull request that touches the code it measures. `benchmarks/budget.json`
+# stores each ceiling next to a calibration median, and the gate scales every
+# ceiling by how fast this machine is, so a slower runner does not fail the build.
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "benchmarks/**"
+      - "tools/benchmark_budget.py"
+      - "caching.py"
+      - "dataset_loader.py"
+      - "persistence.py"
+      - "validators.py"
+      - "error_catalogue.py"
+      - "projects/01_hangman_game/words.py"
+      - "projects/02_portfolio_tracker/portfolio.py"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/benchmarks.yml"
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  budget:
+    name: Performance regression gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # The plugin writes `benchmark-results.json` in the working directory; the
+      # gate reads that exact file by default, so the two cannot drift apart.
+      - name: Run the benchmarks
+        run: pytest benchmarks/ -q --benchmark-json=benchmark-results.json
+
+      - name: Compare against the committed budget
+        run: python tools/benchmark_budget.py --results benchmark-results.json
+
+      - name: Print the committed budget
+        if: always()
+        run: python tools/benchmark_budget.py --list
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.json
+          if-no-files-found: warn

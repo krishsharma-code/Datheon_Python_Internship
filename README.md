@@ -101,7 +101,9 @@ Two properties fall out of that shape and are worth stating plainly:
   `tests/test_validation.py`, and the diagram itself is checked — it must parse
   as SVG, stay under budget and be referenced from both this page and the
   [documentation home](docs/index.md), which is what
-  `python tools/readme_audit.py` enforces.
+  `python tools/readme_audit.py` enforces. The hot paths are timed too: eight
+  benchmarks, each held to a committed ceiling scaled to the machine, in
+  [`docs/benchmarking.md`](docs/benchmarking.md).
 
 ---
 

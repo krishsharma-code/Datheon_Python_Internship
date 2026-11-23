@@ -14,7 +14,7 @@ Three things make the gate trustworthy rather than decorative:
   ``--minimum 90`` explicitly as well; the tests assert all three agree.
 * **The scope is the shipped code.** ``[tool.coverage.run]`` in
   ``pyproject.toml`` measures the five projects and the shared core modules,
-  and omits ``tests/``, ``tools/`` and ``conftest.py``. Measuring the test
+  and omits ``tests/``, ``tools/``, ``benchmarks/`` and ``conftest.py``. Measuring the test
   files would flatter the number — every line of a test that runs is a covered
   line — and the gate would then be watching the wrong thing.
 * **A drop is reproducible.** ``--report-only --from-json`` re-reads a saved

@@ -139,6 +139,7 @@ nav:
       - Fuzz testing: fuzzing.md
       - Mutation testing: mutation_testing.md
       - Coverage gate: coverage_gate.md
+      - Benchmark regression gate: benchmarking.md
       - Test strategy: test_strategy.md
       - Week 3 QA report: week3_qa_report.md
   - Continuous integration:

@@ -14,6 +14,19 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Maintenance: performance regression gate (Day 30).** The four hot paths
+  Day 12 profiled are now timed by `benchmarks/bench_core.py` (pytest-benchmark,
+  eight benchmarks including a pure-arithmetic calibration), and
+  `tools/benchmark_budget.py` grades the run against `benchmarks/budget.json` —
+  exit `1` on a regression, an unbudgeted benchmark or a ceiling with no
+  measurement, exit `2` when no verdict is reachable. Every ceiling is scaled by
+  how fast the machine is relative to the calibration recorded with the budget,
+  so a slower runner gets a slower budget instead of a false failure.
+  `.github/workflows/benchmarks.yml` runs the gate on pull requests, weekly and
+  on demand; `docs/benchmarking.md` documents the contract. `tests/` gains 80
+  test functions (373 new cases), including audits that prove each check
+  fires on a doctored copy.
+
 - **Maintenance: `--json` on every tool (Day 29).** Each of the five command
   lines can now emit one machine-readable JSON document instead of a table.
   The mode lives in `cli_contract.py` — `add_json_flag`, `human_output` and

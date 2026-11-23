@@ -731,6 +731,117 @@ def test_parser_documents_every_flag() -> None:
 
 
 # ---------------------------------------------------------------------------
+# The freeze pins what the repository carries
+# ---------------------------------------------------------------------------
+
+
+def test_gitignore_patterns_drops_comments_negations_and_blank_lines(tmp_path: Path) -> None:
+    """Only path patterns survive: the rest is commentary."""
+    (tmp_path / ".gitignore").write_text(
+        "# a comment\n\n*.log\n!keep.log\n/site/\n", encoding="utf-8"
+    )
+    assert fv.gitignore_patterns(tmp_path) == ("*.log", "site")
+
+
+def test_gitignore_patterns_of_a_repository_without_one_is_empty(tmp_path: Path) -> None:
+    """No ignore file means nothing is ignored."""
+    assert fv.gitignore_patterns(tmp_path) == ()
+
+
+def test_is_gitignored_covers_a_directory_entry(tmp_path: Path) -> None:
+    """``site/`` covers the files beneath it, at any depth."""
+    patterns = fv.gitignore_patterns(_ignoring(tmp_path, "site/\n"))
+    assert fv.is_gitignored("site/index.html", patterns) is True
+    assert fv.is_gitignored("site/api/index.html", patterns) is True
+
+
+def test_is_gitignored_covers_a_basename_glob(tmp_path: Path) -> None:
+    """``*.log`` matches the name, wherever the file sits."""
+    patterns = fv.gitignore_patterns(_ignoring(tmp_path, "*.log\n"))
+    assert fv.is_gitignored("projects/03_file_organizer_automation/run.log", patterns) is True
+    assert fv.is_gitignored("run.log", patterns) is True
+
+
+def test_is_gitignored_covers_an_exact_path(tmp_path: Path) -> None:
+    """The runtime-output entries name one file, and only that file is covered."""
+    patterns = fv.gitignore_patterns(
+        _ignoring(tmp_path, "projects/02_portfolio_tracker/portfolio_summary.csv\n")
+    )
+    assert fv.is_gitignored("projects/02_portfolio_tracker/portfolio_summary.csv", patterns)
+    assert not fv.is_gitignored("projects/02_portfolio_tracker/portfolio.py", patterns)
+
+
+def test_is_gitignored_leaves_a_tracked_file_alone(tmp_path: Path) -> None:
+    """A pattern that matches nothing in the path must not swallow it."""
+    patterns = fv.gitignore_patterns(_ignoring(tmp_path, "*.log\nsite/\n"))
+    assert fv.is_gitignored("docs/index.md", patterns) is False
+
+
+def test_pinned_paths_excludes_a_gitignored_artefact(repo: Path) -> None:
+    """The defect this rule exists for: a generated CSV pinned into the freeze.
+
+    ``portfolio_summary.csv`` is written by the portfolio tracker and ignored by
+    git, so it is absent from every clean clone. Pinning it made the audit fail
+    with "pinned but gone" on a tree nobody had edited.
+    """
+    artefact = repo / "projects" / "02_portfolio_tracker" / "portfolio_summary.csv"
+    _write(artefact, "symbol,value\nINFY,10\n")
+    _write(
+        repo / ".gitignore",
+        "\n".join(
+            (
+                "__pycache__/",
+                *fv.IGNORED_PATTERNS,
+                "projects/02_portfolio_tracker/portfolio_summary.csv",
+            )
+        )
+        + "\n",
+    )
+    assert "projects/02_portfolio_tracker/portfolio_summary.csv" not in fv.pinned_paths(repo)
+
+
+def test_a_freeze_cut_over_an_ignored_artefact_round_trips(repo: Path) -> None:
+    """The manifest is stable whether or not the artefact is on disk."""
+    artefact = repo / "projects" / "02_portfolio_tracker" / "portfolio_summary.csv"
+    _write(artefact, "symbol,value\nINFY,10\n")
+    _write(
+        repo / ".gitignore",
+        "\n".join(
+            (
+                "__pycache__/",
+                *fv.IGNORED_PATTERNS,
+                "projects/02_portfolio_tracker/portfolio_summary.csv",
+            )
+        )
+        + "\n",
+    )
+    _freeze(repo)
+    artefact.unlink()
+    assert fv.audit_freeze(repo)[0].status == "pass"
+
+
+def test_pinned_paths_still_pins_tracked_files_under_an_ignoring_root(repo: Path) -> None:
+    """The rule narrows the pin set; it does not empty it."""
+    assert "docs/index.md" in fv.pinned_paths(repo)
+    assert "mkdocs.yml" in fv.pinned_paths(repo)
+
+
+def _ignoring(root: Path, body: str) -> Path:
+    """Write a ``.gitignore`` and return its directory.
+
+    Args:
+        root: Directory to write into.
+        body: The ignore file's contents.
+
+    Returns:
+        The directory, for chaining into :func:`fv.gitignore_patterns`.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    (root / ".gitignore").write_text(body, encoding="utf-8")
+    return root
+
+
+# ---------------------------------------------------------------------------
 # The committed repository
 # ---------------------------------------------------------------------------
 
