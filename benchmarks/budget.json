@@ -1,0 +1,38 @@
+{
+  "benchmarks": {
+    "bench_atomic_write_json": {
+      "max_median_us": 13511.202,
+      "median_us": 6755.601
+    },
+    "bench_cache_lookup": {
+      "max_median_us": 3355.188,
+      "median_us": 1677.594
+    },
+    "bench_catalogue_lookup": {
+      "max_median_us": 5014.694,
+      "median_us": 2507.347
+    },
+    "bench_constituents_parse": {
+      "max_median_us": 10330.262,
+      "median_us": 5165.131
+    },
+    "bench_validator_batch": {
+      "max_median_us": 151.162,
+      "median_us": 75.581
+    },
+    "bench_word_list_cached": {
+      "max_median_us": 960.354,
+      "median_us": 480.177
+    },
+    "bench_word_list_cold": {
+      "max_median_us": 19282.924,
+      "median_us": 9641.462
+    }
+  },
+  "calibration_us": 2801.802,
+  "headroom": 2.0,
+  "python": "3.12.13",
+  "recorded": "2026-11-23",
+  "schema": 1,
+  "tolerance": 0.0
+}

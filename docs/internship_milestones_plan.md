@@ -47,6 +47,7 @@ Status values: `pending` · `in-progress` · `done` · `blocked`.
 | 27 | 2026-11-15 | Submission polish | `feat/datheon-day-27-polish` | Layered architecture diagram `docs/assets/architecture.svg` embedded in the README and the docs home page; animated demo `docs/assets/demo/quickstart.gif` (89 frames, 860x402, 824 KB) rendered from the captured `docs/assets/demo/transcript.json` by `tools/demo_assets.py` (`--capture`, `--check`); `tools/readme_audit.py` audit (9 finding codes — section, quickstart, link incl. anchors, asset, diagram, demo, orphan, placeholder, secret — exit 2 when unmeasurable); `docs/polish.md`, README final pass with a table of contents and an architecture section, 68 tests; 6 real defects found (Pillow cropping every frame to the first, a fixed window that redrew one picture, a leaked scratch path, the JSON transcript audited as an image, a GIF budget never checked, a crash on a README outside the repo) | done | #28 |
 | 28 | 2026-11-16 | Final verification & submission | `feat/datheon-day-28-final` | Full green run in one command (`tools/final_verification.py`: 12 live checks + 11 static claims, 12 finding codes, exit 2 when unmeasurable), repo freeze (`docs/submission/freeze.json`, SHA-256 over 146 shipped files), the certificate checklist made auditable — its first run found a line naming a document that was never committed — and the final post, drafted in `docs/final_verification.md`; 62 tests | done | #29 |
 | 29 | 2026-11-18 | Maintenance — `--json` output mode (backlog §5) | `feat/datheon-day-29-json-output` | One machine-readable document from every tool: `add_json_flag` / `human_output` / `JsonEmitter` in `cli_contract.py`, a shared envelope (`tool`, `schema`, `version`, `command`, `ok`, `data`/`error`), human output moved to `stderr`, exit codes unchanged; `docs/cli_contract.md` payload reference, 26 tests in `tests/test_cli_json.py` | done | #30 |
+| 30 | 2026-11-23 | Maintenance — benchmark regression gate (backlog §5) | `feat/datheon-day-30-benchmarks` | Eight pytest-benchmark timings of the Day 12 hot paths plus a pure-arithmetic calibration (`benchmarks/bench_core.py`), `tools/benchmark_budget.py` grading each median against `benchmarks/budget.json` (exit 1 on a regression, an unbudgeted benchmark or a missing measurement; exit 2 when unmeasurable), every ceiling scaled by the measured calibration so a slower machine gets a slower budget, `.github/workflows/benchmarks.yml` on PR/weekly/on-demand, `docs/benchmarking.md`; also fixes the freeze pinning git-ignored runtime output | done | #31 |
 
 ---
 
@@ -183,7 +184,7 @@ Used only when every ledger row is `done`, or to fill spare capacity:
 
 - ~~Add a `--json` output mode to every CLI for machine-readable results.~~ **Shipped as Day 29** — see the ledger row above.
 - Ship a GitHub Actions workflow that publishes coverage to Codecov.
-- Add a benchmark harness with `pytest-benchmark` and a regression budget.
+- ~~Add a benchmark harness with `pytest-benchmark` and a regression budget.~~ **Shipped as Day 30** — see the ledger row above.
 - Add Docker packaging for the organizer as a cron-friendly container.
 - Add a `pre-commit` configuration (black, flake8, end-of-file-fixer).
 - Add type checking (`mypy`/`pyright`) to CI once annotations are complete.

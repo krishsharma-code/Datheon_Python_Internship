@@ -95,14 +95,15 @@ what CI enforces.
 
 | Gate | Threshold | Where it lives |
 | --- | --- | --- |
-| Test suite | 1,385 passing tests, 0 failures | `pytest` |
-| Assertions | 2,098 (floor: 200) | `tools/assertion_census.py` |
+| Test suite | 1,758 passing tests, 0 failures | `pytest` |
+| Assertions | 2,685 (floor: 200) | `tools/assertion_census.py` |
 | Line coverage | 95.8% (floor: 90%) | `tools/coverage_gate.py` |
 | Mutation score | 100% of 182 mutants killed | `tools/mutation.py` |
 | Test isolation | no real filesystem, clock or network I/O | `tools/io_audit.py` |
 | CI matrix | 12 cells: 3 operating systems × Python 3.10–3.13 | `tools/ci_matrix.py` |
 | Distribution | wheel + sdist, `twine check`, clean-venv install | `tools/distribution.py` |
 | Docs site | every page in the nav, every module documented | `tools/docs_site.py` |
+| Performance | 8 benchmarks, each within 2× its recorded median | `tools/benchmark_budget.py` |
 
 Read the reasoning behind each one in the [test strategy](test_strategy.md) and
 the [Week 3 QA report](week3_qa_report.md).
@@ -121,7 +122,7 @@ Datheon_Python_Internship/
 │   ├── 04_terminal_assistant/
 │   └── 05_inventory_oop/
 ├── docs/                     # engineering guides (the pages of this site)
-├── tests/                    # 1,385 tests
+├── tests/                    # 1,758 tests
 ├── tools/                    # quality gates, each with a documented exit code
 ├── mkdocs.yml                # this site
 └── pyproject.toml            # PEP 621 metadata + five console scripts

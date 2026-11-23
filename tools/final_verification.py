@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fnmatch
 import hashlib
 import json
 import re
@@ -70,7 +71,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 try:  # pragma: no cover - Python 3.11+
@@ -148,6 +149,7 @@ IGNORED_PATTERNS: Tuple[str, ...] = (
     ".pytest_cache/",
     ".coverage",
     "coverage.json",
+    "benchmark-results.json",
     "site/",
     "mutants/",
     ".env",
@@ -984,6 +986,60 @@ def audit_secrets(root: Path) -> List[CheckResult]:
 # ---------------------------------------------------------------------------
 
 
+def gitignore_patterns(root: Path) -> Tuple[str, ...]:
+    """Return the path patterns the root ``.gitignore`` excludes.
+
+    Only the entries that name a path survive: comments, blank lines and
+    negations are dropped, a leading ``/`` is removed so an anchored pattern is
+    matched against the whole relative path, and a trailing ``/`` is stripped so
+    a directory entry covers the files beneath it. This is a deliberately small
+    subset of git's rules — enough to keep generated output out of the freeze,
+    and no more.
+
+    Args:
+        root: Repository root.
+
+    Returns:
+        Patterns, in file order. Empty when there is no ``.gitignore``.
+    """
+    ignore_file = root / ".gitignore"
+    if not ignore_file.is_file():
+        return ()
+    patterns: List[str] = []
+    for raw_line in ignore_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith("!"):
+            continue
+        patterns.append(line.strip("/").lstrip("/") or line)
+    return tuple(patterns)
+
+
+def is_gitignored(rel: str, patterns: Sequence[str]) -> bool:
+    """Report whether a repository-relative path is excluded by ``patterns``.
+
+    A pattern containing a slash is matched against the path and each of its
+    parent directories, so ``site/`` covers ``site/index.html``. A pattern with
+    no slash is matched against every path component, which is how git treats
+    ``*.log`` and ``.env``.
+
+    Args:
+        rel: Repository-relative POSIX path.
+        patterns: Patterns from :func:`gitignore_patterns`.
+
+    Returns:
+        ``True`` when the path would not be tracked.
+    """
+    parts = PurePosixPath(rel).parts
+    prefixes = ["/".join(parts[: index + 1]) for index in range(len(parts))]
+    for pattern in patterns:
+        if "/" in pattern:
+            if any(fnmatch.fnmatchcase(prefix, pattern) for prefix in prefixes):
+                return True
+        elif any(fnmatch.fnmatchcase(part, pattern) for part in parts):
+            return True
+    return False
+
+
 def pinned_paths(root: Path) -> List[str]:
     """List the files the freeze manifest pins, as relative POSIX paths.
 
@@ -992,11 +1048,17 @@ def pinned_paths(root: Path) -> List[str]:
 
     Returns:
         Sorted paths. Governance documents that change on every run are left
-        out — a freeze that expires the moment it is cut is not a freeze.
+        out — a freeze that expires the moment it is cut is not a freeze — and
+        so is everything ``.gitignore`` excludes. Pinning an ignored path was a
+        real defect: the tools write ``portfolio_summary.csv`` next to the
+        portfolio tracker, the freeze recorded it, and every clean clone then
+        failed the audit with "pinned but gone". A manifest may only pin what
+        the repository actually carries.
     """
+    ignored = gitignore_patterns(root)
     paths: List[str] = []
     for rel in FREEZE_FILES:
-        if (root / rel).is_file():
+        if (root / rel).is_file() and not is_gitignored(rel, ignored):
             paths.append(rel)
     for rel_dir in FREEZE_DIRS:
         base = root / rel_dir
@@ -1006,7 +1068,7 @@ def pinned_paths(root: Path) -> List[str]:
             if not path.is_file() or path.suffix.lower() not in PINNED_SUFFIXES:
                 continue
             rel = path.relative_to(root).as_posix()
-            if "__pycache__" in rel or rel in FREEZE_MUTABLE:
+            if "__pycache__" in rel or rel in FREEZE_MUTABLE or is_gitignored(rel, ignored):
                 continue
             paths.append(rel)
     return sorted(set(paths))
