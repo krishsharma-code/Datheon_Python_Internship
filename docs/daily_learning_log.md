@@ -3097,3 +3097,103 @@ so the JSON and the CSV cannot disagree.
 | `python tools/docs_site.py --strict` | PASS — 42 pages, 15 modules |
 | `python tools/io_audit.py --strict` | PASS |
 | Assertion census | 1,388 test functions / 2,580 assertions (floor 200) |
+
+---
+
+## Day 30 — Maintenance: a benchmark that can fail a build
+
+**Branch:** `feat/datheon-day-30-benchmarks` · **PR:** #31
+**Scope:** The second backlog item in §5 of the plan. Every ledger row was
+already `done`, so the run stayed in maintenance mode and took the benchmark
+harness: eight timings of the four hot paths Day 12 profiled, a committed
+budget, and a gate that turns the numbers into a verdict.
+
+### Milestones
+
+- `benchmarks/bench_core.py` times complete calls of the real public API —
+  `load_words_from_file` cold and warm, `load_symbols_from_csv`,
+  `validate_symbol` over 200 tickers, a thousand `DatasetCache` hits,
+  `atomic_write_json`, and one `describe_code` per catalogue code. Nothing
+  re-implements the code it measures.
+- `bench_calibration` is a pure-arithmetic loop and exists only to measure the
+  machine: `tools/benchmark_budget.py` divides this run's calibration by the
+  budgeted one and scales every ceiling by that factor.
+- `tools/benchmark_budget.py` — parse, scale, compare, report. Exit `0` within
+  budget, `1` on any finding, `2` when no verdict is reachable. `--update`
+  re-cuts the budget; `--list` and `--json` make it readable to a person and to
+  a script.
+- `benchmarks/budget.json` was cut by the gate itself (`--update`), so the
+  format and the reader cannot drift: 2× headroom, 0 tolerance, a recorded
+  date, the interpreter, and the calibration.
+- `.github/workflows/benchmarks.yml` runs the gate on a path-filtered pull
+  request, weekly, and on demand; the report is uploaded as an artefact.
+- `docs/benchmarking.md` documents the contract, including the honest
+  limitation: the calibration measures CPU speed while three benchmarks are
+  dominated by I/O.
+- 80 new test functions (373 cases) across `tests/test_benchmark_budget.py` and
+  `tests/test_benchmarks.py`.
+- Found and fixed a real defect on the way: the freeze pinned a git-ignored
+  runtime artefact, so a clean clone failed the audit. `pinned_paths()` now
+  honours `.gitignore`.
+
+### Architectural decisions
+
+1. **A budget without a scale is a budget for one machine.** The obvious
+   implementation stores microseconds and compares them, which is wrong the
+   moment the code runs anywhere else: CI runners are slower than laptops, and
+   a shared runner is slower again on a busy minute. Storing each ceiling next
+   to a calibration median makes the budget *relative*, so a slow machine gets
+   a slow budget. The alternative — disabling the gate on CI — would have made
+   it a decoration.
+2. **Clamp the factor, and say when you clamped.** A runner 10× slower than the
+   reference is not measuring the same thing, and silently scaling by 10 would
+   excuse a genuine 9× regression. The band is 0.25×–4×, and a clamped run
+   prints a note on `stderr`: an approximate verdict that announces itself is
+   useful, a confident one that is wrong is not.
+3. **Headroom in the file, not in the code.** `headroom: 2.0` and
+   `tolerance: 0.0` mean one visible allowance. Two stacked multipliers — a
+   hidden one in the tool and another in the budget — is how a gate ends up
+   unable to fail anything, and nobody can tell by reading it.
+4. **Both directions are findings.** An unbudgeted benchmark is a finding, so a
+   new timing cannot arrive unprotected. A ceiling with no measurement is a
+   finding too, so a deleted benchmark cannot leave a gate that measures less
+   each month while still printing "pass". The second one is the failure mode
+   nobody notices: the gate keeps working, on less and less.
+5. **Exit 2 exists for a reason.** "No report" and "a regression" are different
+   facts, and folding them together teaches people to ignore exit 1. The gate
+   refuses to grade what it cannot read — the same rule as the coverage gate
+   and the docs audit.
+6. **The timings stay out of `testpaths`.** A timing in the correctness suite
+   would fail on a busy machine and pass on a quiet one, which is the definition
+   of a flaky test. `pytest` runs the hermetic suite; `pytest benchmarks/` runs
+   the timings; `benchmarks/*` is omitted from the coverage scope so an
+   unexecuted harness cannot penalise the 90% floor.
+
+### Performance notes
+
+The budget records the reference run: calibration 2,801.8 µs; the cold word-list
+load at 9,641.5 µs, the constituents parse at 5,165.1 µs, the atomic write at
+6,755.6 µs, the warm word-list hit at 480.2 µs, a thousand cache hits at
+1,677.6 µs, the validator batch at 75.6 µs. Those are the numbers the gate will
+hold the next change to, scaled by whatever machine runs it.
+
+The suite costs about 25 seconds on this machine, which is why it is a
+path-filtered pull-request job and a weekly schedule rather than a step in
+`ci.yml`.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 98 files unchanged |
+| `pytest` | 1,758 passed, 2 skipped, 0 failed (+80 test functions) |
+| `pytest --cov` | 95.9% over 3,499 statements, 780 branches (floor 90%) |
+| `python tools/benchmark_budget.py` | 7 benchmarks within budget, exit 0 |
+| `python tools/final_verification.py --static` | green — freeze re-cut for this day |
+| `python tools/docs_site.py --strict` | PASS — 43 pages, 15 modules |
+| `python tools/io_audit.py --strict` | PASS |
+| `python tools/readme_audit.py` | submission-ready |
+| `python tools/ci_matrix.py` | 12 cells, 0 warnings |
+| Assertion census | 1,465 test functions / 2,685 assertions (floor 200) |
