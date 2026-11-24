@@ -8,64 +8,21 @@ Each page has a terminal you can play, pause, step through and re-run at 1×, 2�
 or 4×. The transcript is also printed as plain text inside every page, so the
 demos work without JavaScript, in a feed reader, and for a screen reader.
 
-<div class="demo-grid" markdown>
-
-<div class="demo-card" markdown>
-
-### [Hangman](hangman.md)
-
-`hangman --categories`
-
-A full round played from stdin: the ASCII gallows, the letter board, the score
-and the play-again prompt.
-
-</div>
-
-<div class="demo-card" markdown>
-
-### [Portfolio tracker](portfolio.md)
-
-`portfolio --demo`
-
-Four positions valued against a CSV of prices, with per-holding gain, net P/L
-and the summary file it writes.
-
-</div>
-
-<div class="demo-card" markdown>
-
-### [File organizer](organizer.md)
-
-`organizer ~/datheon-demo --dry-run --duplicates`
-
-A messy folder sorted into categories by the asyncio engine, with SHA-256
-duplicate detection — in dry-run, so nothing moves.
-
-</div>
-
-<div class="demo-card" markdown>
-
-### [Terminal assistant](assistant.md)
-
-`assistant --no-log`
-
-Three turns against the rule-based intent matcher, each reply carrying the
-intent it matched and its confidence.
-
-</div>
-
-<div class="demo-card" markdown>
-
-### [Inventory (OOP)](inventory.md)
-
-`inventory`
-
-The object-oriented walkthrough: checkouts, returns, rejected operations,
-revenue, the audit table and the dunder methods.
-
-</div>
-
-</div>
+- **[Hangman](hangman.md)** — `hangman --categories`. A full round played from
+  stdin: the ASCII gallows, the letter board, the score and the play-again
+  prompt.
+- **[Portfolio tracker](portfolio.md)** — `portfolio --demo`. Four positions
+  valued against a CSV of prices, with per-holding gain, net P/L and the summary
+  file it writes.
+- **[File organizer](organizer.md)** — `organizer ~/datheon-demo --dry-run
+  --duplicates`. A messy folder sorted into categories by the asyncio engine,
+  with SHA-256 duplicate detection — in dry-run, so nothing moves.
+- **[Terminal assistant](assistant.md)** — `assistant --no-log`. Three turns
+  against the rule-based intent matcher, each reply carrying the intent it
+  matched and its confidence.
+- **[Inventory (OOP)](inventory.md)** — `inventory`. The object-oriented
+  walkthrough: checkouts, returns, rejected operations, revenue, the audit table
+  and the dunder methods.
 
 ## How these pages stay true
 

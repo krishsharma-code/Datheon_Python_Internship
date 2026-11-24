@@ -143,35 +143,6 @@
   border: 0;
 }
 
-/* The hub page: five cards, one per tool. */
-.demo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 0.9rem;
-  margin: 1.4rem 0;
-}
-
-.demo-card {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 0.5rem;
-  padding: 0.2rem 1rem 0.6rem;
-  transition: border-color 125ms, box-shadow 125ms;
-}
-
-.demo-card:hover {
-  border-color: var(--md-accent-fg-color);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-
-.demo-card h3 {
-  margin-top: 0.7rem;
-  margin-bottom: 0.35rem;
-}
-
-.demo-card code {
-  font-size: 0.72rem;
-}
-
 @media screen and (max-width: 44.9375em) {
   .demo-terminal__screen,
   .demo-terminal__fallback {
@@ -184,8 +155,3 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .demo-card {
-    transition: none;
-  }
-}
