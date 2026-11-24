@@ -34,15 +34,24 @@ from cli_contract import (  # noqa: E402
 from errors import DatheonError  # noqa: E402
 from logging_config import add_logging_flags, configure_logging_from_args  # noqa: E402
 from async_organizer import DEFAULT_CONCURRENCY, MAX_CONCURRENCY  # noqa: E402
-from organizer import CATEGORIES, FileOrganizer, write_json_log  # noqa: E402
+from organizer import (  # noqa: E402
+    CATEGORIES,
+    FileOrganizer,
+    OrganizeReport,
+    write_json_log,
+)
 from validators import add_strict_flag, validate_int, validate_path  # noqa: E402
 
 #: Program name, shared by the parser, the version banner and the logger.
 PROG = "organizer"
 
 
-def _print_report(report) -> None:
-    """Print a human-readable execution summary."""
+def _print_report(report: OrganizeReport) -> None:
+    """Print a human-readable execution summary.
+
+    Args:
+        report: The report produced by the run, live or dry.
+    """
     mode = "DRY RUN (no changes made)" if report.dry_run else "LIVE"
     print(f"\nOrganising: {report.directory}   [{mode}]")
     print("-" * 60)

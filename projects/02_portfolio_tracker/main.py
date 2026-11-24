@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -58,7 +58,7 @@ DEFAULT_CONSTITUENTS = HERE / "data" / "constituents.csv"
 DEFAULT_OUTPUT = HERE / "portfolio_summary.csv"
 
 #: Positions used by ``--demo`` so the tool can be exercised without input.
-DEMO_POSITIONS: List[tuple] = [
+DEMO_POSITIONS: List[Tuple[str, int, float]] = [
     ("AAPL", 10, 150.00),
     ("MSFT", 5, 300.00),
     ("NVDA", 8, 420.00),
@@ -66,7 +66,7 @@ DEMO_POSITIONS: List[tuple] = [
 ]
 
 
-def _load_prices(path: Path, *, strict: bool = False) -> dict:
+def _load_prices(path: Path, *, strict: bool = False) -> Dict[str, float]:
     """Load the price table, degrading gracefully if the file is missing.
 
     Args:
@@ -172,7 +172,11 @@ def _run_validation(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]
         A ``(command, payload, exit_code)`` triple: code ``0`` when every
         requested dataset is valid, ``1`` otherwise.
     """
-    targets = [("price file", args.prices, load_prices_from_csv)]
+    # The two loaders return different mappings, so the tuple is annotated with
+    # their common shape: a label, a path and a callable the loop only *calls*.
+    targets: List[Tuple[str, Path, Callable[..., Dict[str, Any]]]] = [
+        ("price file", args.prices, load_prices_from_csv)
+    ]
     if args.constituents is not None:
         targets.append(("constituents file", args.constituents, load_symbols_from_csv))
 

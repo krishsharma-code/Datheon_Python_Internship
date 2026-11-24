@@ -12,6 +12,12 @@ pytest-cov>=4.1
 flake8>=6.1
 black>=24.1
 
+# Day 31: the static type gate. `tools/typecheck.py` runs mypy over the shipped
+# modules, the `datheon` package and each project's module graph, and exits 2
+# when mypy is absent — so CI must install it here or every run would report
+# "could not measure".
+mypy>=1.11
+
 # Day 17: property-based tests. `tests/test_properties.py` is skipped
 # automatically when hypothesis is absent, so the suite still runs without it.
 hypothesis>=6.98

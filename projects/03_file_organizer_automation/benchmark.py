@@ -24,7 +24,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,7 +55,7 @@ def build_tree(root: Path, count: int) -> List[Path]:
     return created
 
 
-def _sleepy_mover(latency_s: float):
+def _sleepy_mover(latency_s: float) -> Callable[[Path, Path], None]:
     """Return a mover that sleeps for ``latency_s`` instead of moving.
 
     Simulating the latency keeps the benchmark honest on a warm page cache,

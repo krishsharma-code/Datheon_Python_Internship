@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -208,11 +208,12 @@ def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
 
     print("\n== Demonstrating error handling ==")
     rejected: List[Dict[str, str]] = []
-    for action in (
+    actions: Tuple[Callable[[], object], ...] = (
         lambda: manager.checkout("B001", "Ravi"),  # already on loan
         lambda: manager.checkout("ZZZ", "Ravi"),  # unknown item
         lambda: manager.return_item("B002"),  # not on loan
-    ):
+    )
+    for action in actions:
         try:
             action()
         except InventoryError as exc:
@@ -233,6 +234,9 @@ def _run(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]:
 
     print("\n== Dunder method showcase ==")
     book = manager.get("B002")
+    # The demo inventory always holds B002; the guard keeps that assumption
+    # explicit so the dunder showcase below never formats a ``None``.
+    assert book is not None, "demo inventory must contain B002"
     print(f"  str(book)  -> {book}")
     print(f"  repr(book) -> {book!r}")
     print(f"  len(book)  -> {len(book)} pages")

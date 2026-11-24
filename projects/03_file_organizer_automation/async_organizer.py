@@ -87,6 +87,26 @@ def _default_mover(source: Path, destination: Path) -> None:
     shutil.move(str(source), str(destination))
 
 
+async def _await_factory(factory: Callable[[], Awaitable[T]]) -> T:
+    """Await whatever ``factory`` produces, inside the running event loop.
+
+    :func:`asyncio.run` accepts a *coroutine* and nothing else, so a factory
+    that hands back another awaitable — a :class:`~asyncio.Future`, a task, any
+    object with ``__await__`` — would raise ``ValueError`` before the work
+    started. Awaiting it from inside a coroutine makes the contract in
+    :func:`run_coroutine_sync` ("an awaitable") true, and still creates the
+    awaitable on the thread that will drive it, because ``factory`` is called
+    here rather than before the loop starts.
+
+    Args:
+        factory: Zero-argument callable returning the awaitable to drive.
+
+    Returns:
+        Whatever the awaitable resolves to.
+    """
+    return await factory()
+
+
 def run_coroutine_sync(factory: Callable[[], Awaitable[T]]) -> T:
     """Run an awaitable to completion from synchronous code.
 
@@ -111,10 +131,10 @@ def run_coroutine_sync(factory: Callable[[], Awaitable[T]]) -> T:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(factory())
+        return asyncio.run(_await_factory(factory))
 
     with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(lambda: asyncio.run(factory())).result()
+        return pool.submit(lambda: asyncio.run(_await_factory(factory))).result()
 
 
 def _split_name(name: str) -> Tuple[str, str]:

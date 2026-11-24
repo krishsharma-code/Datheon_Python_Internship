@@ -14,6 +14,30 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Maintenance: static type gate (Day 31).** `tools/typecheck.py` runs
+  `mypy --strict` over every shipped module — the thirteen shared core modules,
+  the `datheon` package and all five projects — in six phases, and fails the
+  build on a single error. The five task packs are checked from a *shadow tree*
+  (core modules plus the project's files, flat in one directory), because their
+  numbered directory names are not valid Python package names and mypy refuses
+  to name the files inside them. The gate audits its own scope: `[tool.mypy]
+  files` is compared against `[tool.setuptools] py-modules`, so a new core
+  module cannot ship untyped, and `typecheck.pytyped`, `typecheck.ci` and
+  `typecheck.requirement` keep the marker, the workflow job and the pinned
+  requirement from drifting away. Exit `0` clean, `1` a type error or a
+  declaration finding, `2` when mypy cannot be run. The first run found 39
+  errors in 15 files, six of them real defects: an `asyncio.run` handed an
+  `Awaitable` instead of a coroutine, a JSON string iterated as a list of
+  characters in the intent loader, a `len()` on an `Optional`, a callback
+  contract no caller met in `persistence.atomic_write_with`, an import that was
+  never a re-export, and a `type: ignore` that suppressed the wrong error code.
+  `.github/workflows/ci.yml` gains a `type-check` job (one runner, one
+  interpreter — a type error is not a platform signal) and lists it in the
+  `CI status` aggregate; `mypy>=1.11` joins `requirements.txt` and the `dev`
+  extra; `docs/type_checking.md` documents the contract, and 76 test functions
+  in `tests/test_typecheck.py` prove the parser, every audit code and both
+  halves of the exit-code contract.
+
 - **Maintenance: performance regression gate (Day 30).** The four hot paths
   Day 12 profiled are now timed by `benchmarks/bench_core.py` (pytest-benchmark,
   eight benchmarks including a pure-arithmetic calibration), and

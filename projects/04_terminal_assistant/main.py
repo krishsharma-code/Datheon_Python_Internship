@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Make the repository root importable so every CLI shares one exit-code
 # contract module regardless of the directory the script is launched from.
@@ -64,7 +64,9 @@ def _log_turn(
     logger: ConversationLogger,
     role: str,
     text: str,
-    **extra: object,
+    *,
+    intent: str = "",
+    confidence: float = 0.0,
 ) -> Optional[ConversationLogger]:
     """Append one turn to the conversation log, degrading gracefully on failure.
 
@@ -76,14 +78,14 @@ def _log_turn(
         logger: The active :class:`ConversationLogger`.
         role: ``"user"`` or ``"assistant"``.
         text: The turn's text.
-        **extra: Extra fields forwarded to :meth:`ConversationLogger.log`
-            (``intent``, ``confidence``).
+        intent: Matched intent, forwarded to :meth:`ConversationLogger.log`.
+        confidence: Match confidence, forwarded to the same call.
 
     Returns:
         The logger to keep using, or ``None`` once it has been disabled.
     """
     try:
-        logger.log(role, text, **extra)
+        logger.log(role, text, intent=intent, confidence=confidence)
     except OSError as exc:
         print(f"  ! could not write the conversation log ({exc}); logging disabled.")
         return None
@@ -100,6 +102,9 @@ def _run_validation(args: argparse.Namespace) -> Tuple[str, Dict[str, Any], int]
         A ``(command, payload, exit_code)`` triple: code ``0`` when the dataset
         is valid, ``1`` when it is missing or corrupt.
     """
+    # The two loaders are different classmethods with different defaults, so the
+    # variable is annotated with the shape the loop relies on: path in, engine out.
+    loader: Callable[..., IntentEngine]
     if args.faq is not None:
         label, path, loader = "FAQ file", args.faq, IntentEngine.from_faq_json
     else:

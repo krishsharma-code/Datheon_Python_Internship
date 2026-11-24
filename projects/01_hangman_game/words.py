@@ -202,7 +202,7 @@ def load_words_from_file(
     local.source = source
 
     words: List[str] = []
-    seen: set = set()
+    seen: set[str] = set()
     for line_no, line in enumerate(source.text.splitlines(), start=1):
         local.rows_checked += 1
         word = line.strip().lower()

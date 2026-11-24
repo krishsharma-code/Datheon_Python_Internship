@@ -82,7 +82,7 @@ DEFAULT_SEED: int = 18
 DEFAULT_CASES: int = 25
 
 #: The only exit codes the CLI contract permits (see :mod:`cli_contract`).
-VALID_EXIT_CODES: frozenset = frozenset({0, 1, 2})
+VALID_EXIT_CODES: frozenset[int] = frozenset({0, 1, 2})
 
 #: Substrings that only appear when an exception escaped the process boundary.
 TRACEBACK_MARKERS: Tuple[str, ...] = (
