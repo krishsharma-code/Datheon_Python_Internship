@@ -352,7 +352,13 @@ def scrub_lines(text: str, *, home: Optional[Path] = None) -> List[str]:
         their stable form, and the dropped prefixes removed.
     """
     if home is not None:
-        text = text.replace(str(home), "~/datheon-demo")
+        # Both separators, because the same directory is spelled two ways: the
+        # path we hold is POSIX on Linux and the tool may print it with
+        # backslashes on Windows. Only the prefix is rewritten — the hangman
+        # gallows is full of backslashes and must survive untouched.
+        for variant in {str(home), str(home).replace("/", "\\"), str(home).replace("\\", "/")}:
+            text = text.replace(variant, "~/datheon-demo")
+        text = text.replace("~/datheon-demo\\", "~/datheon-demo/")
     kept: List[str] = []
     for raw in text.replace("\r\n", "\n").split("\n"):
         line = raw.rstrip()
@@ -455,7 +461,10 @@ def _prepare_scratch(scratch: Path) -> None:
         # Every file gets its own content, so the duplicate detector finds the
         # pair it is supposed to find instead of reporting the whole folder.
         payload = "identical content\n" if name in DEMO_DUPLICATES else f"{name}: demo\n"
-        (scratch / name).write_text(payload, encoding="utf-8")
+        # Written as bytes on purpose: `write_text` translates "\n" to "\r\n" on
+        # Windows, which changes the digest the duplicate detector prints and
+        # makes the same session hash differently on two runners.
+        (scratch / name).write_bytes(payload.encode("utf-8"))
     (scratch / "logs").mkdir(exist_ok=True)
 
 

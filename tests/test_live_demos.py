@@ -102,6 +102,38 @@ def test_scrub_replaces_the_scratch_directory_everywhere(tmp_path: Path):
     ]
 
 
+def test_scrub_normalises_the_separator_after_the_prefix(tmp_path: Path):
+    """Windows prints the scratch directory with backslashes.
+
+    Replacing the prefix alone left ``~/datheon-demo\\report.pdf`` in the
+    transcript, which the four Windows cells of the CI matrix caught the first
+    time this shipped: the same session hashed and read differently per runner.
+    """
+    home = tmp_path / "scratch"
+    windows_spelling = str(home).replace("/", "\\")
+
+    lines = live_demos.scrub_lines(f"     - {windows_spelling}\\report.pdf\n", home=home)
+
+    assert lines == ["     - ~/datheon-demo/report.pdf"]
+
+
+def test_scrub_keeps_the_ascii_art_backslashes(tmp_path: Path):
+    """Only the scratch prefix is rewritten; the gallows is not a path."""
+    art = " /|\\  |\n / \\  |\n"
+
+    lines = live_demos.scrub_lines(art, home=tmp_path)
+
+    assert lines == [" /|\\  |", " / \\  |"]
+
+
+def test_demo_files_are_byte_identical_on_every_platform(tmp_path: Path):
+    """No CRLF translation: the duplicate detector prints a SHA-256 of them."""
+    live_demos._prepare_scratch(tmp_path)
+
+    assert b"\r\n" not in (tmp_path / "report.pdf").read_bytes()
+    assert (tmp_path / "report.pdf").read_bytes() == (tmp_path / "report-copy.pdf").read_bytes()
+
+
 def test_scrub_pins_a_duration(tmp_path: Path):
     lines = live_demos.scrub_lines("Duration  : 918.44 ms (asyncio engine)\n")
 
