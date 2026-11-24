@@ -8,6 +8,16 @@ Each page has a terminal you can play, pause, step through and re-run at 1×, 2�
 or 4×. The transcript is also printed as plain text inside every page, so the
 demos work without JavaScript, in a feed reader, and for a screen reader.
 
+These pages are published with the rest of the site at
+**<https://krishsharma-code.github.io/Datheon_Python_Internship/demos/>** — that
+is the link to share, and every tool page below has its own URL under it. To run
+the site locally instead:
+
+```bash
+pip install -e ".[docs]"
+mkdocs serve          # -> http://127.0.0.1:8000/demos/
+```
+
 - **[Hangman](hangman.md)** — `hangman --categories`. A full round played from
   stdin: the ASCII gallows, the letter board, the score and the play-again
   prompt.
