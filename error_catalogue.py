@@ -27,7 +27,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Type, Union
 
 from errors import (
     AccessDeniedError,
@@ -94,7 +94,11 @@ class ErrorEntry:
 
 
 #: Every concrete error class, in catalogue order (parents before children).
-_ERROR_CLASSES: Tuple[type, ...] = (
+#: Typed as the base class so the catalogue can read ``code``, ``title``,
+#: ``summary``, ``resolution`` and ``exit_code`` off each entry: every one of
+#: them is declared on :class:`~errors.DatheonError`, so a bare ``type`` would
+#: discard exactly the attributes the catalogue exists to publish.
+_ERROR_CLASSES: Tuple[Type[DatheonError], ...] = (
     DatheonError,
     InputError,
     ValidationError,

@@ -3197,3 +3197,109 @@ path-filtered pull-request job and a weekly schedule rather than a step in
 | `python tools/readme_audit.py` | submission-ready |
 | `python tools/ci_matrix.py` | 12 cells, 0 warnings |
 | Assertion census | 1,465 test functions / 2,685 assertions (floor 200) |
+
+## Day 31 — Maintenance: a type checker that can fail a build
+
+**Branch:** `feat/datheon-day-31-typecheck` · **PR:** #__PR__
+**Scope:** The fourth backlog item in §5 of the plan — "add type checking
+(`mypy`/`pyright`) to CI once annotations are complete". Every ledger row was
+already `done`, so the run stayed in maintenance mode and took the item that
+asks a question no other gate in this repository asks: *can a call be wrong
+without a test ever running?*
+
+### Milestones
+
+- `tools/typecheck.py` — six phases: the thirteen core modules plus the
+  `datheon` package in place, then one phase per task pack. 33 targets, one
+  verdict. Exit `0` clean, `1` a type error or a declaration finding, `2` when
+  mypy is absent or a phase fails to run.
+- **The shadow tree.** `projects/01_hangman_game` is not a valid package name,
+  so mypy refuses to derive a module name for the files inside it. Excluding the
+  five projects would have left the largest part of the codebase untyped, so the
+  gate copies the core modules next to each project's files and checks that
+  directory — the same flat module graph the CLIs build at runtime with
+  `sys.path`. `--explicit-package-bases` is what makes mypy name those files
+  after the directory rather than "found twice under different module names".
+- `[tool.mypy]` in `pyproject.toml` carries the declaration: `strict = true`,
+  `python_version = "3.10"` (the floor from `requires-python`), and `files`
+  naming the scope. The gate compares `files` against `[tool.setuptools]
+  py-modules`, so a fourteenth core module cannot ship untyped.
+- Seven finding codes — `typecheck.config`, `.strict`, `.python`, `.scope`,
+  `.pytyped`, `.ci`, `.requirement` — each proved by a test that breaks exactly
+  one thing in a synthetic `pyproject.toml`, workflow or requirements file.
+- `.github/workflows/ci.yml` gains a `type-check` job on one runner and one
+  interpreter, listed in the `CI status` aggregate; `mypy>=1.11` joins
+  `requirements.txt` and the `dev` extra; `docs/type_checking.md` documents the
+  contract.
+- `tests/test_typecheck.py` — 76 test functions. The phases are driven by a
+  three-line stub checker, so no test needs mypy installed and none of them
+  type-checks the repository a second time; two integration tests do read the
+  real declaration, because "the scope matches what ships" is worth exactly as
+  much as its weakest run.
+
+### What the first run found
+
+39 errors in 15 files. Six were defects rather than missing annotations:
+
+1. **`asyncio.run(factory())` in `run_coroutine_sync`.** The parameter is
+   annotated `Callable[[], Awaitable[T]]`; `asyncio.run` accepts a coroutine and
+   nothing else, so a `Future` or a task raised `ValueError` before the work
+   started. The fix is a four-line coroutine that awaits whatever the factory
+   returns — the contract now matches the body.
+2. **A JSON string iterated as a list.** `"fallbacks": "sorry"` became
+   `["s", "o", "r", "r", "y"]` in `IntentEngine.from_json`, and the same shape
+   in `greetings`. `_string_list` now wraps a string and rejects anything that
+   is neither a string nor a sequence.
+3. **`len()` on an `Optional`.** The inventory demo formatted
+   `manager.get("B002")` as if it could not be `None`.
+4. **A callback contract no caller met.** `atomic_write_with` asked for
+   `Callable[[TextIO], None]`; every writer in the tree returns something.
+   `Callable[[TextIO], object]` is the honest type — the return value was always
+   ignored.
+5. **An import that was never a re-export.** `inventory.main` imported
+   `InventoryError` from `inventory`, which only imported it from `errors`.
+   `--no-implicit-reexport` turns that accident into a declaration.
+6. **A `type: ignore` that hid the wrong code.** `int(priority)  # type:
+   ignore[arg-type]` suppressed nothing (the code was `call-overload`), so the
+   suppression was dead and the error was live. Replaced by an explicit cast.
+
+### Lessons
+
+1. **A type checker is a test that runs over the code you did not think to
+   test.** 1,758 passing tests, 95.8% coverage, a 100% mutation score on the
+   catalogue and a fuzzer over 16 targets — and none of them could see that a
+   JSON string was being iterated character by character, because no test had
+   ever fed the loader a string where a list belonged.
+2. **The scope is the whole gate.** A checker that skips the five projects
+   would have found 17 of the 39 errors and none of the interesting ones. The
+   shadow tree exists so that "mypy cannot name these directories" does not
+   quietly become "these directories are not checked".
+3. **A declaration compared against another declaration is a real check.**
+   `files` against `py-modules` is not redundant: it is the difference between a
+   scope that grows with the codebase and one that is frozen at whatever it was
+   on the day it was written.
+4. **`strict` earns its keep in the boring settings.** `warn_unused_ignores`
+   found the dead suppression; `no-implicit-reexport` found the accidental
+   import; `disallow_any_explicit` is why the fixes use `cast(...)` with a
+   comment instead of `Any`.
+5. **A cast is a claim, so it gets a comment.** There are exactly three in the
+   tree now — the cache's `T`, the compiled pattern, and `pstats.Stats.stats`,
+   which typeshed does not declare. Each says which invariant makes it safe;
+   an unexplained cast is an `Any` with better manners.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 100 files unchanged |
+| `pytest` | 1,833 passed, 2 skipped, 0 failed (+76 test functions) |
+| `pytest --cov` | 95.8% over 3,517 statements, 788 branches (floor 90%) |
+| `python tools/typecheck.py` | PASS — 6 phases, 33 targets, 0 errors |
+| `python tools/final_verification.py --static` | green — freeze re-cut for this day |
+| `python tools/docs_site.py --strict` | PASS |
+| `python tools/io_audit.py --strict` | PASS |
+| `python tools/readme_audit.py` | submission-ready |
+| `python tools/ci_matrix.py` | 12 cells, 0 warnings |
+| Assertion census | 1,532 test functions / 2,810 assertions (floor 200) |

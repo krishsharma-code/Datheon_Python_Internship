@@ -21,7 +21,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 from caching import compile_pattern
 from dataset_loader import DatasetFormatError, LoadReport, TextSource, read_text_robust
@@ -142,7 +142,7 @@ def _keywords(text: str, min_length: int = 4) -> List[str]:
         A list of keywords in first-seen order, de-duplicated.
     """
     tokens = re.findall(r"[a-z0-9]+", text.lower())
-    seen: set = set()
+    seen: set[str] = set()
     keywords: List[str] = []
     for token in tokens:
         if len(token) < min_length or token in STOPWORDS or token in seen:
@@ -198,7 +198,7 @@ class Intent:
     """
 
     name: str
-    patterns: List[re.Pattern] = field(default_factory=list)
+    patterns: List["re.Pattern[str]"] = field(default_factory=list)
     responses: List[str] = field(default_factory=list)
     priority: int = 0
 
@@ -254,7 +254,11 @@ class Intent:
             )
         priority = data.get("priority", 0)
         try:
-            priority_value = int(priority)  # type: ignore[arg-type]
+            # ``priority`` comes out of JSON as ``object``. ``int`` accepts the
+            # whole range the loader tolerates (integers, numeric strings,
+            # ``bool``, a float that truncates), so the cast states that contract
+            # rather than narrowing it to a subset and changing what loads.
+            priority_value = int(cast(Any, priority))
         except (TypeError, ValueError) as exc:
             raise ValidationError(
                 f"Intent {name!r} has a non-integer priority: {priority!r}",
@@ -296,6 +300,39 @@ def _load_json_object(source: TextSource, path: Path) -> Dict[str, object]:
             f"{path}: expected a JSON object at the top level, got {type(data).__name__}"
         )
     return data
+
+
+def _string_list(value: object, *, field: str, path: Path) -> Optional[List[str]]:
+    """Coerce an optional JSON value into a list of strings.
+
+    A missing key (``None``) stays ``None`` so the caller can apply its own
+    default. A JSON string becomes a one-element list — iterating it directly
+    would have split it into characters, which is never what a dataset meant —
+    and a list or tuple is copied element by element with ``str`` applied.
+
+    Args:
+        value: The raw value read from the dataset, as ``object``.
+        field: The key being read, for the error message.
+        path: The originating file, for the error message.
+
+    Returns:
+        ``None`` when the key is absent, otherwise a list of strings.
+
+    Raises:
+        DatasetFormatError: If the value is neither a string nor a sequence of
+            values, e.g. ``"fallbacks": 3``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value]
+    raise DatasetFormatError(
+        f"{path}: {field!r} must be a list of strings, got {type(value).__name__}.",
+        hint=f'set \'{field}\' to a list such as ["one", "two"], or omit it',
+        context={"field": field},
+    )
 
 
 def _parse_intents(entries: Sequence[object], report: LoadReport) -> List["Intent"]:
@@ -409,8 +446,10 @@ class IntentEngine:
         local.raise_if_errors("intent file")
         return cls(
             intents,
-            fallbacks=data.get("fallbacks"),
-            exit_commands=data.get("exit_commands"),
+            fallbacks=_string_list(data.get("fallbacks"), field="fallbacks", path=json_path),
+            exit_commands=_string_list(
+                data.get("exit_commands"), field="exit_commands", path=json_path
+            ),
         )
 
     @classmethod
@@ -465,7 +504,11 @@ class IntentEngine:
 
         intents: List[Intent] = []
 
-        greetings = [g for g in (data.get("greetings") or []) if str(g).strip()]
+        greetings = [
+            g
+            for g in (_string_list(data.get("greetings"), field="greetings", path=json_path) or [])
+            if g.strip()
+        ]
         if greetings:
             greeting_pattern = (
                 r"\b(" + "|".join(re.escape(str(g).strip().lower()) for g in greetings) + r")\b"

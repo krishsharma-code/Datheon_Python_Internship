@@ -67,7 +67,7 @@ import sys
 from dataclasses import dataclass, field
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import List, Optional, TextIO, Union
+from typing import Any, Dict, List, Optional, TextIO, Union
 
 from errors import ConfigurationError
 from structured_logging import (
@@ -332,7 +332,7 @@ class LoggingSession:
         self,
         outcome: str = "success",
         *,
-        error: Optional[dict] = None,
+        error: Optional[Dict[str, Any]] = None,
         level: int = logging.INFO,
     ) -> None:
         """Record the outcome and total duration of this run.
@@ -363,7 +363,7 @@ class LoggingSession:
             return
 
         self.run.finish(outcome)
-        fields: dict = {"event": "run_finish", "outcome": outcome}
+        fields: Dict[str, Any] = {"event": "run_finish", "outcome": outcome}
         if error is not None:
             fields["error"] = error
         self.logger.log(level, "run finished", extra=structured_extra(**fields))
@@ -578,7 +578,7 @@ def configure_logging_from_args(
     )
 
 
-def finish_active_runs(outcome: str = "success", *, error: Optional[dict] = None) -> None:
+def finish_active_runs(outcome: str = "success", *, error: Optional[Dict[str, Any]] = None) -> None:
     """Record a terminal outcome for every run that is still open.
 
     :func:`cli_contract.run_cli` calls this in its ``finally`` block, before

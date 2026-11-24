@@ -95,8 +95,8 @@ what CI enforces.
 
 | Gate | Threshold | Where it lives |
 | --- | --- | --- |
-| Test suite | 1,758 passing tests, 0 failures | `pytest` |
-| Assertions | 2,685 (floor: 200) | `tools/assertion_census.py` |
+| Test suite | 1,833 passing tests, 0 failures | `pytest` |
+| Assertions | 2,810 (floor: 200) | `tools/assertion_census.py` |
 | Line coverage | 95.8% (floor: 90%) | `tools/coverage_gate.py` |
 | Mutation score | 100% of 182 mutants killed | `tools/mutation.py` |
 | Test isolation | no real filesystem, clock or network I/O | `tools/io_audit.py` |
@@ -104,6 +104,7 @@ what CI enforces.
 | Distribution | wheel + sdist, `twine check`, clean-venv install | `tools/distribution.py` |
 | Docs site | every page in the nav, every module documented | `tools/docs_site.py` |
 | Performance | 8 benchmarks, each within 2× its recorded median | `tools/benchmark_budget.py` |
+| Types | `mypy --strict`, 0 errors over 33 targets | `tools/typecheck.py` |
 
 Read the reasoning behind each one in the [test strategy](test_strategy.md) and
 the [Week 3 QA report](week3_qa_report.md).

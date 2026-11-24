@@ -11,7 +11,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Dict, List, Optional
 
-from errors import InventoryError
+# Re-exported explicitly (``X as X``) because ``inventory.main`` imports
+# ``InventoryError`` from this module: the name lives in ``errors``, but this is
+# the module that owns the inventory vocabulary, so it is the public door.
+from errors import InventoryError as InventoryError
 from models import LibraryItem
 
 

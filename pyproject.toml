@@ -49,6 +49,9 @@ dev = [
     "pytest-cov>=4.1",
     "flake8>=6.1",
     "black>=24.1",
+    # Day 31: the static type gate. `tools/typecheck.py` drives mypy over the
+    # shipped modules, the `datheon` package and each project's module graph.
+    "mypy>=1.11",
     "hypothesis>=6.98",
     # Day 24: `tools/ci_matrix.py` parses the CI workflow to audit the matrix.
     "pyyaml>=6.0",
@@ -183,6 +186,55 @@ exclude_lines = [
 max-line-length = 100
 extend-ignore = ["E203", "W503"]
 exclude = [".git", "__pycache__", ".venv", "build", "dist", "mutants"]
+
+# ---------------------------------------------------------------------------
+# Day 31 — the type gate.
+#
+# `tools/typecheck.py` runs mypy over the shipped surface — the thirteen shared
+# core modules, the `datheon` package and every project module — and fails the
+# build on a single error. `strict = true` is the point: it is what makes the
+# `Typing :: Typed` classifier and `datheon/py.typed` true rather than
+# decorative, and it is what turned ten real defects into compiler messages on
+# the first run (see `docs/type_checking.md`).
+#
+# `files` is the declared scope. The gate's audit fails when a shipped core
+# module is missing from it, so a new module cannot be added and left untyped
+# in silence. The project directories are checked by the same tool from a
+# shadow tree — their numbered names (`01_hangman_game`) are not valid Python
+# identifiers, so mypy cannot derive a module name for them in place.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+strict = true
+show_error_codes = true
+pretty = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+files = [
+    "caching.py",
+    "cli_contract.py",
+    "dataset_loader.py",
+    "edge_cases.py",
+    "error_catalogue.py",
+    "errors.py",
+    "fuzzing.py",
+    "logging_config.py",
+    "observability.py",
+    "persistence.py",
+    "profiling.py",
+    "structured_logging.py",
+    "validators.py",
+    "datheon",
+]
+
+# `profiling.py`'s demo CLI imports the tools by their bare module names, exactly
+# as the CLIs themselves do at runtime (each project directory goes on
+# `sys.path`). From the repository root those names do not resolve, and the
+# project phase checks the very same files with those directories on its path,
+# so the names are declared here instead of weakening every import.
+[[tool.mypy.overrides]]
+module = ["words", "portfolio", "chatbot", "inventory", "hangman", "organizer", "models"]
+ignore_missing_imports = true
 
 [tool.mutmut]
 source_paths = ["error_catalogue.py"]

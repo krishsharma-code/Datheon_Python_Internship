@@ -283,7 +283,7 @@ def atomic_write_bytes(
 
 def atomic_write_with(
     path: Union[str, Path],
-    writer: Callable[[TextIO], None],
+    writer: Callable[[TextIO], object],
     *,
     encoding: str = DEFAULT_ENCODING,
     newline: str = "",
@@ -298,7 +298,10 @@ def atomic_write_with(
 
     Args:
         path: Destination file. Parent directories are created as needed.
-        writer: Callback that writes the content to the supplied handle.
+        writer: Callback that writes the content to the supplied handle. Its
+            return value is ignored, so a callback that happens to return
+            something — ``lambda handle: handle.write(text)``, which returns
+            the character count — is a valid writer too.
         encoding: Text encoding for the file.
         newline: Newline translation mode; ``""`` (the default) writes ``\\n``
             verbatim, which is what :mod:`csv` expects.

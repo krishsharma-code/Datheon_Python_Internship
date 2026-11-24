@@ -38,7 +38,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
 
 from cli_contract import build_parser, run_cli
 from errors import ValidationError
@@ -266,7 +266,7 @@ def profile_callable(
             context={"field": "sort_by", "value": sort_by},
         )
 
-    name = label or getattr(func, "__qualname__", repr(func))
+    name = _resolve_label(func, label)
     profiler = cProfile.Profile()
     started = time.perf_counter()
     profiler.enable()
@@ -280,6 +280,25 @@ def profile_callable(
     result = ProfileResult(label=name, iterations=iterations, wall_ms=wall_ms, sort_by=sort_by)
     result.stats = _collect_stats(profiler, sort_by=sort_by, top=top)
     return result
+
+
+def _resolve_label(func: Callable[..., Any], label: Optional[str]) -> str:
+    """Return the label to show for a profiled call.
+
+    Args:
+        func: The callable being measured.
+        label: An explicit label, or ``None`` to derive one.
+
+    Returns:
+        ``label`` when it is truthy, otherwise the callable's qualified name
+        (falling back to its ``repr`` for callables without one), always as a
+        ``str`` — the report formats it, so a non-string ``__qualname__`` must
+        not leak through.
+    """
+    if label:
+        return label
+    derived = getattr(func, "__qualname__", None) or repr(func)
+    return str(derived)
 
 
 def _collect_stats(
@@ -303,7 +322,11 @@ def _collect_stats(
     stream = io.StringIO()
     stats = pstats.Stats(profiler, stream=stream)
     entries: List[FunctionStat] = []
-    for key, (primitive_calls, total_calls, tottime, cumtime, _callers) in stats.stats.items():
+    # ``pstats.Stats.stats`` is the documented counter table, but typeshed does
+    # not declare it; ``getattr`` with a default keeps the read honest under any
+    # type checker instead of suppressing the line with a ``type: ignore``.
+    raw = cast(Dict[Any, Tuple[int, int, float, float, Any]], getattr(stats, "stats", {}))
+    for key, (primitive_calls, total_calls, tottime, cumtime, _callers) in raw.items():
         filename, lineno, function = key
         entries.append(
             FunctionStat(
@@ -388,7 +411,7 @@ def time_callable(
         samples.append((time.perf_counter() - started) * 1000.0)
 
     return TimingResult(
-        label=label or getattr(func, "__qualname__", repr(func)),
+        label=_resolve_label(func, label),
         number=number,
         samples_ms=tuple(round(sample, 4) for sample in samples),
         best_ms=round(min(samples), 4),

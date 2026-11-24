@@ -56,7 +56,7 @@ import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Hashable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Hashable, List, Optional, Tuple, TypeVar, Union, cast
 
 from errors import ValidationError
 
@@ -434,12 +434,17 @@ class DatasetCache:
         Returns:
             The cached or freshly computed value.
         """
+        # ``lookup`` is deliberately untyped (``Tuple[bool, Any]``): one cache
+        # holds lists, dicts, compiled patterns and ``None`` alike. The cast is
+        # where the store's promise — *the loader's value, or a clone of it* —
+        # becomes the caller's ``T`` again, and it is the only place the two are
+        # allowed to disagree.
         hit, value = self.lookup(key, signature)
         if hit:
-            return value
+            return cast(T, value)
         fresh = loader()
         self.put(key, fresh, signature)
-        return _clone(fresh)
+        return cast(T, _clone(fresh))
 
     # -- invalidation ---------------------------------------------------
 
@@ -583,7 +588,9 @@ def compile_pattern(pattern: str, flags: int = re.IGNORECASE) -> "re.Pattern[str
     key = (pattern, flags)
     hit, cached = PATTERN_CACHE.lookup(key)
     if hit:
-        return cached
+        # The cache holds whatever callers put in it; only this function puts
+        # compiled patterns under this key, so the cast restores that fact.
+        return cast("re.Pattern[str]", cached)
     compiled = re.compile(pattern, flags)
     PATTERN_CACHE.put(key, compiled)
     return compiled
