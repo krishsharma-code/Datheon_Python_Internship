@@ -95,7 +95,7 @@ what CI enforces.
 
 | Gate | Threshold | Where it lives |
 | --- | --- | --- |
-| Test suite | 1,833 passing tests, 0 failures | `pytest` |
+| Test suite | 1,834 passing tests, 0 failures | `pytest` |
 | Assertions | 2,810 (floor: 200) | `tools/assertion_census.py` |
 | Line coverage | 95.8% (floor: 90%) | `tools/coverage_gate.py` |
 | Mutation score | 100% of 182 mutants killed | `tools/mutation.py` |

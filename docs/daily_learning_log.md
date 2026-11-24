@@ -3200,7 +3200,7 @@ path-filtered pull-request job and a weekly schedule rather than a step in
 
 ## Day 31 — Maintenance: a type checker that can fail a build
 
-**Branch:** `feat/datheon-day-31-typecheck` · **PR:** #__PR__
+**Branch:** `feat/datheon-day-31-typecheck` · **PR:** #32
 **Scope:** The fourth backlog item in §5 of the plan — "add type checking
 (`mypy`/`pyright`) to CI once annotations are complete". Every ledger row was
 already `done`, so the run stayed in maintenance mode and took the item that
@@ -3294,7 +3294,7 @@ without a test ever running?*
 | `python -m compileall` | clean |
 | `flake8 .` | 0 findings |
 | `black --check .` | 100 files unchanged |
-| `pytest` | 1,833 passed, 2 skipped, 0 failed (+76 test functions) |
+| `pytest` | 1,834 passed, 2 skipped, 0 failed (+76 test functions) |
 | `pytest --cov` | 95.8% over 3,517 statements, 788 branches (floor 90%) |
 | `python tools/typecheck.py` | PASS — 6 phases, 33 targets, 0 errors |
 | `python tools/final_verification.py --static` | green — freeze re-cut for this day |
