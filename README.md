@@ -8,6 +8,9 @@
 [![Offer ID](https://img.shields.io/badge/Offer%20ID-DT--2026--O6Q0X-6f42c1?style=flat-square)](https://datheon.in/verify?id=DT-2026-O6Q0X)
 [![CI](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml/badge.svg)](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/ci.yml)
 [![Docs](https://github.com/krishsharma-code/Datheon_Python_Internship/actions/workflows/docs.yml/badge.svg)](https://krishsharma-code.github.io/Datheon_Python_Internship/)
+[![Live site](https://img.shields.io/badge/live%20site-krishsharma--code.github.io-2ea44f?style=flat-square)](https://krishsharma-code.github.io/Datheon_Python_Internship/)
+[![Live demos](https://img.shields.io/badge/live%20demos-5%20tools-1f6feb?style=flat-square)](https://krishsharma-code.github.io/Datheon_Python_Internship/demos/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Krish%20Sharma-0a66c2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/krish-sharma07)
 [![Release](https://img.shields.io/github/v/release/krishsharma-code/Datheon_Python_Internship?style=flat-square&label=release&color=2ea44f)](https://github.com/krishsharma-code/Datheon_Python_Internship/releases)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000?style=flat-square)](https://github.com/psf/black)
@@ -24,7 +27,7 @@ Datheon Python Programming Internship (Credential ID `DT-2026-O6Q0X`).*
 
 | Field | Value |
 | --- | --- |
-| Candidate | **Krish Sharma** |
+| Candidate | **Krish Sharma** — [LinkedIn](https://www.linkedin.com/in/krish-sharma07) |
 | Program | Python Programming Internship (Batch 01 · 2026 Cohort) |
 | Application / Credential ID | **DT-2026-O6Q0X** |
 | Internal Reference | DT/HR-INT/2026/O6Q0X |
