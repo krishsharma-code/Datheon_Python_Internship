@@ -92,6 +92,15 @@ plugins:
             inherited_members: false
             filters: ["!^_"]
 
+# The demo player. Two local files, no CDN: the site loads nothing it does not
+# serve itself, so the demos work on a locked-down network and on GitHub Pages
+# without a build step. `tools/live_demos.py --check` fails if either goes
+# missing from these lists.
+extra_css:
+  - stylesheets/live-demos.css
+extra_javascript:
+  - javascripts/terminal-player.js
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -120,6 +129,13 @@ validation:
 
 nav:
   - Home: index.md
+  - Live demos:
+      - Five tools, running: demos/index.md
+      - Hangman: demos/hangman.md
+      - Portfolio tracker: demos/portfolio.md
+      - File organizer: demos/organizer.md
+      - Terminal assistant: demos/assistant.md
+      - Inventory (OOP): demos/inventory.md
   - Getting started:
       - CLI contract & exit codes: cli_contract.md
       - Packaging & entry points: packaging.md

@@ -33,6 +33,10 @@ check each of them. How it is kept honest is in
 Fifteen seconds, five commands, rendered from the tools' own output by
 `python tools/demo_assets.py`.
 
+**→ Or play them yourself: [the five live demos](demos/index.md).** Each tool has
+a page that replays a real captured session — play, pause, step, 1×/2×/4× — with
+the plain transcript printed underneath, so it reads with or without JavaScript.
+
 ---
 
 ## Quickstart
@@ -105,6 +109,7 @@ what CI enforces.
 | Docs site | every page in the nav, every module documented | `tools/docs_site.py` |
 | Performance | 8 benchmarks, each within 2× its recorded median | `tools/benchmark_budget.py` |
 | Types | `mypy --strict`, 0 errors over 33 targets | `tools/typecheck.py` |
+| Live demos | 5 pages, each matching its captured session byte for byte | `tools/live_demos.py` |
 
 Read the reasoning behind each one in the [test strategy](test_strategy.md) and
 the [Week 3 QA report](week3_qa_report.md).

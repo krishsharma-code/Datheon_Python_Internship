@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "tool": "hangman",
+  "title": "One round, played from stdin",
+  "command": "hangman --categories",
+  "cwd": "~/datheon-demo",
+  "exit_code": 0,
+  "markers": [
+    "Welcome to Hangman",
+    "Attempts left",
+    "Final record"
+  ],
+  "steps": [
+    {
+      "kind": "command",
+      "text": "hangman --categories",
+      "prompt": ""
+    },
+    {
+      "kind": "output",
+      "text": " _   _                                          _\n| | | | __ _ _ __   __ _ _ __ ___   __ _ _ __ | |\n| |_| |/ _` | '_ \\ / _` | '_ ` _ \\ / _` | '_ \\| |\n|  _  | (_| | | | | (_| | | | | | | (_| | | | |_|\n|_| |_|\\__,_|_| |_|\\__, |_| |_| |_|\\__,_|_| |_(_)\n                   |___/\n\nWelcome to Hangman \u2014 Datheon Python Internship, Task 1.\n\nAvailable categories: animals, countries, programming, technology",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "programming",
+      "prompt": "Pick a category [programming]: "
+    },
+    {
+      "kind": "output",
+      "text": "A secret word has been chosen from the 'programming' category.\nYou have 6 incorrect guesses. Good luck!\n\n  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\n\nWord:  _ _ _ _ _ _ _ _ _\nWrong: -\nAttempts left: 6",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "e",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'e' is in the word.\n\n  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ _ _ _\nWrong: -\nAttempts left: 6",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "t",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "'t' is not in the word.\n\n  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ _ _ _\nWrong: t\nAttempts left: 5",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "a",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "'a' is not in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ _ _ _\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "o",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'o' is in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ _ o _\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "i",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'i' is in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ i o _\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "n",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'n' is in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ _ i o n\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "s",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 's' is in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  _ e _ _ _ s i o n\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "r",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'r' is in the word.\n\n  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n\nWord:  r e _ _ r s i o n\nWrong: a t\nAttempts left: 4",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "h",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "'h' is not in the word.\n\n  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n=========\n\nWord:  r e _ _ r s i o n\nWrong: a h t\nAttempts left: 3",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "l",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "'l' is not in the word.\n\n  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n=========\n\nWord:  r e _ _ r s i o n\nWrong: a h l t\nAttempts left: 2",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "d",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "'d' is not in the word.\n\n  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n\nWord:  r e _ _ r s i o n\nWrong: a d h l t\nAttempts left: 1",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "c",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'c' is in the word.\n\n  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n\nWord:  r e c _ r s i o n\nWrong: a d h l t\nAttempts left: 1",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "u",
+      "prompt": "Guess a letter: "
+    },
+    {
+      "kind": "output",
+      "text": "Nice! 'u' is in the word.\n\n  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n\n\ud83c\udf89 You guessed it! The word was 'recursion'.\n\nScore \u2014 played: 1 | wins: 1 | losses: 0 | win rate: 100%",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "m",
+      "prompt": "Play again? [y/N]: "
+    },
+    {
+      "kind": "output",
+      "text": "Thanks for playing! Final record:\n  Rounds played : 1\n  Wins          : 1\n  Losses        : 0\n  Win rate      : 100%",
+      "prompt": ""
+    }
+  ]
+}

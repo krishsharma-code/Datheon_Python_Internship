@@ -3303,3 +3303,89 @@ without a test ever running?*
 | `python tools/readme_audit.py` | submission-ready |
 | `python tools/ci_matrix.py` | 12 cells, 0 warnings |
 | Assertion census | 1,532 test functions / 2,810 assertions (floor 200) |
+
+## Day 32 — Live demos: the five tools, playable on the site
+
+**Branch:** `feat/datheon-day-32-live-demos` · **PR:** #__PR__
+**Scope:** A direct request from the intern rather than a plan row: *make the
+five projects visible, live, on the GitHub Pages site*. Every ledger row was
+already `done`, so the run took it as a maintenance row of its own.
+
+### Milestones
+
+- `docs/demos/` — a hub page and one page per tool. Each page replays a **real
+  captured session** in an animated terminal: play, pause, replay, 1×/2×/4×, and
+  typed input rendered character by character.
+- `tools/live_demos.py` — capture, sync and audit. `--capture` runs the five
+  `main.py` files with real stdin in a scratch directory of their own and writes
+  both `docs/assets/demos/<tool>.json` and the page block; `--check` fails when
+  a page and its session disagree, when a host path leaks, when an external
+  asset appears, or when the nav has lost a page; `--verify` re-runs each tool
+  and fails if its output no longer carries the markers the session promises.
+- `docs/javascripts/terminal-player.js` + `docs/stylesheets/live-demos.css` —
+  two local files, no CDN, no build step. Every page ships the full transcript as
+  static HTML, so it reads without JavaScript, in a feed reader and for a screen
+  reader; the player only enhances it. `prefers-reduced-motion` renders the whole
+  session at once with the replay control still available.
+- `mkdocs.yml` — a "Live demos" nav group and the two `extra_*` asset lists,
+  which `--check` also audits, so a page cannot be added without being reachable.
+- `tests/test_live_demos.py` — 69 test functions. The four deterministic captures
+  are re-run and compared with the committed transcripts byte for byte, so a
+  change in any tool's output fails the suite instead of ageing the site.
+
+### Two real defects, found by building it
+
+1. **A shared scratch directory.** The first capture ran all five tools in one
+   temporary directory, so the portfolio's `portfolio_summary.csv` was still
+   there when the organizer swept it: the demo showed nine files, including a
+   CSV no visitor would have, and the session never reproduced. One directory
+   per tool fixed it — and the reproducibility test is what caught it.
+2. **`<SCRATCH>` substituted only when it was a whole argument.** The portfolio
+   recipe passes `--output <SCRATCH>/portfolio_summary.csv` as a single
+   argument, so the token survived and the summary was written into the
+   *checkout* under a directory literally named `<SCRATCH>`. Substituting the
+   token wherever it appears fixed it; the stray directory was removed.
+
+Both are the same lesson in different clothes: **a demo that runs somewhere you
+are not looking is a demo that is wrong in a way nobody notices.**
+
+### Lessons
+
+1. **"Live" does not have to mean "re-executed in the browser".** Pyodide would
+   have run Python in the page, at the cost of a multi-megabyte CDN dependency
+   and a demo that breaks when the CDN does. A replay of real captured output is
+   honest, offline, and 12 KB — and it is what `--verify` can actually prove.
+2. **A transcript is an artefact, so it gets a generator and a gate.** Hand-typed
+   transcripts rot in a week. Here the page block is generated from the JSON,
+   `--check` compares them byte for byte, and `--verify` re-runs the tool. Three
+   layers, each cheap, and the page cannot silently lie.
+3. **The no-JS path is the audit path.** Because the transcript is in the HTML,
+   the page is greppable, testable and readable by a crawler — the animation is
+   a bonus rather than the content.
+4. **Real browsers catch what static checks cannot.** The player looked correct
+   and passed `node --check`; loading it in headless Chromium under the Material
+   bundle showed that `document$` never emitted on first paint, so the terminal
+   stayed on its static fallback. The fix (subscribe *and* wire the document
+   lifecycle, with an idempotent init) came from the render, not the review.
+5. **Scrub aggressively.** Paths, durations and dates all leaked into a first
+   draft. The gate now refuses a page containing `/tmp/`, `/home/` or a drive
+   letter, which is the Day 27 lesson applied before it could bite.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 105 files unchanged |
+| `pytest` | passing, 0 failed (+69 test functions) |
+| `pytest --cov` | at or above the 90% floor |
+| `python tools/live_demos.py --check` | PASS — 5 pages match their sessions |
+| `python tools/live_demos.py --verify` | PASS — every tool still prints its markers |
+| `python tools/typecheck.py` | PASS — 6 phases, 33 targets, 0 errors |
+| `mkdocs build --strict` | clean — 50 pages |
+| `python tools/docs_site.py --strict` | PASS — 50 pages, 15 modules |
+| `python tools/readme_audit.py` | submission-ready |
+| `python tools/io_audit.py --strict` | PASS |
+| `python tools/ci_matrix.py` | 12 cells, 0 warnings |
+| headless Chromium | player renders all 144 lines, controls present, reduced-motion and no-JS paths verified |

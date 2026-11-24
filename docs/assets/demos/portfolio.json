@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "tool": "portfolio",
+  "title": "The sample portfolio, valued",
+  "command": "portfolio --demo",
+  "cwd": "~/datheon-demo",
+  "exit_code": 0,
+  "markers": [
+    "SYMBOL",
+    "Net P/L",
+    "Summary written to"
+  ],
+  "steps": [
+    {
+      "kind": "command",
+      "text": "portfolio --demo",
+      "prompt": ""
+    },
+    {
+      "kind": "output",
+      "text": "SYMBOL           SHARES       BUY       NOW        VALUE    GAIN%\n-----------------------------------------------------------------\nAAPL              10.00    150.00    189.45     1,894.50   26.30%\nMSFT               5.00    300.00    412.30     2,061.50   37.43%\nNVDA               8.00    420.00    495.75     3,966.00   18.04%\nRELIANCE.NS       12.00   2400.00   2465.75    29,589.00    2.74%\n-----------------------------------------------------------------\nInvested                                       35,160.00\nMarket value                                   37,511.00\nNet P/L                                         2,351.00\nReturn                                             6.69%\n\nSummary written to portfolio_summary.csv",
+      "prompt": ""
+    }
+  ]
+}

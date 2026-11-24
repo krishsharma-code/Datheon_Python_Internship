@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "tool": "organizer",
+  "title": "A messy folder, sorted (dry run)",
+  "command": "organizer ~/datheon-demo --dry-run --duplicates",
+  "cwd": "~/datheon-demo",
+  "exit_code": 0,
+  "markers": [
+    "DRY RUN",
+    "Duplicate groups found",
+    "Duration"
+  ],
+  "steps": [
+    {
+      "kind": "command",
+      "text": "organizer ~/datheon-demo --dry-run --duplicates",
+      "prompt": ""
+    },
+    {
+      "kind": "output",
+      "text": "Organising: ~/datheon-demo   [DRY RUN (no changes made)]\n------------------------------------------------------------\n ~> archive.zip  =>  Archives/\n ~> clip.mp4  =>  Videos/\n ~> notes.txt  =>  Documents/\n ~> photo.jpg  =>  Images/\n ~> report-copy.pdf  =>  Documents/\n ~> report.pdf  =>  Documents/\n ~> script.py  =>  Code/\n ~> song.mp3  =>  Audio/\n------------------------------------------------------------\nProcessed : 8\nMoved     : 0\nPlanned   : 8\nErrors    : 0\nDuration  : 2.4 ms (asyncio engine)\n\nDuplicate groups found: 1\n  ac106884df28\u2026  x2\n     - ~/datheon-demo/report-copy.pdf\n     - ~/datheon-demo/report.pdf",
+      "prompt": ""
+    }
+  ]
+}

@@ -114,14 +114,26 @@ Two properties fall out of that shape and are worth stating plainly:
 
 It is built with MkDocs (Material) and published to GitHub Pages by
 [`.github/workflows/docs.yml`](.github/workflows/docs.yml) on every push to
-`main`. Two things make it worth reading rather than skimming:
+`main`. Three things make it worth reading rather than skimming:
 
+- **All five tools are playable on the site.** Each has a
+  [live demo](docs/demos/index.md) that replays a real captured session — a full
+  hangman round, the portfolio valuation, an organizer dry run with duplicate
+  detection, three assistant turns, the inventory walkthrough — with play,
+  pause, step and speed controls, and the plain transcript printed underneath
+  for readers without JavaScript.
 - **Every engineering guide in `docs/` is a page**, in reading order — the CLI
   contract, logging, persistence, caching, the quality gates, the CI matrix.
 - **The API reference is generated from the docstrings**, not written twice. The
   `errors`, `validators`, `persistence`, `caching`, `observability` and other
   core modules are rendered by `mkdocstrings` straight out of the source tree,
   so a signature on the site is the signature in the file.
+
+`tools/live_demos.py` keeps the demos honest: `--capture` re-runs the five tools
+and rewrites both the session JSON and the page block, `--check` fails when a
+page and its session disagree, and `--verify` re-runs each tool to prove the
+recorded transcript still describes it. Nothing on those pages is a screenshot
+or a mock-up.
 
 `tools/docs_site.py` is the gate behind it: it fails the build when a page is
 missing from the nav, when a module that `pyproject.toml` ships has no reference
