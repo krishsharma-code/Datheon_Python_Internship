@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "tool": "assistant",
+  "title": "Three turns with the intent matcher",
+  "command": "assistant --no-log",
+  "cwd": "~/datheon-demo",
+  "exit_code": 0,
+  "markers": [
+    "Rule-Based Terminal Assistant",
+    "bot >",
+    "Goodbye"
+  ],
+  "steps": [
+    {
+      "kind": "command",
+      "text": "assistant --no-log",
+      "prompt": ""
+    },
+    {
+      "kind": "output",
+      "text": "  ____        _   _   _\n |  _ \\  __ _| |_| | | | ___  ___  _ __\n | | | |/ _` | __| |_| |/ _ \\/ _ \\| '_ \\\n | |_| | (_| | |_|  _  |  __/ (_) | | | |\n |____/ \\__,_|\\__|_| |_|\\___|\\___/|_| |_|\n Rule-Based Terminal Assistant \u2014 Datheon Task 4\n\nType a message, or 'bye'/'exit'/'quit' to finish.",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "what are your hours",
+      "prompt": "you > "
+    },
+    {
+      "kind": "output",
+      "text": "bot > We're open Monday to Friday, 9:00 AM to 6:00 PM IST. We're closed on weekends.  [business_hours \u00b7 50%]",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "refund policy",
+      "prompt": "you > "
+    },
+    {
+      "kind": "output",
+      "text": "bot > We offer a full refund within 14 days of purchase \u2014 no questions asked.  [refund \u00b7 50%]",
+      "prompt": ""
+    },
+    {
+      "kind": "input",
+      "text": "exit",
+      "prompt": "you > "
+    },
+    {
+      "kind": "output",
+      "text": "bot > Goodbye! Have a great day. \ud83d\udc4b  [exit \u00b7 100%]",
+      "prompt": ""
+    }
+  ]
+}

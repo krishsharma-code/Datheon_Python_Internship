@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "tool": "inventory",
+  "title": "The OOP walkthrough, end to end",
+  "command": "inventory",
+  "cwd": "~/datheon-demo",
+  "exit_code": 0,
+  "markers": [
+    "Initial inventory",
+    "Demonstrating error handling",
+    "Final audit"
+  ],
+  "steps": [
+    {
+      "kind": "command",
+      "text": "inventory",
+      "prompt": ""
+    },
+    {
+      "kind": "output",
+      "text": "== Initial inventory ==\nID      TYPE          TITLE                     STATUS       LENGTH      FEE\n----------------------------------------------------------------------------\nB001    Book          Clean Code                available       464    12.00\nB002    Book          The Pragmatic Programmer  available       352    12.00\nD001    DigitalMedia  Python Deep Dive          available       420     0.00\nM001    Magazine      Wired                     available        18     3.40\n----------------------------------------------------------------------------\nItems: 4 | On loan: 0 | Revenue: \u20b90.00\n\n== Checkouts ==\n  Krish borrowed B001 for 14 days (fee \u20b912.00)\n  Aisha borrowed M001 for 7 days (fee \u20b93.40)\n\n== Demonstrating error handling ==\n  ! Item 'B001' is already on loan.\n  ! No such item: 'ZZZ'\n  ! Item 'B002' is not on loan.\n\n== Return ==\n  Krish returned B001\n\n== Final audit ==\nID      TYPE          TITLE                     STATUS       LENGTH      FEE\n----------------------------------------------------------------------------\nB001    Book          Clean Code                available       464    12.00\nB002    Book          The Pragmatic Programmer  available       352    12.00\nD001    DigitalMedia  Python Deep Dive          available       420     0.00\nM001    Magazine      Wired                     on loan          18     3.40\n----------------------------------------------------------------------------\nItems: 4 | On loan: 1 | Revenue: \u20b915.40\n\n== Dunder method showcase ==\n  str(book)  -> The Pragmatic Programmer [B002] \u2014 \u20b91,099.00 (available)\n  repr(book) -> Book(item_id='B002', title='The Pragmatic Programmer', price=1099.0)\n  len(book)  -> 352 pages\n  book == copy -> True",
+      "prompt": ""
+    }
+  ]
+}

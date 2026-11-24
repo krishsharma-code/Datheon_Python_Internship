@@ -532,9 +532,12 @@ def audit_readme(root: Path = ROOT, readme: Optional[Path] = None) -> List[Findi
 
     referenced = {target for _, target in iter_links(prose)}
     referenced.update(target for _, target in iter_links(_read_text(root / "docs" / "index.md")))
+    # Every page, not only the top level of ``docs/``: the live-demo pages live
+    # one directory down and are the only documents that reference the captured
+    # session JSON, so a shallow glob reported five healthy assets as orphans.
     referenced.update(
         target
-        for page in sorted((root / "docs").glob("*.md"))
+        for page in sorted((root / "docs").rglob("*.md"))
         for _, target in iter_links(strip_code(_read_text(page)))
     )
 

@@ -14,6 +14,23 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Live demos on the published site (Day 32).** The five tools now run on the
+  documentation site instead of being described by it: `docs/demos/` holds a page
+  per tool, each replaying a **real captured session** in an animated terminal
+  with play, pause, step and 1×/2×/4× controls. `tools/live_demos.py` captures
+  those sessions by running the real `main.py` files with real stdin in a
+  per-tool scratch directory (`--capture`), regenerates the page block from the
+  JSON, and fails the build when the two disagree (`--check`) or when a tool's
+  output no longer matches the committed transcript (`--verify`). The player is
+  two local files — `docs/javascripts/terminal-player.js` and
+  `docs/stylesheets/live-demos.css` — with no CDN and no build step; every page
+  also carries the full transcript as static HTML, so the demos read without
+  JavaScript and for a screen reader, and `prefers-reduced-motion` renders the
+  session whole. Machine-specific lines are scrubbed (absolute paths, durations,
+  dates) and `--check` fails if a host path ever reaches a page. 69 test
+  functions in `tests/test_live_demos.py`, including a re-capture of the four
+  deterministic sessions compared byte for byte with the committed ones.
+
 - **Maintenance: static type gate (Day 31).** `tools/typecheck.py` runs
   `mypy --strict` over every shipped module — the thirteen shared core modules,
   the `datheon` package and all five projects — in six phases, and fails the
