@@ -3306,7 +3306,7 @@ without a test ever running?*
 
 ## Day 32 — Live demos: the five tools, playable on the site
 
-**Branch:** `feat/datheon-day-32-live-demos` · **PR:** #__PR__
+**Branch:** `feat/datheon-day-32-live-demos` · **PR:** #33
 **Scope:** A direct request from the intern rather than a plan row: *make the
 five projects visible, live, on the GitHub Pages site*. Every ledger row was
 already `done`, so the run took it as a maintenance row of its own.
