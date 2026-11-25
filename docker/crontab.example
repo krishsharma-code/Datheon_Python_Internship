@@ -1,0 +1,42 @@
+# Day 33 — the organizer on a cron schedule.
+#
+# Install with `crontab docker/crontab.example` after replacing the paths and
+# the image tag, or copy the line below into an existing crontab. Everything on
+# this line exists to make one nightly run of a one-shot container behave like a
+# scheduled job rather than like a person at a keyboard:
+#
+#   flock -n      a second run cannot start while the first is still moving
+#                 files. Cron does not know how long a run takes, so overlap is
+#                 a matter of when, not if.
+#   --rm          a scheduled job must not leave a container per night behind.
+#   --network none  the organizer reads and moves local files; it has no reason
+#                 to reach a network, so the container is not given one.
+#   --read-only + --tmpfs /tmp
+#                 only the two mounted volumes are writable. A bug that writes
+#                 into the image's filesystem fails here instead of on the host.
+#   -v /srv/inbox:/data:rw
+#                 an absolute host path, mounted at the directory the image's
+#                 WORKDIR points at. Relative mounts resolve against cron's own
+#                 working directory, which is not yours.
+#   -v /srv/datheon-state:/state:rw
+#                 the rotating log (DATHEON_LOG_DIR=/state/logs) and any --log
+#                 output, kept across runs because the container is not.
+#   >> ... 2>&1  cron mails whatever a job writes to stdout/stderr. Without the
+#                 redirect a nightly run leaves no history but the mail spool.
+#   --dry-run     in the example on purpose: an example that moves files the
+#                 first time it is installed is a trap. Remove it once the log
+#                 shows the plan you expected.
+#
+# The image is tagged with the release version, never `latest`: a scheduled job
+# whose behaviour changes without a commit on this host is not a schedule, it is
+# a surprise.
+#
+# The job is one physical line because cron has no line continuation — a
+# backslash at the end of a crontab entry is not joined, it is part of the
+# command. Wrap it in your editor if you must, not in the file you install.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# m   h   dom mon dow   command
+  15   2   *   *   *   flock -n /var/lock/datheon-organizer.lock docker run --rm --network none --read-only --tmpfs /tmp -v /srv/inbox:/data:rw -v /srv/datheon-state:/state:rw datheon-organizer:1.1.0 --dry-run >> /var/log/datheon-organizer.log 2>&1

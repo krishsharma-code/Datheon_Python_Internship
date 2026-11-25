@@ -14,6 +14,28 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Container image: the organizer on a schedule (Day 33).** The organizer now
+  ships as a cron-friendly container. A two-stage `Dockerfile` builds the wheel
+  in `builder` and installs it into a slim `runtime` from the local wheel with
+  `--no-index`, so the build needs the network and the run does not; both stages
+  pin a minor Python version and a Debian release, the image carries the five
+  OCI labels, runs as the fixed uid/gid `10001:10001` and uses the exec-form
+  `ENTRYPOINT ["organizer"]`, so the Day 3 exit codes and `SIGTERM` survive
+  `docker run`. `PYTHONUNBUFFERED=1` keeps cron's log capture honest and
+  `DATHEON_LOG_DIR=/state/logs` puts the rotating log on a mounted state volume.
+  `.dockerignore` keeps history, caches, the developer trees and credentials out
+  of the build context; `docker/crontab.example` is one physical line with
+  `flock -n`, `--rm`, `--network none`, `--read-only`, absolute mounts and a
+  `2>&1` redirect; `.github/workflows/docker.yml` builds the image and asserts
+  the uid, a real mounted-directory run and both error exit codes.
+  `tools/docker_packaging.py` audits all four files as text — 40 finding codes,
+  no daemon needed, exit `1` on a finding and exit `2` when it cannot measure —
+  including the defect a build hides, a `COPY` of a path `.dockerignore`
+  excludes. `docs/docker.md` documents the image, the volumes and the schedule;
+  88 test functions in `tests/test_docker_packaging.py`. The first run caught two
+  real defects: a `COPY --from` flag parsed as a source path, and a wrapped
+  crontab line that hid its own log redirect.
+
 - **Live demos on the published site (Day 32).** The five tools now run on the
   documentation site instead of being described by it: `docs/demos/` holds a page
   per tool, each replaying a **real captured session** in an animated terminal

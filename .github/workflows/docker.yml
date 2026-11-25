@@ -1,0 +1,122 @@
+name: Container image
+
+# Day 33 — the Dockerfile gets a verdict on every change that could break it.
+#
+# A Dockerfile is the one artefact in this repository that nothing else
+# executes. `pytest` imports the code, `black` reads it, `mypy` checks it — and
+# a broken `COPY`, an image that refuses to start, or a container that quietly
+# runs as root would all be discovered by the first person to run
+# `docker build`, which on this project may be nobody for months.
+#
+# So this workflow builds the image and then asks it four questions that a
+# successful build does not answer: does the console script run, does it run as
+# the uid we promised, does it organize a mounted directory, and does it stay
+# out of the image's own filesystem? `tools/docker_packaging.py` runs first —
+# it is the static half and needs no daemon, so the cheap checks fail fast.
+#
+# Kept out of `ci.yml` on purpose: the matrix runs on three operating systems,
+# and only one of them has a Docker daemon.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker/**"
+      - "datheon/**"
+      - "projects/03_file_organizer_automation/**"
+      - "caching.py"
+      - "cli_contract.py"
+      - "dataset_loader.py"
+      - "edge_cases.py"
+      - "error_catalogue.py"
+      - "errors.py"
+      - "fuzzing.py"
+      - "logging_config.py"
+      - "observability.py"
+      - "persistence.py"
+      - "profiling.py"
+      - "structured_logging.py"
+      - "validators.py"
+      - "pyproject.toml"
+      - "tools/docker_packaging.py"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker/**"
+      - "datheon/**"
+      - "projects/03_file_organizer_automation/**"
+      - "pyproject.toml"
+      - "tools/docker_packaging.py"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: datheon-organizer:ci
+
+jobs:
+  image:
+    name: Build and run the container
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Static audit
+        # No daemon needed: the Dockerfile, .dockerignore, crontab example and
+        # this workflow are checked as text, and the COPY paths are resolved
+        # against the tree.
+        run: python3 tools/docker_packaging.py
+
+      - name: Build the image
+        run: docker build --tag "$IMAGE" .
+
+      - name: Smoke-test the console script
+        # The image's ENTRYPOINT is the entry point, so this is the same check
+        # Day 22 made against a pip install — from inside the container.
+        run: |
+          docker run --rm "$IMAGE" --version
+          docker run --rm "$IMAGE" --help
+
+      - name: Assert the container does not run as root
+        run: |
+          uid="$(docker run --rm --entrypoint id "$IMAGE" -u)"
+          echo "uid inside the image: $uid"
+          test "$uid" = "10001"
+
+      - name: Organize a mounted directory
+        # The end-to-end claim: a bind mount is the only writable place, the
+        # tool moves the file, and the run exits 0. `--read-only` proves the
+        # image's own filesystem is not needed for a normal run.
+        run: |
+          mkdir -p "$PWD/inbox" "$PWD/state"
+          printf 'invoice\n' > "$PWD/inbox/invoice.txt"
+          printf 'photo\n' > "$PWD/inbox/holiday.png"
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            -v "$PWD/inbox:/data:rw" -v "$PWD/state:/state:rw" "$IMAGE"
+          test -f "$PWD/inbox/Documents/invoice.txt"
+          test -f "$PWD/inbox/Images/holiday.png"
+          test ! -f "$PWD/inbox/invoice.txt"
+
+      - name: Propagate the tool's exit code
+        # Day 3's contract is worth nothing if the container hides it: a bad
+        # argument must make `docker run` exit 2, and a missing directory 1.
+        run: |
+          set +e
+          docker run --rm "$IMAGE" --not-a-flag
+          usage=$?
+          docker run --rm "$IMAGE" /nonexistent-directory
+          missing=$?
+          set -e
+          echo "usage=$usage missing=$missing"
+          test "$usage" = "2"
+          test "$missing" = "1"
