@@ -101,6 +101,11 @@ jobs:
           mkdir -p "$PWD/inbox" "$PWD/state"
           printf 'invoice\n' > "$PWD/inbox/invoice.txt"
           printf 'photo\n' > "$PWD/inbox/holiday.png"
+          # The container runs as uid 10001, so the host directories must be
+          # writable by that uid — the same `chown -R 10001:10001` the docs ask
+          # for on a real host. Skipping it is how this step would fail with a
+          # permission error that looks like a tool bug.
+          sudo chown -R 10001:10001 "$PWD/inbox" "$PWD/state"
           docker run --rm --network none --read-only --tmpfs /tmp \
             -v "$PWD/inbox:/data:rw" -v "$PWD/state:/state:rw" "$IMAGE"
           test -f "$PWD/inbox/Documents/invoice.txt"
