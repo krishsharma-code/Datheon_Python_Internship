@@ -3389,3 +3389,124 @@ are not looking is a demo that is wrong in a way nobody notices.**
 | `python tools/io_audit.py --strict` | PASS |
 | `python tools/ci_matrix.py` | 12 cells, 0 warnings |
 | headless Chromium | player renders all 144 lines, controls present, reduced-motion and no-JS paths verified |
+
+---
+
+## Day 33 — Maintenance: the organizer in a container, on a schedule
+
+**Branch:** `feat/datheon-day-33-docker` · **PR:** #36
+**Scope:** Backlog §5 — *add Docker packaging for the organizer as a
+cron-friendly container*. Every ledger row was `done`, so the run took the
+highest-value backlog item and made it a ledger row of its own.
+
+### Milestones
+
+- A two-stage `Dockerfile`: `builder` compiles the wheel with
+  `pip wheel --no-cache-dir --no-deps`, `runtime` installs it with `--no-index`
+  from the wheel beside it and deletes the wheels. Nothing else crosses the
+  stage boundary, so the final image carries no compiler, no `apt` package and
+  no pip cache.
+- Both stages pin a **minor** Python version and a Debian release
+  (`python:3.12-slim-bookworm`), and the image carries the five required OCI
+  labels, including the source URL and the licence.
+- The container runs as the fixed uid/gid `10001:10001`, created with
+  `--shell /usr/sbin/nologin`, so a bind mount can be chowned once on the host
+  and the account cannot be used to get a shell.
+- `ENTRYPOINT ["organizer"]` in exec form and `CMD ["/data"]`, so `docker run`
+  returns the tool's own exit code (`0`/`1`/`2` — the Day 3 contract) and
+  `docker stop` delivers `SIGTERM` to Python rather than to a `sh -c` wrapper.
+- `PYTHONUNBUFFERED=1` for cron's log capture, `DATHEON_LOG_DIR=/state/logs` so
+  the rotating log lands on a mounted state volume, and `WORKDIR /data` so a run
+  with no argument organizes the mount instead of the image.
+- `.dockerignore` keeps history, caches, the developer trees (`tests/`, `docs/`,
+  `tools/`, `benchmarks/`) and credentials out of the build context — the tar
+  that is sent to the daemon before the first `RUN`.
+- `docker/crontab.example`: one physical line with `flock -n`, `--rm`,
+  `--network none`, `--read-only --tmpfs /tmp`, two absolute mounts and a
+  `2>&1` redirect — each flag commented with the failure it prevents.
+- `.github/workflows/docker.yml` builds the image and then asserts what a
+  successful build does not: `--version` runs, `id -u` is `10001`, a mounted
+  directory is actually organized, and a bad flag exits `2` while a missing
+  directory exits `1`.
+- `tools/docker_packaging.py`: a static audit of the four files — 40 finding
+  codes, no daemon needed, `--json`, exit `1` on a finding and exit `2` when it
+  cannot measure. `--build` adds the one check that does need a daemon and
+  reports *unmeasurable* when there is none.
+- `docs/docker.md` documents the image, the volumes, the uid, the schedule and
+  the audit's code table; 88 test functions in `tests/test_docker_packaging.py`
+  prove every code is reachable and that the committed tree is clean.
+
+### Architectural decisions
+
+1. **Two stages, one artefact.** The single-stage version of this Dockerfile is
+   three lines shorter and ships setuptools, a pip download cache and the wheel
+   itself. Building the wheel in `builder` and copying only `/wheels` into
+   `runtime` makes "no compiler in the image" a property of the layering rather
+   than a promise in a comment — and `docker.runtime.build_tools` fails if an
+   `apt-get install` ever appears in the final stage.
+2. **`--no-index` is the line that matters.** Without it the runtime stage
+   installs from PyPI, which means the *build* needs the network in the stage
+   that was supposed to need nothing, and the image can be built differently on
+   a day PyPI is unreachable. Installing from the local wheel is what makes
+   "the run needs no network" true rather than likely.
+3. **Exec form, because exit codes are the deliverable.** The Day 3 contract
+   stops at the container boundary unless PID 1 is the tool. `ENTRYPOINT
+   organizer` puts `/bin/sh` there; `ENTRYPOINT ["organizer"]` does not. The
+   workflow asserts `2` and `1` from `docker run` so the contract is tested
+   where it is easiest to lose.
+4. **Cron is a hostile environment, so the example is defensive.** No TTY, no
+   terminal, no `$PWD`, no notion of how long the last run took. Hence `flock
+   -n`, absolute mounts, `--rm`, and a redirect — four properties, each one
+   checkable as text, each one a way a nightly job fails silently.
+5. **A static audit, because a daemon is not always there.** The interesting
+   defects in a Dockerfile are textual: a floating tag, a root user, a shell
+   form, a `COPY` of an ignored path. All of them are decidable without
+   building, which is why this gate runs in the normal `pytest` suite on any
+   machine and the daemon-dependent half is opt-in.
+
+### Defects found
+
+| Defect | Where | What it would have done |
+| --- | --- | --- |
+| A `COPY --from` flag parsed as a source path | `tools/docker_packaging.py`, `parse_dockerfile` | `COPY --from=builder /wheels /wheels` was read as three sources — `--from=builder`, `/wheels`, `/wheels` — so the audit reported two missing files against a correct instruction, and the flag would have been invisible to the stage check. Instructions now split flags out before arguments. |
+| A wrapped crontab line that hid its own redirect | `docker/crontab.example`, and the audit's reader | The example was written across four backslash-continued lines. Cron has **no** line continuation, so the installed entry would have run `docker run ... \` and nothing else — and the audit, which took only the physical line containing `docker run`, would have reported `cron.no_log` for a file that looked correct. The example is now one physical line, and the reader joins continuations so a wrapped file is judged whole. |
+
+### Lessons
+
+1. **The artefact nothing executes is the artefact that rots.** Every other file
+   in this repository is imported, linted, formatted or type-checked by
+   something. A Dockerfile is read by a daemon that a contributor may not have.
+   Turning its claims into a text audit was the only way to make them fail a
+   build.
+2. **A gate should catch what the tool it gates cannot.** `docker build` fails on
+   a missing file; it does not fail on a file excluded by `.dockerignore` — that
+   layer is simply empty, and the image breaks at run time. `docker.copy.ignored`
+   exists because the build is silent exactly where the mistake is expensive.
+3. **Cron's grammar is narrower than it looks.** A backslash at the end of a
+   crontab line is part of the command, not a continuation. The first draft of
+   the example was a four-line job that would have installed as a truncated one,
+   which is the kind of defect that shows up as "the job runs but does nothing"
+   at 02:15.
+4. **Pin what a schedule depends on.** `latest` is convenient for a person who
+   types `docker run` and hostile to a job that runs at 02:15 unattended: the
+   image changes under the host without a commit here. Both base images carry a
+   minor version and a Debian release, and the audit rejects anything without a
+   version in its tag.
+5. **Say what the gate cannot prove.** A GitHub runner has no cron daemon, so
+   the schedule is audited as text, not executed. The documentation says so
+   instead of implying otherwise — a limit stated is a limit a reader can work
+   around.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | 104 files unchanged |
+| `pytest` | passing, 0 failed (+88 test functions) |
+| `pytest --cov` | at or above the 90% floor |
+| `python tools/docker_packaging.py` | PASS — 2 stages, 0 findings |
+| `python tools/docker_packaging.py --json` | one document, `ok: true`, 40 codes documented |
+| `python tools/typecheck.py` | PASS — 6 phases, 33 targets, 0 errors |
+| `python tools/final_verification.py` | PASS — freeze re-cut over the new files |

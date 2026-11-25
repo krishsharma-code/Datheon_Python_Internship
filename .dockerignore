@@ -1,0 +1,60 @@
+# Day 33 — what never enters the build context.
+#
+# A build context is a tar of everything not listed here, sent to the daemon
+# before the first `RUN`. On this tree that is 40 MB of history, test fixtures,
+# rendered docs and caches for a wheel that needs eleven directories, and it is
+# also the surface a stray secret can leak through. `tools/docker_packaging.py`
+# fails the build when one of the required patterns below disappears.
+#
+# The builder stage copies its paths explicitly, so nothing here can remove a
+# file the image needs — and the audit cross-checks exactly that, because a
+# `COPY` of an ignored path silently produces an empty layer rather than an
+# error.
+
+# --- version control and GitHub metadata -----------------------------------
+.git
+.github
+.gitattributes
+.gitignore
+
+# --- environments and caches ----------------------------------------------
+.venv
+venv
+env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.mutmut_cache/
+mutants/
+build/
+dist/
+site/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+benchmark-results*.json
+*.log
+
+# --- developer-only trees --------------------------------------------------
+tests/
+docs/
+benchmarks/
+tools/
+docker/
+
+# --- secrets and local configuration --------------------------------------
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+secrets*
+
+# --- container plumbing ----------------------------------------------------
+Dockerfile
+.dockerignore
+docker-compose*.yml
