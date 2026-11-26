@@ -160,6 +160,7 @@ nav:
       - Test strategy: test_strategy.md
       - Week 3 QA report: week3_qa_report.md
   - Continuous integration:
+      - Pre-commit hooks: precommit.md
       - Container image (Docker): docker.md
       - CI multi-OS matrix: ci_matrix.md
       - Documentation site: docs_site.md

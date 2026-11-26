@@ -3510,3 +3510,106 @@ highest-value backlog item and made it a ledger row of its own.
 | `python tools/docker_packaging.py --json` | one document, `ok: true`, 40 codes documented |
 | `python tools/typecheck.py` | PASS — 6 phases, 33 targets, 0 errors |
 | `python tools/final_verification.py` | PASS — freeze re-cut over the new files |
+
+---
+
+## Day 34 — Maintenance: the gates arrive before the commit, not after it
+
+**Branch:** `feat/datheon-day-34-precommit` · **PR:** #38
+**Scope:** Backlog §5 — *add a `pre-commit` configuration (black, flake8,
+end-of-file-fixer)*. Every ledger row was `done`, so the run took the
+highest-value backlog item and made it a ledger row of its own.
+
+### Milestones
+
+- `.pre-commit-config.yaml` installs the three gates the plan names —
+  `black` @ `24.10.0`, `flake8` @ `7.1.1`, `end-of-file-fixer` @ `v5.0.0` — and
+  the four hygiene hooks that make the first patch on a file a patch about that
+  file: `trailing-whitespace` with `--markdown-linebreak-ext=md`,
+  `mixed-line-ending --fix=lf`, `check-yaml`, `check-toml`,
+  `check-added-large-files --maxkb=1024` and `check-merge-conflict`.
+- Both formatter pins satisfy the floor `pyproject.toml` already declared
+  (`black>=24.1`, `flake8>=6.1`), and **neither hook is passed a line length**:
+  `black` reads `[tool.black] line-length = 100`, `flake8` reads
+  `setup.cfg`'s `max-line-length = 100` — the same two declarations CI reads.
+- `tools/precommit_config.py`: a static audit of the declaration, 12 finding
+  codes, no network and no hook installation — floating revisions, pins below
+  the declared floor, arguments that contradict the project's settings,
+  `files`/`exclude` patterns that hide shipped code, unknown stages,
+  token-shaped strings, the whitespace the hygiene hooks would rewrite (read
+  off the git index, which is the set the hooks see), and a page that stops
+  documenting a code the tool can emit.
+- `docs/precommit.md` documents the hook table, the twelve codes and the two
+  datasets the first run repaired; it is wired into the `mkdocs.yml` nav under
+  *Continuous integration*, and `pre-commit>=3.7` joins the `dev` extra.
+- 129 test functions in `tests/test_precommit_config.py`: every finding code is
+  fed a tree that breaks exactly one rule, the requirement/revision/argument
+  parsers get their own tests, and the committed tree is audited as it stands.
+
+### Architectural decisions
+
+1. **The gate is a declaration, so the declaration needs a gate.** YAML does not
+   validate a hook configuration: a `rev` that points at a branch, a hook scoped
+   out of the code it exists to check, or a `--line-length` that overrides the
+   project's setting all leave a configuration that exits `0` and checks less
+   than it appears to. Auditing the file as data is what turns those into
+   failures.
+2. **One declaration, not two.** Passing `--line-length 100` to the `black` hook
+   would work today and drift the first time `[tool.black]` changes. The
+   configuration passes no such argument, and `precommit.args` fails if one is
+   ever added that disagrees with the file it duplicates.
+3. **Pins must be comparable, not merely present.** `rev: v5.0.0` and
+   `rev: 24.10.0` are two spellings of the same idea, so the audit parses the
+   version out of either and compares it with the floor `pyproject.toml`
+   declares — a hook older than the CI job formats files the runner then
+   rejects.
+4. **Check the hygiene hooks without running them.** `end-of-file-fixer`,
+   `trailing-whitespace` and `mixed-line-ending` are pure functions of a file's
+   bytes, so the audit reimplements their verdict over the git index in-process.
+   That is why the two defects below were found by the normal `pytest` run, on a
+   machine with no `pre-commit` installed and no network.
+5. **Markdown's two-space break is a feature, not noise.** A naive whitespace
+   hook reflows every paragraph in `docs/`. The hook is given
+   `--markdown-linebreak-ext=md` and the local check applies the same rule, so
+   the gate cannot quietly reformat the documentation it is protecting.
+
+### Defects found
+
+| Defect | Where | What it would have done |
+| --- | --- | --- |
+| Two shipped datasets ended without a final newline | `projects/04_terminal_assistant/intents.json`, `sample_faq.json` | No test noticed, because `json.load` does not care. The first patch to touch either file would have carried a one-line "no newline at end of file" diff, which is exactly the noise the hook exists to keep out of a review. Both files now end in a single newline, and `precommit.whitespace` fails if a third one stops doing so. |
+| The file count in the audit's own report was wrong when git was absent | `tools/precommit_config.py`, `audit_tree` | The hygiene scan fell back to walking the tree but the report still said `files: 0`, because the count came from the git listing that had failed. The audit now resolves the file list once and reports what it actually read — a report that undercounts is a report that hides how much was checked. |
+
+### Lessons
+
+1. **A gate that runs late teaches late.** Every rule here already existed; the
+   only thing that changed is *when* a contributor learns about it. Moving a
+   check from the runner to the commit costs nothing and removes a whole class
+   of review comment.
+2. **The hooks see the index, not the tree.** Pre-commit checks tracked files,
+   so the audit reads `git ls-files` rather than walking the directory — which
+   is also why the git-ignored `portfolio_summary.csv` (CRLF, written by the
+   portfolio demo) is correctly not a finding.
+3. **Pin the tool that decides your diff.** `rev: main` on a hook repository
+   means the gate changes without a commit in this repository. A pin is the
+   cheapest kind of reproducibility and the easiest to leave out.
+4. **Let the documentation fail the build.** `precommit.docs` fails when
+   `docs/precommit.md` stops naming a code the tool can emit, so the table of
+   codes cannot fall behind the checks — the same trick the Docker audit uses
+   with its own page.
+5. **Say what the gate cannot prove.** The audit never installs a hook and never
+   touches the network, so it proves the declaration agrees with the repository,
+   not that a hook resolved on PyPI. The page says so instead of implying
+   otherwise.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | unchanged |
+| `pytest` | passing, 0 failed (+129 test functions) |
+| `python tools/precommit_config.py` | PASS — 3 repos, 9 hooks, 0 findings |
+| `python tools/precommit_config.py --json` | one document, `ok: true`, 12 codes documented |
+| `python tools/final_verification.py` | PASS — freeze re-cut over the new files |

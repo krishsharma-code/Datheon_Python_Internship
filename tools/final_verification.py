@@ -172,6 +172,9 @@ FREEZE_SCHEMA = 1
 
 #: Root-level files the freeze pins.
 FREEZE_FILES: Tuple[str, ...] = (
+    # Day 34: the commit-time gate is shipped configuration, so the freeze
+    # records it like every other root-level declaration.
+    ".pre-commit-config.yaml",
     ".gitattributes",
     ".gitignore",
     "CHANGELOG.md",

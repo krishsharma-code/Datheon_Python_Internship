@@ -44,6 +44,20 @@ through a short-lived branch and a reviewed pull request.
    black --check .                               # formatting clean
    ```
 
+   Or let `pre-commit` run them for you before every commit — the same
+   `black` and `flake8`, pinned to the versions the project declares, plus the
+   whitespace hooks:
+
+   ```bash
+   pip install pre-commit && pre-commit install
+   pre-commit run --all-files      # once, over the whole tree
+   ```
+
+   `.pre-commit-config.yaml` is audited by `tools/precommit_config.py` (see
+   [`docs/precommit.md`](docs/precommit.md)), so a hook cannot be unpinned,
+   scoped out of the code it checks, or given a line length that disagrees with
+   `pyproject.toml`.
+
 5. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/):
 
    ```text
