@@ -49,6 +49,10 @@ dev = [
     "pytest-cov>=4.1",
     "flake8>=6.1",
     "black>=24.1",
+    # Day 34: the commit-time gate. `pre-commit` is the runner; the hook
+    # revisions live in `.pre-commit-config.yaml` and are audited by
+    # `tools/precommit_config.py` against the floors declared right here.
+    "pre-commit>=3.7",
     # Day 31: the static type gate. `tools/typecheck.py` drives mypy over the
     # shipped modules, the `datheon` package and each project's module graph.
     "mypy>=1.11",

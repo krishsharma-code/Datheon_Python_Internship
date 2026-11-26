@@ -241,6 +241,9 @@ pytest -q
 # 5. Lint
 flake8 .
 black --check .
+
+# 6. Run the same gates before every commit
+pip install pre-commit && pre-commit install
 ```
 
 ### Install the commands

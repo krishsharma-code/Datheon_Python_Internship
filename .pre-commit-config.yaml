@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# Day 34 — pre-commit: the gates CI already runs, moved before the commit.
+#
+# Every rule below already exists in this repository: `black --check` and
+# `flake8` in `.github/workflows/ci.yml`, the line lengths in `pyproject.toml`
+# and `setup.cfg`, and the LF-only checkout in `.gitattributes`. What was
+# missing was the moment they run. A contributor learned about a formatting
+# error after the push, from a red CI cell, in a review thread — which is the
+# most expensive possible place to learn it.
+#
+# Three rules keep this file honest, and `tools/precommit_config.py` fails the
+# build when one of them breaks:
+#
+#   1. **Every remote hook is pinned to a release.** `rev: main` means the gate
+#      changes without a commit here. A pin must carry a version number.
+#   2. **Every pin satisfies the floor `pyproject.toml` declares.** The hook and
+#      the CI job have to be the same formatter generation, or a commit can be
+#      clean locally and red on the runner (or the reverse).
+#   3. **No hook may silently skip the code it is meant to check.** An
+#      `exclude:` pattern that hides `datheon/` or `tools/` turns the gate into
+#      a comment.
+#
+#   pip install pre-commit && pre-commit install
+#   pre-commit run --all-files
+# ---------------------------------------------------------------------------
+default_language_version:
+  python: python3
+
+# Never stop at the first failure: a contributor fixing a commit wants the whole
+# list, not one item per attempt.
+fail_fast: false
+
+repos:
+  # --- file hygiene: the defects that are invisible in a diff --------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        # Markdown's two trailing spaces are a hard line break, not noise; the
+        # hook keeps them, which is why this argument is mandatory here and
+        # why `tools/precommit_config.py` checks it.
+        args: [--markdown-linebreak-ext=md]
+      - id: mixed-line-ending
+        # `.gitattributes` normalises the checkout to LF; this keeps a file that
+        # arrives with CRLF from being committed as a mixed-endings blob.
+        args: [--fix=lf]
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+
+  # --- the two gates CI runs on every push --------------------------------
+  - repo: https://github.com/psf/black
+    # Satisfies the `black>=24.1` floor in `pyproject.toml`; no `--line-length`
+    # argument, so the hook reads `[tool.black] line-length = 100` — one
+    # declaration, not two that can disagree.
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/PyCQA/flake8
+    # Satisfies the `flake8>=6.1` floor. No `--max-line-length` argument either:
+    # the hook reads `setup.cfg`, exactly as `flake8 .` does in CI.
+    rev: 7.1.1
+    hooks:
+      - id: flake8
