@@ -3618,7 +3618,7 @@ highest-value backlog item and made it a ledger row of its own.
 
 ## Day 35 — Maintenance: the two documents no gate was reading
 
-**Branch:** `feat/datheon-day-35-community-health` · **PR:** __PR__
+**Branch:** `feat/datheon-day-35-community-health` · **PR:** #39
 **Scope:** Backlog §5 — *add a `SECURITY.md` and a `CODE_OF_CONDUCT.md`*. Every
 ledger row was `done`, so the run took the highest-value item still open in the
 backlog and made it a ledger row of its own. The Codecov item needs an external
