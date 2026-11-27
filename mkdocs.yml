@@ -166,6 +166,7 @@ nav:
       - Documentation site: docs_site.md
       - Release automation: release.md
       - Submission polish: polish.md
+      - Community health: community_health.md
   - API reference:
       - Overview: api/index.md
       - errors: api/errors.md

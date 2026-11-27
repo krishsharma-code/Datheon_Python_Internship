@@ -51,6 +51,7 @@ Datheon Python Programming Internship (Credential ID `DT-2026-O6Q0X`).*
 - [Bundled datasets](#-bundled-datasets)
 - [Git workflow](#-git-workflow)
 - [Daily progress](#-daily-progress)
+- [Security & community](#-security--community)
 - [License](#-license)
 
 ---
@@ -621,6 +622,34 @@ The submission record — the final green run, the certificate checklist and the
 frozen manifest that pins the state that was submitted — is
 [`docs/final_verification.md`](docs/final_verification.md). It is reproducible:
 `python tools/final_verification.py` re-measures every line of it.
+
+---
+
+## 🛡️ Security & community
+
+Two documents describe how to work with this repository rather than how it is
+built, and both are checked by the build rather than trusted:
+
+- **[`SECURITY.md`](SECURITY.md)** — the supported versions, and how to report a
+  vulnerability **privately** through GitHub's security advisories. Please do
+  not open a public issue for a security problem: an issue is a disclosure, and
+  it is indexed before there is a fix. Acknowledgement is promised within three
+  business days.
+- **[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)** — the standard of behaviour in
+  this project's issues, pull requests and discussions, adapted from the
+  [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/),
+  with a named enforcement contact and a response time.
+
+`tools/community_health.py` audits both: it fails when the support matrix stops
+naming the version in `pyproject.toml`, when the policy loses its private
+channel or its response commitment, when the code of conduct loses its contact,
+when a `TODO` or a token-shaped string survives in either, and when this README
+or `CONTRIBUTING.md` stops linking them. See
+[`docs/community_health.md`](docs/community_health.md).
+
+```bash
+python tools/community_health.py    # exit 1 on any finding
+```
 
 ---
 

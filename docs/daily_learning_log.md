@@ -3613,3 +3613,103 @@ highest-value backlog item and made it a ledger row of its own.
 | `python tools/precommit_config.py` | PASS — 3 repos, 9 hooks, 0 findings |
 | `python tools/precommit_config.py --json` | one document, `ok: true`, 12 codes documented |
 | `python tools/final_verification.py` | PASS — freeze re-cut over the new files |
+
+---
+
+## Day 35 — Maintenance: the two documents no gate was reading
+
+**Branch:** `feat/datheon-day-35-community-health` · **PR:** __PR__
+**Scope:** Backlog §5 — *add a `SECURITY.md` and a `CODE_OF_CONDUCT.md`*. Every
+ledger row was `done`, so the run took the highest-value item still open in the
+backlog and made it a ledger row of its own. The Codecov item needs an external
+account and a network round trip that no local gate can verify, and the demo
+video is not something a scheduled run can record; this one could be built,
+checked and merged in a single run.
+
+### Milestones
+
+- `SECURITY.md`: the support matrix, the private reporting route (GitHub's
+  security-advisory form), what to include in a report, a response commitment in
+  days, scope in and out, the rule for a committed credential (**rotate, do not
+  open a cleanup PR** — the value stays in the history either way), and a safe
+  harbour statement.
+- `CODE_OF_CONDUCT.md`: an adaptation of the **Contributor Covenant 2.1** with
+  the attribution the licence requires, a named enforcement contact, a
+  five-day acknowledgement commitment, and the covenant's four-tier enforcement
+  ladder (correction, warning, temporary ban, permanent ban) written out.
+- `tools/community_health.py`: a static audit of both documents — **11 finding
+  codes**, standard library only. Location (root, `.github/`, `docs/`), required
+  sections, a private channel, the support matrix against `pyproject.toml`, a
+  response commitment, the covenant declaration, an enforcement contact,
+  placeholders, token shapes, and reachability from `README.md` and
+  `CONTRIBUTING.md`.
+- `docs/community_health.md` documents every code, is wired into the `mkdocs.yml`
+  nav under *Continuous integration*, and is itself checked: the tool fails when
+  the page stops naming a code it can emit.
+- 40 test functions in `tests/test_community_health.py`: every code is fed a
+  checkout that breaks exactly one rule, the parsers (table rows, covenant
+  window) are tested on their own, and the committed policies are audited as
+  they stand.
+- The audit runs in CI on the designated cell, next to the CI-matrix and I/O
+  audits, with `--strict`.
+
+### Architectural decisions
+
+1. **A policy is a declaration, so the declaration needs a gate.** Nothing in
+   this repository read `SECURITY.md` or `CODE_OF_CONDUCT.md`. A support matrix
+   goes stale on the next version bump; a placeholder survives review because a
+   reviewer reads intent rather than text. Reading both documents as data is
+   what turns those into failures instead of prose nobody re-reads.
+2. **The version check reads table rows, never prose.** A version mentioned in a
+   sentence is not a support claim. Counting prose would let the matrix rot while
+   the audit stayed green — the exact failure the check exists to catch.
+3. **The covenant version is read in a window around its name.** A `3.10`
+   elsewhere in a code of conduct is a Python version. Reading the first
+   `major.minor` in the file would accept a document that never declared
+   anything, which is worse than no check at all.
+4. **`2` for "I could not measure".** If the root is not a directory, or neither
+   policy exists anywhere, the tool says so and exits `2`. "Not written yet" and
+   "wrong path" are indistinguishable from inside the audit, and a gate that
+   reports success on either is not a gate.
+5. **The unreadable version is a warning, not an error.** A checkout with no
+   `pyproject.toml` is a partial checkout, not a broken policy; `--strict` is
+   where that becomes a failure.
+
+### Defects found
+
+| Defect | Where | What it would have done |
+| --- | --- | --- |
+| The first `health.link` test expected one finding, not two | `tests/test_community_health.py` | A `CONTRIBUTING.md` that links neither policy produces two findings, one per policy. The assertion was written for the first one only — and it failed, which is the point of writing the test before trusting the tool. The test now pins both codes *and* their order. |
+| A covenant check that accepted any number in the file | `tools/community_health.py`, `covenant_version` | The fallback scanned the whole document for `major.minor`, so "Runs on Python 3.10" declared a covenant version. The check now reads a 120-character window around the words "Contributor Covenant", and a test feeds it a file whose only numbers are a Python version. |
+
+### Lessons
+
+1. **The files with no tests are the files with no reviewer.** Every other
+   artefact here is measured by something; these two were measured by nothing,
+   and they are the two a stranger reads first.
+2. **A promise needs a number in it.** "We will respond promptly" cannot be
+   checked, by the reporter or by the audit. "Within 3 business days" can be.
+3. **A policy that names no channel is a policy that points at the issue
+   tracker.** For a security report that is a disclosure, which is why
+   `health.channel` fails rather than warns.
+4. **Do not ship a cleanup PR for a leaked credential.** The value stays in the
+   history; the fix is rotation, which only the owner can do. The policy says so
+   explicitly, because the intuitive fix is the wrong one.
+5. **Audit the document that documents the audit.** `health.docs` fails when
+   `docs/community_health.md` stops naming a code, the same trick the pre-commit
+   audit uses on its own page.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | unchanged |
+| `pytest` | passing, 0 failed (+40 test functions) |
+| `python tools/community_health.py` | PASS — both policies, support matrix names 1.1.0, 11 codes documented |
+| `python tools/community_health.py --json` | one document, `ok: true` |
+| `python tools/docs_site.py` | PASS — new page is in the nav |
+| `python tools/ci_matrix.py` | PASS — the new step leaves the matrix contract intact |
+| `python tools/readme_audit.py` | PASS — the new README section links resolve |
+| `python tools/final_verification.py` | PASS — freeze re-cut over the new files |

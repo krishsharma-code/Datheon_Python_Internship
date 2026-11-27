@@ -81,6 +81,22 @@ through a short-lived branch and a reviewed pull request.
 
 Accepted types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 
+## Security issues and conduct
+
+Two reports do not belong in a public issue:
+
+- **A security problem** goes through
+  [`SECURITY.md`](SECURITY.md) — GitHub's private vulnerability reporting — not
+  through the issue tracker. An issue is a disclosure, and it is indexed before
+  there is a fix.
+- **A conduct problem** goes to the maintainer privately, as
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) describes. Participation here is
+  covered by that code, and reports are read by the maintainer only.
+
+`tools/community_health.py` checks that both documents still name a reachable
+channel, that the support matrix still names the shipped version, and that this
+file and the README still link them.
+
 ## Definition of done
 
 - [ ] Syntax check passes (`py_compile`).
@@ -88,4 +104,6 @@ Accepted types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 - [ ] `flake8` and `black --check` are clean.
 - [ ] Docstrings and type hints are present.
 - [ ] No secrets, tokens, or credentials are committed.
+- [ ] `python tools/community_health.py` passes (security policy and code of
+      conduct still name their channels).
 - [ ] The PR has been reviewed and squash-merged.
