@@ -14,6 +14,25 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **A security policy and a code of conduct, with a gate behind each (Day 35).**
+  `SECURITY.md` names the supported release lines, routes a report through
+  GitHub's private vulnerability reporting instead of the public issue tracker,
+  says what to include, commits to an acknowledgement in three business days and
+  an assessment in ten, draws the scope in and out, and states the rule for a
+  committed credential — rotate it, do not open a cleanup PR. `CODE_OF_CONDUCT.md`
+  adapts the Contributor Covenant 2.1 with the attribution its licence requires,
+  a named enforcement contact, and the four-tier enforcement ladder. Both are
+  linked from the README and `CONTRIBUTING.md`, and both are checked:
+  `tools/community_health.py` reads them as artefacts — 11 finding codes, standard
+  library only — and fails when the support matrix stops naming the version in
+  `pyproject.toml`, when the policy loses its private channel or its response
+  commitment, when the code of conduct loses its contact or its covenant
+  declaration, when a placeholder or a token-shaped string survives in either,
+  or when the README, `CONTRIBUTING.md` or the tool's own page stops naming what
+  it must. `docs/community_health.md` documents every code and joins the site
+  nav under *Continuous integration*; the audit runs in CI with `--strict`; 40
+  test functions in `tests/test_community_health.py`.
+
 - **Container image: the organizer on a schedule (Day 33).** The organizer now
   ships as a cron-friendly container. A two-stage `Dockerfile` builds the wheel
   in `builder` and installs it into a slim `runtime` from the local wheel with

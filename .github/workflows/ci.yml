@@ -124,6 +124,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: python tools/ci_matrix.py
 
+      - name: Audit the community-health documents
+        # Day 35: SECURITY.md and CODE_OF_CONDUCT.md are the two files no other
+        # gate reads. The audit fails when the support matrix stops naming the
+        # version in pyproject.toml, when either document loses the channel a
+        # stranger needs, or when a placeholder or token survives in them.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: python tools/community_health.py --strict
+
       - name: Property tests (Hypothesis, fixed seed)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         env:
