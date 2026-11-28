@@ -3716,7 +3716,7 @@ checked and merged in a single run.
 
 ## Day 36 — Maintenance: publishing the number the gate already computes
 
-**Branch:** `feat/datheon-day-36-coverage` · **PR:** PRNUMBER
+**Branch:** `feat/datheon-day-36-coverage` · **PR:** #40
 **Scope:** Backlog §5 — *ship a GitHub Actions workflow that publishes coverage
 to Codecov*. Every ledger row was `done`, so the run took the highest-value item
 still open. Day 35's log deferred this one because it "needs an external account

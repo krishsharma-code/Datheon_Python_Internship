@@ -1,5 +1,5 @@
 {
-  "file_count": 182,
+  "file_count": 183,
   "generated": "2026-11-28",
   "schema": 1,
   "sha256": {
@@ -17,6 +17,7 @@
     "CONTRIBUTING.md": "7858d70de771032ad40a6bd0d12c128741183fe0b71df3dbc31ca7948ea5c159",
     "LICENSE": "e1551ba74efd4d6703ac8c1367fb53a7995525ff01e7e3f49e8cf6d7b99ebacf",
     "README.md": "118cd72cd658e9163e56f70f4e8db20ef319a3a35fcd2e46a3bbdca651a74d40",
+    "codecov.yml": "c53283e4adfd03fc6db67d6e75cc2af5302f0a24256a4798e2e4473e718a7b6e",
     "conftest.py": "1edac91564ef67fab9043a27d19899ff7e20e09a35ee10ff9aa5dff7980b4110",
     "datheon/__init__.py": "5a14111b2b7535d838868f088bc0457555f25c6d1f02e2fa7bd3789ba1eb6e5d",
     "datheon/cli/__init__.py": "faee16164fb984e5a31f64ec88b06dd51896a125b948e6aab85c641e9ba46f40",
@@ -175,7 +176,7 @@
     "tools/distribution.py": "06061fb2efc8cb1a97cfc41662c0b3ea2da3100e5286682a06eb4fc12a79c036",
     "tools/docker_packaging.py": "f34359205c1dfabdeac2254d8fb3417ea0f0e76ff25b14742890cdc397c5eee4",
     "tools/docs_site.py": "ee353f132a7a91889ecccf11661b892ec9f50a8141af5f64904365fdbe759e71",
-    "tools/final_verification.py": "cb0d2646ea36978894ea5efbdfc4000d293ae67332dae9f8896e43b70e474b80",
+    "tools/final_verification.py": "392c862cab72ef78cd1cc5c130bb57dc8f90b51ae99145dafab83f018f76f104",
     "tools/fuzz.py": "1070f7dbfb6ebf34e40ea458529fc5f8f864f0d2355513dd3555791300570068",
     "tools/io_audit.py": "40b54cbc59d47464d1c7f4969d5b838628582c6643bdaed7e635cdffe48dc75c",
     "tools/live_demos.py": "2d0bdc39da8d866df9cd6b217716473503a634e84d1635befdbc9630dc91be6c",
