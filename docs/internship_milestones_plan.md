@@ -200,3 +200,4 @@ Used only when every ledger row is `done`, or to fill spare capacity:
 - ~~Add type checking (`mypy`/`pyright`) to CI once annotations are complete.~~ **Shipped as Day 31** — see the ledger row above.
 - ~~Add a `SECURITY.md` and a `CODE_OF_CONDUCT.md`.~~ **Shipped as Day 35** — see the ledger row below.
 - Record a 2-minute demo video for the LinkedIn walkthrough.
+- Fix the Windows cells: `tests/test_precommit_config.py` has been red on all four `windows-latest` cells since Day 34, because the checkout is CRLF there and `tools/precommit_config.py`'s whitespace audit reads the tree without honouring `.gitattributes`. Nine tests, one cause — the Day 24 matrix is the only place it shows.
