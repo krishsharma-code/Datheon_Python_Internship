@@ -135,7 +135,7 @@
     "tests/test_cli_json.py": "2d3f1cd506dc7f73760b47ef5448bfd11366e66c58090fabeab056c9673bae86",
     "tests/test_community_health.py": "de016fcfac3a593af79c86de851512054aca05979bec36af3683aaa4ae88b26a",
     "tests/test_coverage_gate.py": "f3183e8f54dce3cf66d1d9cd2f54e621beaab7c91c5c6fc2f27e382156a3c29e",
-    "tests/test_coverage_report.py": "1f04002a94843f680c0a02a6a23d170041eb383a677ec6f7ac3d1fc35d2b7e26",
+    "tests/test_coverage_report.py": "179f472acb61ec76c67d820fedba3e6c830e32a94df0061b6f0d91b5fc27b1b4",
     "tests/test_dataset_loader.py": "6eb9a514e790fb90928666cc39cffe8de1ea165e218b845b85a4e28b261847f5",
     "tests/test_demo_assets.py": "ecd68916d355b61cb48d9df3a7396277915208f73c394c700d2d32462ade08e7",
     "tests/test_distribution.py": "6bc5aefab357f3b5d67060c8ad5838d84dc5238ccd6a52b2fba5dc1050ea7f64",

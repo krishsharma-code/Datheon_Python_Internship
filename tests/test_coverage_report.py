@@ -244,9 +244,11 @@ def test_committed_workflow_pins_the_uploader() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_workflow_triggers_reads_the_boolean_key() -> None:
+def test_workflow_triggers_reads_the_boolean_key(tmp_path: Path) -> None:
     """YAML 1.1 turns ``on:`` into ``True``; both spellings are one declaration."""
-    document = cr.load_yaml(_write(Path("/tmp") / "cr_probe.yml", WORKFLOW))
+    # Parsed from a file, not a hand-built dict: the ``True`` key is PyYAML's
+    # doing, so a dict literal would test the helper against itself.
+    document = cr.load_yaml(_write(tmp_path / "cr_probe.yml", WORKFLOW))
     assert isinstance(document, dict)
     assert "push" in cr.workflow_triggers(document)
 
