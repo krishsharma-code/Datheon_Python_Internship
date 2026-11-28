@@ -3713,3 +3713,116 @@ checked and merged in a single run.
 | `python tools/ci_matrix.py` | PASS — the new step leaves the matrix contract intact |
 | `python tools/readme_audit.py` | PASS — the new README section links resolve |
 | `python tools/final_verification.py` | PASS — freeze re-cut over the new files |
+
+## Day 36 — Maintenance: publishing the number the gate already computes
+
+**Branch:** `feat/datheon-day-36-coverage` · **PR:** PRNUMBER
+**Scope:** Backlog §5 — *ship a GitHub Actions workflow that publishes coverage
+to Codecov*. Every ledger row was `done`, so the run took the highest-value item
+still open. Day 35's log deferred this one because it "needs an external account
+and a network round trip that no local gate can verify" — true of the *upload*,
+false of the *declaration*: the workflow, the Codecov config and their agreement
+with `pyproject.toml` are all files, and files can be audited without an account
+or a network. The upload itself is tokenless (GitHub OIDC) and non-blocking, so
+nothing about it can make a green build red.
+
+### Milestones
+
+- `.github/workflows/coverage.yml`: one run of the suite producing both reports
+  (`--cov-report=xml:coverage.xml`, `--cov-report=json:coverage.json`,
+  `--cov-fail-under=0` so the gate owns the verdict), the same 90% floor applied
+  through `tools/coverage_gate.py --report-only --from-json coverage.json`, both
+  reports kept as a fourteen-day artefact under `if: always()`, and the XML
+  uploaded with `codecov/codecov-action@v5` — `use_oidc: true`,
+  `fail_ci_if_error: false`, `files: ./coverage.xml`. `permissions:` is
+  `contents: read` plus `id-token: write`; a `concurrency` group cancels a
+  superseded push so a stale report cannot land after a newer one.
+- `codecov.yml`: project target `90` (equal to `fail_under`), a `1%` threshold
+  that absorbs rounding rather than a real drop, a stricter `85%` patch target so
+  a small change cannot ride in on the coverage of the files around it, an
+  `ignore` list mirroring `[tool.coverage.run] omit`, and the `unittests` flag
+  with `carryforward: false`.
+- `tools/coverage_report.py`: the audit. **14 finding codes**, standard library
+  plus PyYAML, no network, no Codecov account — it reads the workflow,
+  `codecov.yml`, `pyproject.toml`, `.gitignore` and its own page as data. Exit
+  `1` on a finding, `2` when it cannot measure (no root, no PyYAML, unparsable
+  YAML, or no `fail_under` to compare against).
+- `docs/coverage_reporting.md` documents every code, joins the site nav under
+  *Quality gates*, and is itself checked: the tool fails when the page stops
+  naming a code it can emit.
+- 69 test functions in `tests/test_coverage_report.py`: every code is fed a
+  checkout that breaks exactly one rule, the parsers (trigger forms, produced
+  report paths, glob bases, the TOML reader) are tested on their own, the
+  false positive that would teach a reader to ignore the token scan (a commit SHA
+  pinned as `@<40 hex>`) is pinned as a non-finding, and the committed pipeline
+  is audited as it stands.
+- The audit runs in CI on the designated cell with `--strict`, next to the
+  CI-matrix, I/O and community-health audits.
+
+### Architectural decisions
+
+1. **Audit the declaration, not the upload.** A test suite cannot reach Codecov,
+   and a check that needed to would be unrunnable on a fork. Every rule here is
+   about files: the workflow names the report the job writes, the action carries
+   a version, the target equals the floor, the ignore list mirrors `omit`. Those
+   are the failures that actually happen, and all of them are visible offline.
+2. **The upload may not decide the build's colour.** `fail_ci_if_error: false`
+   is a rule, not a preference. Codecov being down is not a fact about this code,
+   and the local gate has already produced the verdict that matters.
+3. **Tokenless by default.** `id-token: write` plus `use_oidc: true` means a
+   public repository stores no credential for this pipeline. The audit accepts
+   either form — OIDC or `${{ secrets.CODECOV_TOKEN }}` — and fails on a literal,
+   because the one thing that must never reach the file is the token itself.
+4. **`auto` is not a target.** A Codecov project target of `auto` is read off the
+   previous commit, so it can never equal a declared floor and no local gate can
+   predict it. The audit requires a number, and that number has to be `90`.
+5. **A missing `fail_under` is exit 2, not exit 0.** With no floor there is
+   nothing to compare a target against, and "the target agrees with the floor"
+   would be vacuously true. Unmeasurable and passing must not look alike.
+6. **An unfiltered trigger is a warning.** `push:` with no `branches` filter runs
+   on every branch. That is noisy — a feature branch publishes a number a reader
+   expects from `main` — but it is not wrong, so `--strict` is where it fails.
+
+### Defects found
+
+| Defect | Where | What it would have done |
+| --- | --- | --- |
+| The shipped-module guard compared a filename with its stem | `tools/coverage_report.py`, `audit_config` | The guard checked `_base_of(entry) in {"projects", "datheon", *modules}`, so an ignore entry of `"caching.py"` produced the base `caching.py`, which is not in a set containing `caching` — a core module could be hidden from the badge and the audit stayed green. The test written for it failed, which is the point of writing the test before trusting the tool; the guard now strips a `.py` suffix before comparing. |
+| The first literal-token test expected one finding | `tests/test_coverage_report.py` | A literal written into the `token:` input breaks two rules — the input is not a secret reference, and the literal is a credential — so the audit reported two findings where the test asserted one. The test now pins both, and asserts that the report masks the value rather than reprinting it. |
+| The `coverage.trigger` row documented one behaviour, the code has two | `docs/coverage_reporting.md` | An unfiltered trigger is a warning while a filter excluding `main` is an error; the table described only the error. One row, both behaviours, now written down — the same drift `coverage.docs` exists to catch. |
+
+### Lessons
+
+1. **"Needs an external account" is usually "needs a file".** The upload needs
+   Codecov; the *claim* the upload makes is declared in two files that are right
+   here. Auditing the declaration is what makes the pipeline reviewable on a
+   fork with no credentials at all.
+2. **A report that dies with the log is a report nobody reads.** The Day 20 gate
+   was correct and invisible. Publishing the number is what turns it into
+   something a reviewer can compare between two pull requests.
+3. **Two floors is no floor.** The single most valuable check here is that
+   Codecov's project target equals `fail_under`: the failure mode is a green
+   badge on a build the local gate failed, which no amount of CI watching catches.
+4. **Only scan for secrets where a secret can be written.** The token scan reads
+   lines that mention a token, so a commit SHA pinned as `@<40 hex>` — which this
+   repository may well adopt — does not trip it. A check with false positives is
+   a check people learn to ignore.
+5. **Non-blocking uploads need a local artefact.** With
+   `fail_ci_if_error: false`, a broken upload is silent by design. Keeping
+   `coverage.xml` as an artefact is what makes that silence debuggable.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `python -m compileall` | clean |
+| `flake8 .` | 0 findings |
+| `black --check .` | unchanged |
+| `pytest` | passing, 0 failed (+69 test functions) |
+| `python tools/coverage_report.py` | PASS — target matches `fail_under` 90%, XML kept and uploaded, 14 codes documented |
+| `python tools/coverage_report.py --strict` | PASS — no warnings |
+| `python tools/docs_site.py` | PASS — new page is in the nav |
+| `python tools/ci_matrix.py` | PASS — the new step leaves the matrix contract intact |
+| `python tools/release.py` | PASS — the `[Unreleased]` entry parses |
+| `python tools/coverage_gate.py --minimum 90` | PASS — floor met with the new test file |
+| `python tools/final_verification.py` | PASS — freeze re-cut over the new files |

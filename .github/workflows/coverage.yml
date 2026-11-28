@@ -1,0 +1,119 @@
+name: Coverage
+
+# Day 36 — publish the number the coverage gate already computes.
+#
+# `tools/coverage_gate.py` (Day 20) turns coverage into a verdict on one runner,
+# and then the report dies with the log. Nothing else can see it: a reviewer
+# cannot tell a 94% pull request from a 91% one, the trend is invisible, and the
+# badge has no data behind it. This workflow measures the suite once, applies the
+# same 90% floor, keeps the report as an artefact and uploads it to Codecov.
+#
+# Four rules, all audited by `tools/coverage_report.py` (which the test suite
+# runs), because a reporting pipeline that lies is worse than none:
+#
+#   1. **The upload cannot fail the build.** `fail_ci_if_error: false`. A
+#      third-party outage is not a fact about this code, and the local gate
+#      already owns the verdict.
+#   2. **The report it names is the report the job writes.** `files:
+#      ./coverage.xml` matches `--cov-report=xml:coverage.xml` below; an upload
+#      that searches and finds nothing still reports success.
+#   3. **The artefact survives a failed upload.** `actions/upload-artifact` keeps
+#      `coverage.xml` and `coverage.json` for two weeks, so a red upload is
+#      still debuggable.
+#   4. **Least privilege.** `contents: read` plus the `id-token: write` the
+#      tokenless (OIDC) upload needs — no `contents: write`, no repository
+#      secret required for a public repository.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Codecov's tokenless upload authenticates with a short-lived OIDC token, so
+  # a public repository needs no stored credential at all.
+  id-token: write
+
+# One coverage claim per ref: a superseded push must not upload a stale report
+# after the newer commit's run has already published.
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  report:
+    # One runner, one interpreter. Coverage is not a platform signal: the same
+    # tests execute the same statements on macOS and Windows, so twelve copies
+    # of this job would cost minutes and prove nothing extra.
+    name: Measure, gate and upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Measure and gate
+        # `--cov-fail-under=0` switches off pytest-cov's own floor so the gate
+        # below owns the verdict: a non-zero pytest exit means "no verdict", and
+        # the finding — which floor was breached, by how much — would be lost
+        # behind a generic failure. The floor is passed explicitly here and read
+        # from `[tool.coverage.report] fail_under` everywhere else.
+        run: |
+          python -m pytest -q \
+            --cov \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=json:coverage.json \
+            --cov-fail-under=0
+          python tools/coverage_gate.py --report-only --from-json coverage.json --minimum 90
+
+      - name: Keep the report
+        # `if: always()`: a failed gate is exactly when someone wants the report,
+        # and a failed upload is exactly when the artefact is the only copy left.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            coverage.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: py3.12-ubuntu
+          # Rule 1: the uploader may not decide the build's colour.
+          fail_ci_if_error: false
+          # Rule 4: tokenless, through the id-token granted above.
+          use_oidc: true
+          verbose: true

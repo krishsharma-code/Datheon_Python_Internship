@@ -132,6 +132,15 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: python tools/community_health.py --strict
 
+      - name: Audit the coverage-reporting pipeline
+        # Day 36: the workflow that publishes the number, and the Codecov
+        # declaration that says what the number means. The audit fails when the
+        # upload names a report the job does not write, when the Codecov target
+        # stops matching `fail_under`, when the ignore list drifts away from
+        # `[tool.coverage.run] omit`, or when a literal token reaches the file.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: python tools/coverage_report.py --strict
+
       - name: Property tests (Hypothesis, fixed seed)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         env:

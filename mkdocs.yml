@@ -155,6 +155,7 @@ nav:
       - Fuzz testing: fuzzing.md
       - Mutation testing: mutation_testing.md
       - Coverage gate: coverage_gate.md
+      - Coverage reporting (Codecov): coverage_reporting.md
       - Benchmark regression gate: benchmarking.md
       - Static type checking: type_checking.md
       - Test strategy: test_strategy.md
