@@ -14,6 +14,24 @@ cannot disagree. `tools/release.py` audits the structure of this file, and
 
 ### Added
 
+- **Coverage reporting: the number the gate computes is now published (Day 36).**
+  `.github/workflows/coverage.yml` measures the suite once, applies the same 90%
+  floor through `tools/coverage_gate.py --report-only`, keeps `coverage.xml` and
+  `coverage.json` as an artefact for fourteen days and uploads the XML to Codecov
+  — tokenless, through GitHub's OIDC token, so no secret is stored for a public
+  repository, and with `fail_ci_if_error: false`, so a third-party outage cannot
+  redden a build every local gate passed. `codecov.yml` declares what "good"
+  means: a project target equal to `fail_under`, a patch target of 85%, and an
+  ignore list that mirrors `[tool.coverage.run] omit`. `tools/coverage_report.py`
+  audits the whole declaration as data — 14 finding codes, no network and no
+  Codecov account — and fails when the upload names a report the job does not
+  write, when the action floats on a tag with no version, when the target and
+  the floor disagree, when the ignore list drifts or hides shipped code, when a
+  literal token reaches the file, or when a report artefact stops being
+  git-ignored; `docs/coverage_reporting.md` documents every code and joins the
+  site nav under *Quality gates*; the audit runs in CI with `--strict`; 69 test
+  functions in `tests/test_coverage_report.py`.
+
 - **A security policy and a code of conduct, with a gate behind each (Day 35).**
   `SECURITY.md` names the supported release lines, routes a report through
   GitHub's private vulnerability reporting instead of the public issue tracker,

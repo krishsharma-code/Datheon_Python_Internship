@@ -175,6 +175,9 @@ FREEZE_FILES: Tuple[str, ...] = (
     # Day 34: the commit-time gate is shipped configuration, so the freeze
     # records it like every other root-level declaration.
     ".pre-commit-config.yaml",
+    # Day 36: so is the Codecov declaration — the public statement of what the
+    # coverage badge means, which no directory listing would otherwise pin.
+    "codecov.yml",
     ".gitattributes",
     ".gitignore",
     "CHANGELOG.md",

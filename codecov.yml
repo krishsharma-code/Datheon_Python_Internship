@@ -1,0 +1,65 @@
+# Day 36 — what the coverage badge means.
+#
+# `tools/coverage_gate.py` enforces a floor on one runner; this file is the same
+# promise made in public. `tools/coverage_report.py` audits it against
+# `pyproject.toml` and fails the build when the two disagree:
+#
+#   * the project target below must equal `[tool.coverage.report] fail_under`,
+#     or the badge and the local gate enforce two different floors;
+#   * the ignore list must mirror `[tool.coverage.run] omit`, or the two places
+#     measure different files and "90%" means two things;
+#   * the flags must match the flags `.github/workflows/coverage.yml` uploads,
+#     or a report arrives that no status check reads.
+
+coverage:
+  # One decimal place, the same precision the local report prints, so a reader
+  # comparing the badge with a build log sees the same number.
+  precision: 1
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        # Mirrors `fail_under = 90` in pyproject.toml. A one-point threshold
+        # absorbs the noise of a rounding change without absorbing a real drop.
+        target: 90
+        threshold: 1%
+        informational: false
+    patch:
+      # New code is held to a higher bar than the repository average: the point
+      # of a patch status is that a small, well-tested change cannot ride in on
+      # the coverage of the files around it.
+      default:
+        target: 85
+        threshold: 1%
+        informational: false
+
+  # Mirrors `[tool.coverage.run] omit`. Tests, tools, benchmarks and conftest are
+  # not shipped code; counting them would flatter the number.
+  ignore:
+    - "tests/*"
+    - "tools/*"
+    - "benchmarks/*"
+    - "conftest.py"
+    - "*/__pycache__/*"
+
+flags:
+  unittests:
+    # The flag `.github/workflows/coverage.yml` sends. `carryforward: false`
+    # because the suite runs on every push and pull request, so a missing upload
+    # is a fact worth showing rather than a number to paper over.
+    paths:
+      - projects/
+      - datheon/
+    carryforward: false
+
+comment:
+  layout: "header, diff, flags, files"
+  require_changes: false
+  behavior: default
+
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
